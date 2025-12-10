@@ -1,0 +1,54 @@
+# Python caches & compiled artifacts
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.mypy_cache/
+
+# Virtual environments
+mw_env/
+.venv/
+venv/
+env/
+ENV/
+
+# Packaging / build outputs
+build/
+dist/
+downloads/
+eggs/
+.eggs/
+parts/
+sdist/
+var/
+*.egg-info/
+*.egg
+
+# Flask / config
+instance/
+.env
+.env.*
+*.env
+
+# Logs & coverage
+*.log
+.coverage
+coverage.xml
+htmlcov/
+
+# Frontend artifacts
+node_modules/
+frontend/node_modules/
+frontend/dist/
+npm-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# IDE & editor folders
+.vscode/
+.idea/
+*.code-workspace
+
+# OS-specific
+.DS_Store
+Thumbs.db
