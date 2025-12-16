@@ -9,21 +9,25 @@ from .user_model import (
     VALID_TOKEN_TYPES
 )
 
-from .shop_model import Shop, UserFollowShop, VerificationOTP, VerificationStatus
+from .shop_model import Shop, UserFollowShop, VerificationOTP, \
+    VERIFICATION_STATUS_PENDING, VERIFICATION_STATUS_UNDER_REVIEW, VERIFICATION_STATUS_VERIFIED, \
+    VERIFICATION_STATUS_REJECTED, VERIFICATION_STATUS_SUSPENDED, VALID_VERIFICATION_STATUSES
 from .product_model import Product, StockUpdate
 from .category_model import Category, \
     CATEGORY_LEVEL_TRUNK, CATEGORY_LEVEL_BRANCH, CATEGORY_LEVEL_LEAF, \
     VALID_CATEGORY_LEVELS
-from .subscription_model import Subscription, SubscriptionType
+from .subscription_model import Subscription, \
+    SUBSCRIPTION_TYPE_USER, SUBSCRIPTION_TYPE_PRODUCT, SUBSCRIPTION_TYPE_SHOP, \
+    VALID_SUBSCRIPTION_TYPES
 
 # Make these available at the package level
 __all__ = [
     # Models
     'User', 'UserBrowsingHistory', 'AuthToken',
-    'Shop', 'UserFollowShop', 'VerificationOTP', 'VerificationStatus',
+    'Shop', 'UserFollowShop', 'VerificationOTP',
     'Product', 'StockUpdate',
     'Category',
-    'Subscription', 'SubscriptionType',
+    'Subscription',
     
     # Constants
     'USER_STATUS_ACTIVE', 'USER_STATUS_SUSPENDED', 'USER_STATUS_PENDING',
@@ -32,5 +36,9 @@ __all__ = [
     'TOKEN_TYPE_EMAIL_VERIFICATION', 'TOKEN_TYPE_PASSWORD_RESET', 'TOKEN_TYPE_API',
     'VALID_TOKEN_TYPES',
     'CATEGORY_LEVEL_TRUNK', 'CATEGORY_LEVEL_BRANCH', 'CATEGORY_LEVEL_LEAF',
-    'VALID_CATEGORY_LEVELS'
+    'VALID_CATEGORY_LEVELS',
+    'VERIFICATION_STATUS_PENDING', 'VERIFICATION_STATUS_UNDER_REVIEW', 'VERIFICATION_STATUS_VERIFIED',
+    'VERIFICATION_STATUS_REJECTED', 'VERIFICATION_STATUS_SUSPENDED', 'VALID_VERIFICATION_STATUSES',
+    'SUBSCRIPTION_TYPE_USER', 'SUBSCRIPTION_TYPE_PRODUCT', 'SUBSCRIPTION_TYPE_SHOP',
+    'VALID_SUBSCRIPTION_TYPES'
 ]

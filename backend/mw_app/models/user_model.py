@@ -17,8 +17,6 @@ VALID_USER_STATUSES = {USER_STATUS_ACTIVE, USER_STATUS_SUSPENDED, USER_STATUS_PE
 VALID_USER_ROLES = {USER_ROLE_ADMIN, USER_ROLE_SELLER, USER_ROLE_BUYER}
 
 class User(db.Model):
-    __tablename__ = 'users'
-    
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(80), unique=True, nullable=False, index=True)
     email = db.Column(db.String(120), unique=True, nullable=False, index=True)
@@ -121,8 +119,8 @@ class User(db.Model):
             'id': self.id,
             'username': self.username,
             'email': self.email,
-            'role': self.role.value if self.role else None,
-            'status': self.status.value if self.status else None,
+            'role': self.role,
+            'status': self.status,
             'first_name': self.first_name,
             'last_name': self.last_name,
             'phone': self.phone,
@@ -198,7 +196,6 @@ class User(db.Model):
 
 class UserBrowsingHistory(db.Model):
     """Track user browsing behavior for recommendations"""
-    __tablename__ = 'user_browsing_history'
     
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
@@ -249,11 +246,10 @@ VALID_TOKEN_TYPES = {
 }
 
 class AuthToken(db.Model):
-    """Authentication tokens for email verification, password reset, etc."""
-    __tablename__ = 'auth_tokens'
+    """Authentication tokens for API access and email verification"""
     
     id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('users.id', ondelete='CASCADE'), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id', ondelete='CASCADE'), nullable=False)
     token = db.Column(db.String(255), nullable=False, index=True)
     token_type = db.Column(db.String(50), nullable=False)  # 'email_verification', 'password_reset', 'api'
     expires_at = db.Column(db.DateTime, nullable=False)

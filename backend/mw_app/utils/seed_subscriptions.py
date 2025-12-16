@@ -1,17 +1,17 @@
-from .. import db
-from ..models import Subscription, SubscriptionType, User, Shop, Product
+from ..extensions import db
+from ..models import Subscription, User, Shop, Product, SUBSCRIPTION_TYPE_USER, SUBSCRIPTION_TYPE_SHOP, SUBSCRIPTION_TYPE_PRODUCT, USER_ROLE_BUYER, USER_ROLE_SELLER
 from datetime import datetime, timezone, timedelta
 import random
 
 def seed_subscriptions():
     """Create premium subscriptions for users, shops, and products"""
     # Get all entities
-    users = User.query.filter(User.role.in_(['buyer', 'seller'])).all()
+    users = User.query.filter(User.role.in_([USER_ROLE_BUYER, USER_ROLE_SELLER])).all()
     shops = Shop.query.filter_by(is_active=True).all()
     products = Product.query.filter_by(is_active=True).all()
     
     # Get an admin for created_by field
-    admin = User.query.filter_by(role='admin').first()
+    admin = User.query.filter_by(role=USER_ROLE_ADMIN).first()
     admin_id = admin.id if admin else None
     
     subscription_count = 0
@@ -25,7 +25,7 @@ def seed_subscriptions():
         # Create subscription record
         end_date = datetime.now(timezone.utc) + timedelta(days=random.randint(30, 365))
         subscription = Subscription(
-            subscription_type=SubscriptionType.USER,
+            subscription_type=SUBSCRIPTION_TYPE_USER,
             target_id=user.id,
             start_date=datetime.now(timezone.utc),
             end_date=end_date,
@@ -40,7 +40,7 @@ def seed_subscriptions():
     for shop in premium_shops:
         end_date = datetime.now(timezone.utc) + timedelta(days=random.randint(60, 365))
         subscription = Subscription(
-            subscription_type=SubscriptionType.SHOP,
+            subscription_type=SUBSCRIPTION_TYPE_SHOP,
             target_id=shop.id,
             start_date=datetime.now(timezone.utc),
             end_date=end_date,
@@ -55,7 +55,7 @@ def seed_subscriptions():
     for product in premium_products:
         end_date = datetime.now(timezone.utc) + timedelta(days=random.randint(15, 180))
         subscription = Subscription(
-            subscription_type=SubscriptionType.PRODUCT,
+            subscription_type=SUBSCRIPTION_TYPE_PRODUCT,
             target_id=product.id,
             start_date=datetime.now(timezone.utc),
             end_date=end_date,
@@ -68,13 +68,13 @@ def seed_subscriptions():
     # Also create some expired subscriptions for testing
     expired_count = random.randint(2, 5)
     for i in range(expired_count):
-        target_type = random.choice([SubscriptionType.USER, SubscriptionType.SHOP, SubscriptionType.PRODUCT])
+        target_type = random.choice([SUBSCRIPTION_TYPE_USER, SUBSCRIPTION_TYPE_SHOP, SUBSCRIPTION_TYPE_PRODUCT])
         
-        if target_type == SubscriptionType.USER and users:
+        if target_type == SUBSCRIPTION_TYPE_USER and users:
             target_id = random.choice(users).id
-        elif target_type == SubscriptionType.SHOP and shops:
+        elif target_type == SUBSCRIPTION_TYPE_SHOP and shops:
             target_id = random.choice(shops).id
-        elif target_type == SubscriptionType.PRODUCT and products:
+        elif target_type == SUBSCRIPTION_TYPE_PRODUCT and products:
             target_id = random.choice(products).id
         else:
             continue

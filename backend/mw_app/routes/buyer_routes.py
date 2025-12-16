@@ -1,6 +1,6 @@
 from flask import Blueprint, jsonify, request
-from ..extensions import db
-from ..models import Category, User, UserBrowsingHistory, Product, Shop, UserFollowShop, VerificationStatus
+from ..extensions import db, search
+from ..models import Category, User, UserBrowsingHistory, Product, Shop, UserFollowShop, VERIFICATION_STATUS_VERIFIED
 
 buyer_bp = Blueprint('buyer_bp', __name__, url_prefix='/explore')
 
@@ -14,32 +14,25 @@ def browse_shops():
     """Browse all shops in the marketplace"""
     try:
         # Get query parameters
-        search = request.args.get('search', '').strip()
+        search_term = request.args.get('search', '').strip()
         sort_by = request.args.get('sort_by', 'name')  # name, last_updated
         user_id = request.args.get('user_id', type=int)
         
         # Build query - only show verified and active shops
         query = Shop.query.filter_by(
             is_active=True,
-            verification_status=VerificationStatus.VERIFIED
+            verification_status=VERIFICATION_STATUS_VERIFIED
         )
         
-        # Filter by search term
-        if search:
-            query = query.filter(
-                db.or_(
-                    Shop.name.ilike(f'%{search}%'),
-                    Shop.description.ilike(f'%{search}%')
-                )
-            )
-        
-        # Sort
-        if sort_by == 'last_updated':
-            query = query.order_by(Shop.last_updated.desc())
+        # Use Flask-Msearch for full-text search
+        if search_term:
+            shops = query.search(search_term).all()
         else:
-            query = query.order_by(Shop.name)
-        
-        shops = query.all()
+            # Sort if no search
+            if sort_by == 'last_updated':
+                shops = query.order_by(Shop.last_updated.desc()).all()
+            else:
+                shops = query.order_by(Shop.name).all()
         
         # Get user's followed shops if user_id provided
         followed_shop_ids = set()
@@ -82,7 +75,7 @@ def view_shop(shop_id):
         shop = Shop.query.filter_by(
             id=shop_id,
             is_active=True,
-            verification_status=VerificationStatus.VERIFIED
+            verification_status=VERIFICATION_STATUS_VERIFIED
         ).first_or_404()
         
         # Get user_id from request (for checking if user follows)
@@ -126,7 +119,7 @@ def shop_products(shop_id):
         shop = Shop.query.filter_by(
             id=shop_id,
             is_active=True,
-            verification_status=VerificationStatus.VERIFIED
+            verification_status=VERIFICATION_STATUS_VERIFIED
         ).first_or_404()
         
         # Query params: search, min_price, max_price, in_stock (true/false)

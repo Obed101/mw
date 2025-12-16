@@ -1,19 +1,21 @@
-from .. import db
+from ..extensions import db
 from datetime import datetime, timezone
-import enum
 
-class SubscriptionType(enum.Enum):
-    """Subscription target type"""
-    USER = "user"
-    PRODUCT = "product"
-    SHOP = "shop"
+# Subscription type constants
+SUBSCRIPTION_TYPE_USER = 'user'
+SUBSCRIPTION_TYPE_PRODUCT = 'product'
+SUBSCRIPTION_TYPE_SHOP = 'shop'
+VALID_SUBSCRIPTION_TYPES = {
+    SUBSCRIPTION_TYPE_USER,
+    SUBSCRIPTION_TYPE_PRODUCT,
+    SUBSCRIPTION_TYPE_SHOP
+}
 
 class Subscription(db.Model):
     """Relationship table for subscription periods linked to users, products, or shops"""
-    __tablename__ = 'subscription'
     
     id = db.Column(db.Integer, primary_key=True)
-    subscription_type = db.Column(db.Enum(SubscriptionType), nullable=False)
+    subscription_type = db.Column(db.String(20), nullable=False)
     target_id = db.Column(db.Integer, nullable=False)  # References user.id, product.id, or shop.id
     start_date = db.Column(db.DateTime, nullable=False, default=datetime.now(timezone.utc))
     end_date = db.Column(db.DateTime, nullable=False)

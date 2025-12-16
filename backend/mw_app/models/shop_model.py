@@ -1,18 +1,25 @@
-from .. import db
+from ..extensions import db
 from datetime import datetime, timedelta, timezone
-import enum
 import secrets
 from werkzeug.security import generate_password_hash, check_password_hash
 
-class VerificationStatus(enum.Enum):
-    """Shop verification status"""
-    PENDING = "pending"
-    UNDER_REVIEW = "under_review"
-    VERIFIED = "verified"
-    REJECTED = "rejected"
-    SUSPENDED = "suspended"
+# Shop verification status constants
+VERIFICATION_STATUS_PENDING = 'pending'
+VERIFICATION_STATUS_UNDER_REVIEW = 'under_review'
+VERIFICATION_STATUS_VERIFIED = 'verified'
+VERIFICATION_STATUS_REJECTED = 'rejected'
+VERIFICATION_STATUS_SUSPENDED = 'suspended'
+VALID_VERIFICATION_STATUSES = {
+    VERIFICATION_STATUS_PENDING,
+    VERIFICATION_STATUS_UNDER_REVIEW,
+    VERIFICATION_STATUS_VERIFIED,
+    VERIFICATION_STATUS_REJECTED,
+    VERIFICATION_STATUS_SUSPENDED
+}
 
 class Shop(db.Model):
+    __searchable__ = ['name', 'description', 'address', 'region', 'district', 'town']
+    
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(150), nullable=False)
     description = db.Column(db.Text)
@@ -28,7 +35,7 @@ class Shop(db.Model):
     last_updated = db.Column(db.DateTime, default=datetime.now(timezone.utc), onupdate=datetime.now(timezone.utc))
     
     # Verification fields
-    verification_status = db.Column(db.Enum(VerificationStatus), default=VerificationStatus.PENDING, nullable=False)
+    verification_status = db.Column(db.String(20), default=VERIFICATION_STATUS_PENDING, nullable=False)
     phone_verified = db.Column(db.Boolean, default=False)
     email_verified = db.Column(db.Boolean, default=False)
     verification_requested_at = db.Column(db.DateTime)
@@ -58,16 +65,15 @@ class Shop(db.Model):
     
     def is_verified(self):
         """Check if shop is verified"""
-        return self.verification_status == VerificationStatus.VERIFIED
+        return self.verification_status == VERIFICATION_STATUS_VERIFIED
     
     def can_request_verification(self):
         """Check if shop can request verification (phone and email must be verified)"""
-        return self.phone_verified and self.email_verified and self.verification_status == VerificationStatus.PENDING
+        return self.phone_verified and self.email_verified and self.verification_status == VERIFICATION_STATUS_PENDING
 
 
 class UserFollowShop(db.Model):
     """Track which users follow which shops"""
-    __tablename__ = 'user_follow_shop'
     
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)

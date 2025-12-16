@@ -1,7 +1,9 @@
-from .. import db
+from ..extensions import db
 from datetime import datetime, timezone
 
 class Product(db.Model):
+    __searchable__ = ['name', 'description', 'tags']
+    
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(150), nullable=False)
     code = db.Column(db.String(30), nullable=False)

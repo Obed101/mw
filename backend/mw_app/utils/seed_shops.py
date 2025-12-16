@@ -1,12 +1,12 @@
-from .. import db
-from ..models import Shop, User, VerificationStatus
+from ..extensions import db
+from ..models import Shop, User, VERIFICATION_STATUS_VERIFIED, VERIFICATION_STATUS_PENDING, VERIFICATION_STATUS_UNDER_REVIEW, USER_ROLE_SELLER
 from datetime import datetime, timezone
 import random
 
 def seed_shops():
     """Create fake shops linked to seller users"""
     # Get all seller users
-    sellers = User.query.filter_by(role='seller').all()
+    sellers = User.query.filter_by(role=USER_ROLE_SELLER).all()
     
     if not sellers:
         print("No sellers found. Please run seed_users first.")
@@ -41,9 +41,9 @@ def seed_shops():
                 email=f"contact{seller.username}@shop.com",
                 owner_id=seller.id,
                 verification_status=random.choice([
-                    VerificationStatus.VERIFIED,
-                    VerificationStatus.PENDING,
-                    VerificationStatus.UNDER_REVIEW
+                    VERIFICATION_STATUS_VERIFIED,
+                    VERIFICATION_STATUS_PENDING,
+                    VERIFICATION_STATUS_UNDER_REVIEW
                 ]),
                 phone_verified=random.choice([True, False]),
                 email_verified=random.choice([True, False]),
@@ -51,12 +51,12 @@ def seed_shops():
             )
             
             # Set verification timestamps if verified
-            if shop.verification_status == VerificationStatus.VERIFIED:
+            if shop.verification_status == VERIFICATION_STATUS_VERIFIED:
                 shop.verified_at = datetime.now(timezone.utc)
                 shop.phone_verified = True
                 shop.email_verified = True
                 # Assign a random admin as verifier
-                admin = User.query.filter_by(role='admin').first()
+                admin = User.query.filter_by(role=USER_ROLE_ADMIN).first()
                 if admin:
                     shop.verified_by = admin.id
             

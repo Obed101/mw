@@ -1,6 +1,6 @@
 from flask import Blueprint, jsonify, request
 from ..extensions import db
-from ..models import Shop, UserFollowShop, User, Product, StockUpdate, VerificationOTP, VerificationStatus
+from ..models import Shop, UserFollowShop, User, Product, StockUpdate, VerificationOTP, VERIFICATION_STATUS_VERIFIED, VERIFICATION_STATUS_UNDER_REVIEW, VERIFICATION_STATUS_PENDING
 from datetime import datetime
 
 seller_bp = Blueprint('seller_bp', __name__, url_prefix='/seller')
@@ -939,27 +939,27 @@ def request_verification():
             }), 400
         
         # Check if already verified or under review
-        if shop.verification_status == VerificationStatus.VERIFIED:
+        if shop.verification_status == VERIFICATION_STATUS_VERIFIED:
             return jsonify({
                 'success': False,
                 'message': 'Shop is already verified'
             }), 400
         
-        if shop.verification_status == VerificationStatus.UNDER_REVIEW:
+        if shop.verification_status == VERIFICATION_STATUS_UNDER_REVIEW:
             return jsonify({
                 'success': False,
                 'message': 'Shop verification is already under review'
             }), 400
         
         # Request verification
-        shop.verification_status = VerificationStatus.PENDING
+        shop.verification_status = VERIFICATION_STATUS_PENDING
         shop.verification_requested_at = datetime.now(datetime.timezone.utc)
         db.session.commit()
         
         return jsonify({
             'success': True,
             'message': 'Verification request submitted. Admin will review your shop.',
-            'verification_status': shop.verification_status.value,
+            'verification_status': shop.verification_status,
             'verification_requested_at': shop.verification_requested_at.isoformat()
         }), 200
         

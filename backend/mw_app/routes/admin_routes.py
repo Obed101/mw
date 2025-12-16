@@ -1,6 +1,9 @@
 from flask import Blueprint, jsonify, request
 from ..extensions import db
-from ..models import Category, Shop, User, VerificationStatus, Subscription, SubscriptionType, \
+from ..models import Category, Shop, User, Subscription, \
+    VERIFICATION_STATUS_VERIFIED, VERIFICATION_STATUS_PENDING, VERIFICATION_STATUS_UNDER_REVIEW, \
+    VERIFICATION_STATUS_REJECTED, VERIFICATION_STATUS_SUSPENDED, \
+    SUBSCRIPTION_TYPE_USER, SUBSCRIPTION_TYPE_PRODUCT, SUBSCRIPTION_TYPE_SHOP, \
     CATEGORY_LEVEL_TRUNK, CATEGORY_LEVEL_BRANCH, CATEGORY_LEVEL_LEAF
 from datetime import datetime
 
@@ -111,6 +114,12 @@ def create_category():
     except Exception as e:
         db.session.rollback()
         return jsonify({"error": str(e)}), 500
+
+@admin_bp.route("/categories/<int:category_id>")
+def get_category(category_id):
+    """Get a specific category by ID"""
+    category = Category.query.get_or_404(category_id)
+    return jsonify(category.to_dict())
 
 @admin_bp.route("/categories/<int:category_id>", methods=["PUT"])
 def update_category(category_id):
@@ -232,7 +241,7 @@ def manage_shops():
                 'phone': shop.phone,
                 'email': shop.email,
                 'is_active': shop.is_active,
-                'verification_status': shop.verification_status.value if shop.verification_status else None,
+                'verification_status': shop.verification_status if shop.verification_status else None,
                 'phone_verified': shop.phone_verified,
                 'email_verified': shop.email_verified,
                 'verification_requested_at': shop.verification_requested_at.isoformat() if shop.verification_requested_at else None,
@@ -264,9 +273,9 @@ def get_pending_verification():
         status = request.args.get('status', 'pending')  # pending or under_review
         
         if status == 'under_review':
-            status_enum = VerificationStatus.UNDER_REVIEW
+            status_enum = VERIFICATION_STATUS_UNDER_REVIEW
         else:
-            status_enum = VerificationStatus.PENDING
+            status_enum = VERIFICATION_STATUS_PENDING
         
         shops = Shop.query.filter_by(verification_status=status_enum).order_by(
             Shop.verification_requested_at.desc()
@@ -347,7 +356,7 @@ def verify_shop(shop_id):
             }), 404
         
         # Verify shop
-        shop.verification_status = VerificationStatus.VERIFIED
+        shop.verification_status = VERIFICATION_STATUS_VERIFIED
         shop.verified_at = datetime.now(datetime.timezone.utc)
         shop.verified_by = admin_id
         shop.rejection_reason = None  # Clear rejection reason if any
@@ -359,7 +368,7 @@ def verify_shop(shop_id):
             'shop': {
                 'id': shop.id,
                 'name': shop.name,
-                'verification_status': shop.verification_status.value,
+                'verification_status': shop.verification_status,
                 'verified_at': shop.verified_at.isoformat(),
                 'verified_by': admin_id
             }
@@ -412,7 +421,7 @@ def reject_shop(shop_id):
             }), 404
         
         # Reject shop
-        shop.verification_status = VerificationStatus.REJECTED
+        shop.verification_status = VERIFICATION_STATUS_REJECTED
         shop.rejection_reason = rejection_reason
         shop.verified_by = None
         shop.verified_at = None
@@ -424,7 +433,7 @@ def reject_shop(shop_id):
             'shop': {
                 'id': shop.id,
                 'name': shop.name,
-                'verification_status': shop.verification_status.value,
+                'verification_status': shop.verification_status,
                 'rejection_reason': shop.rejection_reason
             }
         }), 200
@@ -469,7 +478,7 @@ def suspend_shop(shop_id):
             }), 404
         
         # Suspend shop
-        shop.verification_status = VerificationStatus.SUSPENDED
+        shop.verification_status = VERIFICATION_STATUS_SUSPENDED
         db.session.commit()
         
         return jsonify({
@@ -478,7 +487,7 @@ def suspend_shop(shop_id):
             'shop': {
                 'id': shop.id,
                 'name': shop.name,
-                'verification_status': shop.verification_status.value
+                'verification_status': shop.verification_status
             }
         }), 200
         
@@ -522,7 +531,7 @@ def put_shop_under_review(shop_id):
             }), 404
         
         # Put under review
-        shop.verification_status = VerificationStatus.UNDER_REVIEW
+        shop.verification_status = VERIFICATION_STATUS_UNDER_REVIEW
         db.session.commit()
         
         return jsonify({
@@ -531,7 +540,7 @@ def put_shop_under_review(shop_id):
             'shop': {
                 'id': shop.id,
                 'name': shop.name,
-                'verification_status': shop.verification_status.value
+                'verification_status': shop.verification_status
             }
         }), 200
         
@@ -671,173 +680,6 @@ def manage_categories():
             'error': str(e)
         }), 500
 
-@admin_bp.route("/categories", methods=["POST"])
-def create_category():
-    """Create a new product category"""
-    try:
-        data = request.get_json()
-        
-        # Validate required fields
-        if not data or 'name' not in data:
-            return jsonify({
-                'success': False,
-                'message': 'Category name is required'
-            }), 400
-        
-        name = data['name'].strip()
-        if not name:
-            return jsonify({
-                'success': False,
-                'message': 'Category name cannot be empty'
-            }), 400
-        
-        # Check if category with same name already exists
-        existing_category = Category.query.filter_by(name=name).first()
-        if existing_category:
-            return jsonify({
-                'success': False,
-                'message': f'Category with name "{name}" already exists'
-            }), 409
-        
-        # Create new category
-        category = Category(
-            name=name,
-            description=data.get('description', '').strip() or None,
-            is_active=data.get('is_active', True)
-        )
-        
-        db.session.add(category)
-        db.session.commit()
-        
-        return jsonify({
-            'success': True,
-            'message': 'Category created successfully',
-            'category': category.to_dict()
-        }), 201
-        
-    except Exception as e:
-        db.session.rollback()
-        return jsonify({
-            'success': False,
-            'message': 'Error creating category',
-            'error': str(e)
-        }), 500
-
-@admin_bp.route("/categories/<int:category_id>")
-def get_category(category_id):
-    """Get specific category details"""
-    try:
-        category = Category.query.get_or_404(category_id)
-        
-        return jsonify({
-            'success': True,
-            'category': category.to_dict()
-        }), 200
-        
-    except Exception as e:
-        return jsonify({
-            'success': False,
-            'message': 'Error fetching category',
-            'error': str(e)
-        }), 500
-
-@admin_bp.route("/categories/<int:category_id>", methods=["PUT"])
-def update_category(category_id):
-    """Update category information"""
-    try:
-        category = Category.query.get_or_404(category_id)
-        data = request.get_json()
-        
-        if not data:
-            return jsonify({
-                'success': False,
-                'message': 'No data provided'
-            }), 400
-        
-        # Update name if provided
-        if 'name' in data:
-            new_name = data['name'].strip()
-            if not new_name:
-                return jsonify({
-                    'success': False,
-                    'message': 'Category name cannot be empty'
-                }), 400
-            
-            # Check if another category with this name exists
-            existing = Category.query.filter(
-                Category.name == new_name,
-                Category.id != category_id
-            ).first()
-            
-            if existing:
-                return jsonify({
-                    'success': False,
-                    'message': f'Category with name "{new_name}" already exists'
-                }), 409
-            
-            category.name = new_name
-        
-        # Update description if provided
-        if 'description' in data:
-            category.description = data['description'].strip() or None
-        
-        # Update is_active if provided
-        if 'is_active' in data:
-            category.is_active = bool(data['is_active'])
-        
-        db.session.commit()
-        
-        return jsonify({
-            'success': True,
-            'message': 'Category updated successfully',
-            'category': category.to_dict()
-        }), 200
-        
-    except Exception as e:
-        db.session.rollback()
-        return jsonify({
-            'success': False,
-            'message': 'Error updating category',
-            'error': str(e)
-        }), 500
-
-@admin_bp.route("/categories/<int:category_id>", methods=["DELETE"])
-def delete_category(category_id):
-    """Delete or deactivate a category"""
-    try:
-        category = Category.query.get_or_404(category_id)
-        
-        # Check if category has products
-        product_count = len(category.products) if category.products else 0
-        
-        if product_count > 0:
-            # Soft delete: deactivate instead of deleting
-            category.is_active = False
-            db.session.commit()
-            
-            return jsonify({
-                'success': True,
-                'message': f'Category deactivated (has {product_count} associated products)',
-                'category': category.to_dict()
-            }), 200
-        else:
-            # Hard delete: no products associated
-            db.session.delete(category)
-            db.session.commit()
-            
-            return jsonify({
-                'success': True,
-                'message': 'Category deleted successfully'
-            }), 200
-        
-    except Exception as e:
-        db.session.rollback()
-        return jsonify({
-            'success': False,
-            'message': 'Error deleting category',
-            'error': str(e)
-        }), 500
-
 # Marketplace Analytics
 @admin_bp.route("/analytics")
 def marketplace_analytics():
@@ -881,9 +723,9 @@ def toggle_subscription():
         
         # Map target_type to enum and model
         type_map = {
-            "user": (SubscriptionType.USER, User),
-            "product": (SubscriptionType.PRODUCT, Product),
-            "shop": (SubscriptionType.SHOP, Shop)
+            "user": (SUBSCRIPTION_TYPE_USER, User),
+            "product": (SUBSCRIPTION_TYPE_PRODUCT, Product),
+            "shop": (SUBSCRIPTION_TYPE_SHOP, Shop)
         }
         subscription_type, model_class = type_map[target_type]
         
@@ -957,9 +799,9 @@ def get_subscription(target_type, target_id):
             }), 400
         
         type_map = {
-            "user": SubscriptionType.USER,
-            "product": SubscriptionType.PRODUCT,
-            "shop": SubscriptionType.SHOP
+            "user": SUBSCRIPTION_TYPE_USER,
+            "product": SUBSCRIPTION_TYPE_PRODUCT,
+            "shop": SUBSCRIPTION_TYPE_SHOP
         }
         subscription_type = type_map[target_type]
         

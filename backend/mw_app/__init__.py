@@ -1,7 +1,7 @@
 from flask import Flask
 from flask_migrate import Migrate
 
-from .extensions import db, jwt, cors
+from .extensions import db, jwt, cors, search
 
 def create_app():
     app = Flask(__name__, instance_relative_config=True)
@@ -10,6 +10,7 @@ def create_app():
     # Initialize extensions
     db.init_app(app)
     jwt.init_app(app)
+    search.init_app(app)
     cors.init_app(app, resources={
         r"/api/*": {
             "origins": ["http://localhost:3000", "http://127.0.0.1:3000"],
