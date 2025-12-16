@@ -1,8 +1,8 @@
 from flask import Blueprint, jsonify, request
-from backend.mw_app import db
-from backend.mw_app.models import Category, User, UserBrowsingHistory, Product, Shop, UserFollowShop, VerificationStatus
+from ..extensions import db
+from ..models import Category, User, UserBrowsingHistory, Product, Shop, UserFollowShop, VerificationStatus
 
-buyer_bp = Blueprint('buyer_bp', __name__, url_prefix='/buyer')
+buyer_bp = Blueprint('buyer_bp', __name__, url_prefix='/explore')
 
 @buyer_bp.route("/")
 def buyer_dashboard():

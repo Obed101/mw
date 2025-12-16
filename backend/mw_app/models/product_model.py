@@ -1,9 +1,10 @@
 from .. import db
-from datetime import datetime
+from datetime import datetime, timezone
 
 class Product(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(150), nullable=False)
+    code = db.Column(db.String(30), nullable=False)
     type_ = db.Column(db.String(100), nullable=False, default='product') # product, service
     description = db.Column(db.Text)
     tags = db.Column(db.Text) # JSON string or comma-separated tags
@@ -11,8 +12,8 @@ class Product(db.Model):
     stock = db.Column(db.Integer, default=0)
     images = db.Column(db.Text)  # JSON string or comma-separated URLs
     is_active = db.Column(db.Boolean, default=True)
-    created_at = db.Column(db.DateTime, default=datetime.now(datetime.timezone.utc))
-    updated_at = db.Column(db.DateTime, default=datetime.now(datetime.timezone.utc), onupdate=datetime.now(datetime.timezone.utc))
+    created_at = db.Column(db.DateTime, default=datetime.now(timezone.utc))
+    updated_at = db.Column(db.DateTime, default=datetime.now(timezone.utc), onupdate=datetime.now(timezone.utc))
     
     # Foreign key: Product belongs to a Shop
     shop_id = db.Column(db.Integer, db.ForeignKey("shop.id"), nullable=False)
@@ -24,6 +25,15 @@ class Product(db.Model):
     def __repr__(self):
         return f'<Product {self.name}>'
     
+    def generate_code():
+        """Generate a unique 8-character alphanumeric code for the product"""
+        import random
+        import string
+        while True:
+            code = ''.join(random.choices(string.ascii_letters + string.digits, k=8))
+            if not Product.query.filter_by(code=code).first():
+                return code
+
     def is_low_stock(self, threshold=10):
         """Check if product stock is below threshold"""
         return self.stock <= threshold
@@ -42,7 +52,7 @@ class StockUpdate(db.Model):
     stock_change = db.Column(db.Integer, nullable=False)  # positive for increase, negative for decrease
     updated_by = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)  # Seller who made the update
     reason = db.Column(db.String(255))  # Optional: "restocked", "sold", "damaged", etc.
-    updated_at = db.Column(db.DateTime, default=datetime.now(datetime.timezone.utc), nullable=False)
+    updated_at = db.Column(db.DateTime, default=datetime.now(timezone.utc), nullable=False)
     
     # Relationships
     product = db.relationship("Product", backref="stock_history")

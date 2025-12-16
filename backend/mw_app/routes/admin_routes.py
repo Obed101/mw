@@ -1,6 +1,7 @@
 from flask import Blueprint, jsonify, request
-from backend.mw_app import db
-from backend.mw_app.models import Category, Shop, User, VerificationStatus
+from ..extensions import db
+from ..models import Category, Shop, User, VerificationStatus, Subscription, SubscriptionType, \
+    CATEGORY_LEVEL_TRUNK, CATEGORY_LEVEL_BRANCH, CATEGORY_LEVEL_LEAF
 from datetime import datetime
 
 admin_bp = Blueprint('admin_bp', __name__, url_prefix='/admin')
@@ -31,6 +32,144 @@ def update_user(user_id):
 def delete_user(user_id):
     """Deactivate or delete a user"""
     return jsonify({"message": f"Delete user {user_id}"})
+
+# Category Management
+@admin_bp.route("/categories/trunks", methods=["GET"])
+def get_trunk_categories():
+    """Get all trunk categories"""
+    from ..models import Category
+    trunks = Category.get_trunk_categories()
+    return jsonify([trunk.to_dict(include_children=True) for trunk in trunks])
+
+@admin_bp.route("/categories/branches/<int:trunk_id>", methods=["GET"])
+def get_branches(trunk_id):
+    """Get all branches under a trunk"""
+    from ..models import Category
+    branches = Category.get_branches_for_trunk(trunk_id)
+    return jsonify([branch.to_dict(include_children=True) for branch in branches])
+
+@admin_bp.route("/categories/leaves/<int:branch_id>", methods=["GET"])
+def get_leaves(branch_id):
+    """Get all leaves under a branch"""
+    from ..models import Category
+    leaves = Category.get_leaves_for_branch(branch_id)
+    return jsonify([leaf.to_dict() for leaf in leaves])
+
+@admin_bp.route("/categories", methods=["POST"])
+def create_category():
+    """Create a new category (admin only)"""
+    from ..utils.helpers import admin_required
+    from flask_jwt_extended import jwt_required, get_jwt_identity
+    
+    data = request.get_json()
+    
+    # Validate required fields
+    required = ['name', 'level']
+    if not all(field in data for field in required):
+        return jsonify({"error": "Missing required fields"}), 400
+    
+    # Validate category level
+    try:
+        category_level = int(data['level'])
+        if category_level not in VALID_CATEGORY_LEVELS:
+            return jsonify({"error": "Invalid category level"}), 400
+    except (ValueError, TypeError):
+        return jsonify({"error": "Invalid category level format"}), 400
+    
+    # Validate parent_id based on level
+    parent_id = data.get('parent_id')
+    if category_level == CATEGORY_LEVEL_TRUNK and parent_id is not None:
+        return jsonify({"error": "Trunk categories cannot have a parent"}), 400
+    elif category_level == CATEGORY_LEVEL_BRANCH and not parent_id:
+        return jsonify({"error": "Branch categories require a trunk parent"}), 400
+    elif category_level == CATEGORY_LEVEL_LEAF and not parent_id:
+        return jsonify({"error": "Leaf categories require a branch parent"}), 400
+    
+    # Check if parent exists and is of correct level
+    if parent_id:
+        parent = Category.query.get(parent_id)
+        if not parent:
+            return jsonify({"error": "Parent category not found"}), 404
+        
+        if (category_level == CATEGORY_LEVEL_BRANCH and parent.level != CATEGORY_LEVEL_TRUNK) or \
+           (category_level == CATEGORY_LEVEL_LEAF and parent.level != CATEGORY_LEVEL_BRANCH):
+            level_names = {0: 'trunk', 1: 'branch', 2: 'leaf'}
+            return jsonify({"error": f"Invalid parent category level for {level_names[category_level]}"}), 400
+    
+    # Create category
+    try:
+        category = Category(
+            name=data['name'],
+            level=category_level,
+            parent_id=parent_id,
+            description=data.get('description'),
+            is_active=data.get('is_active', True)
+        )
+        db.session.add(category)
+        db.session.commit()
+        return jsonify(category.to_dict()), 201
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": str(e)}), 500
+
+@admin_bp.route("/categories/<int:category_id>", methods=["PUT"])
+def update_category(category_id):
+    """Update a category (admin only)"""
+    from ..utils.helpers import admin_required
+    from flask_jwt_extended import jwt_required, get_jwt_identity
+    
+    category = Category.query.get_or_404(category_id)
+    data = request.get_json()
+    
+    # Prevent changing level of category with children
+    if 'level' in data:
+        try:
+            new_level = int(data['level'])
+            if new_level not in VALID_CATEGORY_LEVELS:
+                return jsonify({"error": "Invalid category level"}), 400
+            if new_level != category.level and category.children:
+                return jsonify({"error": "Cannot change level of category with children"}), 400
+            category.level = new_level
+        except (ValueError, TypeError):
+            return jsonify({"error": "Invalid category level format"}), 400
+    
+    # Update fields
+    if 'name' in data:
+        category.name = data['name']
+    if 'description' in data:
+        category.description = data['description']
+    if 'is_active' in data:
+        category.is_active = data['is_active']
+    
+    try:
+        db.session.commit()
+        return jsonify(category.to_dict())
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": str(e)}), 500
+
+@admin_bp.route("/categories/<int:category_id>", methods=["DELETE"])
+def delete_category(category_id):
+    """Delete a category (admin only)"""
+    from ..models import db, Category
+    from ..utils.helpers import admin_required
+    from flask_jwt_required import jwt_required, get_jwt_identity
+    
+    category = Category.query.get_or_404(category_id)
+    
+    # Prevent deleting categories with children or products
+    if category.children:
+        return jsonify({"error": "Cannot delete category with subcategories"}), 400
+    if category.products:
+        return jsonify({"error": "Cannot delete category with products"}), 400
+    
+    try:
+        db.session.delete(category)
+        db.session.commit()
+        return jsonify({"message": "Category deleted successfully"}), 200
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": str(e)}), 500
 
 # Shop Management
 @admin_bp.route("/shops")
@@ -714,4 +853,127 @@ def product_analytics():
 def shop_analytics():
     """View shop statistics"""
     return jsonify({"message": "Shop analytics"})
+
+# Subscription Management
+@admin_bp.route("/subscription/toggle", methods=["POST"])
+def toggle_subscription():
+    """Toggle premium status and manage subscription for user/product/shop"""
+    try:
+        data = request.get_json()
+        target_type = data.get("target_type")  # "user", "product", or "shop"
+        target_id = data.get("target_id")
+        is_premium = data.get("is_premium", False)
+        start_date = data.get("start_date")
+        end_date = data.get("end_date")
+        
+        if not all([target_type, target_id]):
+            return jsonify({
+                'success': False,
+                'message': 'target_type and target_id are required'
+            }), 400
+        
+        # Validate target_type
+        if target_type not in ["user", "product", "shop"]:
+            return jsonify({
+                'success': False,
+                'message': 'target_type must be user, product, or shop'
+            }), 400
+        
+        # Map target_type to enum and model
+        type_map = {
+            "user": (SubscriptionType.USER, User),
+            "product": (SubscriptionType.PRODUCT, Product),
+            "shop": (SubscriptionType.SHOP, Shop)
+        }
+        subscription_type, model_class = type_map[target_type]
+        
+        # Get the target object
+        target = model_class.query.get(target_id)
+        if not target:
+            return jsonify({
+                'success': False,
+                'message': f'{target_type.title()} not found'
+            }), 404
+        
+        # Update premium flag if model has it
+        if hasattr(target, 'premium'):
+            target.premium = is_premium
+        else:
+            # For models without premium flag, we'll rely on subscription existence
+            pass
+        
+        # Handle subscription dates
+        if is_premium and start_date and end_date:
+            # Parse dates if they're strings
+            if isinstance(start_date, str):
+                start_date = datetime.fromisoformat(start_date.replace('Z', '+23:59'))
+            if isinstance(end_date, str):
+                end_date = datetime.fromisoformat(end_date.replace('Z', '+23:59'))
+            
+            # Create or update subscription
+            subscription = Subscription.create_subscription(
+                subscription_type=subscription_type,
+                target_id=target_id,
+                end_date=end_date,
+                created_by=admin_id
+            )
+            subscription.start_date = start_date
+            db.session.commit()
+        elif not is_premium:
+            # Deactivate any existing subscription
+            existing = Subscription.get_active_subscription(subscription_type, target_id)
+            if existing:
+                existing.deactivate()
+        
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'message': f'{target_type.title()} premium status updated',
+            'target': {
+                'id': target.id,
+                'type': target_type,
+                'is_premium': is_premium,
+                'subscription': subscription.to_dict() if is_premium and 'subscription' in locals() else None
+            }
+        }), 200
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({
+            'success': False,
+            'message': 'Error updating subscription',
+            'error': str(e)
+        }), 500
+
+@admin_bp.route("/subscription/<target_type>/<int:target_id>")
+def get_subscription(target_type, target_id):
+    """Get current subscription for a target"""
+    try:
+        if target_type not in ["user", "product", "shop"]:
+            return jsonify({
+                'success': False,
+                'message': 'Invalid target_type'
+            }), 400
+        
+        type_map = {
+            "user": SubscriptionType.USER,
+            "product": SubscriptionType.PRODUCT,
+            "shop": SubscriptionType.SHOP
+        }
+        subscription_type = type_map[target_type]
+        
+        subscription = Subscription.get_active_subscription(subscription_type, target_id)
+        
+        return jsonify({
+            'success': True,
+            'subscription': subscription.to_dict() if subscription else None
+        }), 200
+        
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'message': 'Error fetching subscription',
+            'error': str(e)
+        }), 500
 

@@ -1,6 +1,6 @@
 from flask import Blueprint, jsonify, request
-from backend.mw_app import db
-from backend.mw_app.models import Shop, UserFollowShop, User, Product, StockUpdate, VerificationOTP, VerificationStatus
+from ..extensions import db
+from ..models import Shop, UserFollowShop, User, Product, StockUpdate, VerificationOTP, VerificationStatus
 from datetime import datetime
 
 seller_bp = Blueprint('seller_bp', __name__, url_prefix='/seller')

@@ -1,5 +1,5 @@
 from .. import db
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 import enum
 import secrets
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -16,6 +16,7 @@ class Shop(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(150), nullable=False)
     description = db.Column(db.Text)
+    promoted = db.Column(db.Boolean)
     address = db.Column(db.String(255))
     region = db.Column(db.String(100))
     district = db.Column(db.String(100))
@@ -23,8 +24,8 @@ class Shop(db.Model):
     phone = db.Column(db.String(20))
     email = db.Column(db.String(120))
     is_active = db.Column(db.Boolean, default=True)
-    created_at = db.Column(db.DateTime, default=datetime.now(datetime.timezone.utc))
-    last_updated = db.Column(db.DateTime, default=datetime.now(datetime.timezone.utc), onupdate=datetime.now(datetime.timezone.utc))
+    created_at = db.Column(db.DateTime, default=datetime.now(timezone.utc))
+    last_updated = db.Column(db.DateTime, default=datetime.now(timezone.utc), onupdate=datetime.now(timezone.utc))
     
     # Verification fields
     verification_status = db.Column(db.Enum(VerificationStatus), default=VerificationStatus.PENDING, nullable=False)
@@ -39,8 +40,18 @@ class Shop(db.Model):
     # Foreign key: Shop is owned by a User (seller)
     owner_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
     
-    # Relationship to admin who verified
-    verifier = db.relationship("User", foreign_keys=[verified_by], backref="verified_shops")
+    # Explicit relationships to avoid AmbiguousForeignKeysError
+    owner = db.relationship(
+        "User",
+        foreign_keys=[owner_id],
+        back_populates="owned_shops"
+    )
+    
+    verifier = db.relationship(
+        "User",
+        foreign_keys=[verified_by],
+        back_populates="verified_shops"
+    )
     
     def __repr__(self):
         return f'<Shop {self.name}>'
@@ -61,7 +72,7 @@ class UserFollowShop(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
     shop_id = db.Column(db.Integer, db.ForeignKey("shop.id"), nullable=False)
-    followed_at = db.Column(db.DateTime, default=datetime.now(datetime.timezone.utc), nullable=False)
+    followed_at = db.Column(db.DateTime, default=datetime.now(timezone.utc), nullable=False)
     
     # Unique constraint: a user can only follow a shop once
     __table_args__ = (db.UniqueConstraint('user_id', 'shop_id', name='unique_user_shop_follow'),)
@@ -93,7 +104,7 @@ class VerificationOTP(db.Model):
     expires_at = db.Column(db.DateTime, nullable=False)
     verified_at = db.Column(db.DateTime)
     is_used = db.Column(db.Boolean, default=False)
-    created_at = db.Column(db.DateTime, default=datetime.now(datetime.timezone.utc), nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.now(timezone.utc), nullable=False)
     
     # Relationship
     shop = db.relationship("Shop", backref="otp_requests")
@@ -121,7 +132,7 @@ class VerificationOTP(db.Model):
         otp_hash = generate_password_hash(otp_code)
         
         # Calculate expiration
-        expires_at = datetime.now(datetime.timezone.utc) + timedelta(minutes=expires_in_minutes)
+        expires_at = datetime.now(timezone.utc) + timedelta(minutes=expires_in_minutes)
         
         # Create OTP record
         otp = VerificationOTP(
@@ -142,7 +153,7 @@ class VerificationOTP(db.Model):
         if self.is_used:
             return False, "OTP has already been used"
         
-        if datetime.now(datetime.timezone.utc) > self.expires_at:
+        if datetime.now(timezone.utc) > self.expires_at:
             return False, "OTP has expired"
         
         if not check_password_hash(self.otp_hash, otp_code):
@@ -150,7 +161,7 @@ class VerificationOTP(db.Model):
         
         # Mark as used
         self.is_used = True
-        self.verified_at = datetime.now(datetime.timezone.utc)
+        self.verified_at = datetime.now(timezone.utc)
         db.session.commit()
         
         return True, "OTP verified successfully"
@@ -158,7 +169,7 @@ class VerificationOTP(db.Model):
     @staticmethod
     def get_active_otp(shop_id, otp_type):
         """Get active (unused, not expired) OTP for a shop"""
-        now = datetime.now(datetime.timezone.utc)
+        now = datetime.now(timezone.utc)
         return VerificationOTP.query.filter_by(
             shop_id=shop_id,
             otp_type=otp_type,

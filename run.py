@@ -1,4 +1,4 @@
-from backend.mw_app import create_app
+from mw_app import create_app
 
 app = create_app()
 
