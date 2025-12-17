@@ -1,0 +1,101 @@
+{% extends "base.html" %}
+
+{% block title %}Categories - Market Window{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="row mb-4">
+        <div class="col-12">
+            <h1 class="fw-bold">Browse Categories</h1>
+            <p class="text-muted">Discover products by category</p>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <!-- Category Grid -->
+        <div class="col-md-6 col-lg-4">
+            <div class="card h-100 border-0 shadow-sm feature-card">
+                <div class="card-body text-center p-4">
+                    <div class="rounded-circle bg-light d-inline-flex align-items-center justify-content-center mb-3" 
+                         style="width: 80px; height: 80px;">
+                        <i class="bi bi-phone fs-2 text-primary"></i>
+                    </div>
+                    <h4 class="fw-bold">Electronics</h4>
+                    <p class="text-muted">245 products</p>
+                    <a href="/categories/electronics" class="btn btn-primary">Browse</a>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6 col-lg-4">
+            <div class="card h-100 border-0 shadow-sm feature-card">
+                <div class="card-body text-center p-4">
+                    <div class="rounded-circle bg-light d-inline-flex align-items-center justify-content-center mb-3" 
+                         style="width: 80px; height: 80px;">
+                        <i class="bi bi-tshirt fs-2 text-success"></i>
+                    </div>
+                    <h4 class="fw-bold">Fashion</h4>
+                    <p class="text-muted">189 products</p>
+                    <a href="/categories/fashion" class="btn btn-primary">Browse</a>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6 col-lg-4">
+            <div class="card h-100 border-0 shadow-sm feature-card">
+                <div class="card-body text-center p-4">
+                    <div class="rounded-circle bg-light d-inline-flex align-items-center justify-content-center mb-3" 
+                         style="width: 80px; height: 80px;">
+                        <i class="bi bi-house fs-2 text-warning"></i>
+                    </div>
+                    <h4 class="fw-bold">Home & Garden</h4>
+                    <p class="text-muted">156 products</p>
+                    <a href="/categories/home-garden" class="btn btn-primary">Browse</a>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6 col-lg-4">
+            <div class="card h-100 border-0 shadow-sm feature-card">
+                <div class="card-body text-center p-4">
+                    <div class="rounded-circle bg-light d-inline-flex align-items-center justify-content-center mb-3" 
+                         style="width: 80px; height: 80px;">
+                        <i class="bi bi-book fs-2 text-danger"></i>
+                    </div>
+                    <h4 class="fw-bold">Books</h4>
+                    <p class="text-muted">98 products</p>
+                    <a href="/categories/books" class="btn btn-primary">Browse</a>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6 col-lg-4">
+            <div class="card h-100 border-0 shadow-sm feature-card">
+                <div class="card-body text-center p-4">
+                    <div class="rounded-circle bg-light d-inline-flex align-items-center justify-content-center mb-3" 
+                         style="width: 80px; height: 80px;">
+                        <i class="bi bi-dumbbell fs-2 text-info"></i>
+                    </div>
+                    <h4 class="fw-bold">Sports</h4>
+                    <p class="text-muted">67 products</p>
+                    <a href="/categories/sports" class="btn btn-primary">Browse</a>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6 col-lg-4">
+            <div class="card h-100 border-0 shadow-sm feature-card">
+                <div class="card-body text-center p-4">
+                    <div class="rounded-circle bg-light d-inline-flex align-items-center justify-content-center mb-3" 
+                         style="width: 80px; height: 80px;">
+                        <i class="bi bi-palette fs-2" style="color: var(--secondary-mauve);"></i>
+                    </div>
+                    <h4 class="fw-bold">Arts & Crafts</h4>
+                    <p class="text-muted">45 products</p>
+                    <a href="/categories/arts" class="btn btn-primary">Browse</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

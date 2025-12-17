@@ -696,6 +696,189 @@ def shop_analytics():
     """View shop statistics"""
     return jsonify({"message": "Shop analytics"})
 
+# Bulk Operations
+@admin_bp.route("/bulk/categories", methods=["POST"])
+def bulk_update_categories():
+    """Bulk update categories (activate/deactivate, move, etc.)"""
+    try:
+        data = request.get_json()
+        operation = data.get("operation")  # "activate", "deactivate", "move", "delete"
+        category_ids = data.get("category_ids", [])
+        
+        if not operation or not category_ids:
+            return jsonify({
+                'success': False,
+                'message': 'operation and category_ids are required'
+            }), 400
+        
+        if operation not in ["activate", "deactivate", "move", "delete"]:
+            return jsonify({
+                'success': False,
+                'message': 'Invalid operation. Must be activate, deactivate, move, or delete'
+            }), 400
+        
+        results = []
+        errors = []
+        
+        for category_id in category_ids:
+            try:
+                category = Category.query.get(category_id)
+                if not category:
+                    errors.append({'category_id': category_id, 'error': 'Category not found'})
+                    continue
+                
+                if operation == "activate":
+                    category.is_active = True
+                    results.append({'category_id': category_id, 'action': 'activated'})
+                
+                elif operation == "deactivate":
+                    # Check if category has products
+                    if category.products:
+                        errors.append({'category_id': category_id, 'error': 'Cannot deactivate category with products'})
+                        continue
+                    category.is_active = False
+                    results.append({'category_id': category_id, 'action': 'deactivated'})
+                
+                elif operation == "delete":
+                    # Check if category has children or products
+                    if category.children:
+                        errors.append({'category_id': category_id, 'error': 'Cannot delete category with subcategories'})
+                        continue
+                    if category.products:
+                        errors.append({'category_id': category_id, 'error': 'Cannot delete category with products'})
+                        continue
+                    db.session.delete(category)
+                    results.append({'category_id': category_id, 'action': 'deleted'})
+                
+                elif operation == "move":
+                    new_parent_id = data.get("new_parent_id")
+                    if not new_parent_id:
+                        errors.append({'category_id': category_id, 'error': 'new_parent_id required for move operation'})
+                        continue
+                    
+                    new_parent = Category.query.get(new_parent_id)
+                    if not new_parent:
+                        errors.append({'category_id': category_id, 'error': 'New parent category not found'})
+                        continue
+                    
+                    # Validate parent-child relationship
+                    if category.level == CATEGORY_LEVEL_TRUNK:
+                        errors.append({'category_id': category_id, 'error': 'Cannot move trunk categories'})
+                        continue
+                    
+                    if (category.level == CATEGORY_LEVEL_BRANCH and new_parent.level != CATEGORY_LEVEL_TRUNK) or \
+                       (category.level == CATEGORY_LEVEL_LEAF and new_parent.level != CATEGORY_LEVEL_BRANCH):
+                        errors.append({'category_id': category_id, 'error': 'Invalid parent category level'})
+                        continue
+                    
+                    category.parent_id = new_parent_id
+                    results.append({'category_id': category_id, 'action': 'moved', 'new_parent_id': new_parent_id})
+                
+            except Exception as e:
+                errors.append({'category_id': category_id, 'error': str(e)})
+                continue
+        
+        if results:
+            db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'message': f'Bulk {operation} completed',
+            'processed': len(results),
+            'errors': len(errors),
+            'results': results,
+            'errors': errors
+        }), 200
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({
+            'success': False,
+            'message': 'Error performing bulk operation',
+            'error': str(e)
+        }), 500
+
+@admin_bp.route("/bulk/shops/verify", methods=["POST"])
+def bulk_verify_shops():
+    """Bulk verify shops (approve, reject, under_review)"""
+    try:
+        data = request.get_json()
+        action = data.get("action")  # "verify", "reject", "under_review"
+        shop_ids = data.get("shop_ids", [])
+        rejection_reason = data.get("rejection_reason", "")
+        admin_id = data.get("admin_id")
+        
+        if not action or not shop_ids:
+            return jsonify({
+                'success': False,
+                'message': 'action and shop_ids are required'
+            }), 400
+        
+        if action not in ["verify", "reject", "under_review"]:
+            return jsonify({
+                'success': False,
+                'message': 'Invalid action. Must be verify, reject, or under_review'
+            }), 400
+        
+        if action == "reject" and not rejection_reason:
+            return jsonify({
+                'success': False,
+                'message': 'rejection_reason is required for reject action'
+            }), 400
+        
+        results = []
+        errors = []
+        
+        for shop_id in shop_ids:
+            try:
+                shop = Shop.query.get(shop_id)
+                if not shop:
+                    errors.append({'shop_id': shop_id, 'error': 'Shop not found'})
+                    continue
+                
+                if action == "verify":
+                    shop.verification_status = VERIFICATION_STATUS_VERIFIED
+                    shop.verified_at = datetime.now(datetime.timezone.utc)
+                    shop.verified_by = admin_id
+                    shop.rejection_reason = None
+                    results.append({'shop_id': shop_id, 'action': 'verified'})
+                
+                elif action == "reject":
+                    shop.verification_status = VERIFICATION_STATUS_REJECTED
+                    shop.rejection_reason = rejection_reason
+                    shop.verified_at = None
+                    shop.verified_by = None
+                    results.append({'shop_id': shop_id, 'action': 'rejected', 'reason': rejection_reason})
+                
+                elif action == "under_review":
+                    shop.verification_status = VERIFICATION_STATUS_UNDER_REVIEW
+                    shop.rejection_reason = None
+                    results.append({'shop_id': shop_id, 'action': 'under_review'})
+                
+            except Exception as e:
+                errors.append({'shop_id': shop_id, 'error': str(e)})
+                continue
+        
+        if results:
+            db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'message': f'Bulk shop {action} completed',
+            'processed': len(results),
+            'errors': len(errors),
+            'results': results,
+            'errors': errors
+        }), 200
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({
+            'success': False,
+            'message': 'Error performing bulk shop verification',
+            'error': str(e)
+        }), 500
+
 # Subscription Management
 @admin_bp.route("/subscription/toggle", methods=["POST"])
 def toggle_subscription():
@@ -816,6 +999,249 @@ def get_subscription(target_type, target_id):
         return jsonify({
             'success': False,
             'message': 'Error fetching subscription',
+            'error': str(e)
+        }), 500
+
+# Report Generation and Data Export
+@admin_bp.route("/reports/export", methods=["POST"])
+def export_data():
+    """Export data in various formats (CSV, JSON, Excel)"""
+    try:
+        data = request.get_json()
+        report_type = data.get("report_type")  # "users", "shops", "products", "categories", "verification"
+        export_format = data.get("format", "json")  # "json", "csv", "excel"
+        filters = data.get("filters", {})
+        
+        if not report_type:
+            return jsonify({
+                'success': False,
+                'message': 'report_type is required'
+            }), 400
+        
+        if export_format not in ["json", "csv"]:
+            return jsonify({
+                'success': False,
+                'message': 'format must be json or csv'
+            }), 400
+        
+        # Get data based on report type
+        if report_type == "users":
+            query = User.query
+            if filters.get("role"):
+                query = query.filter(User.role == filters["role"])
+            if filters.get("status"):
+                query = query.filter(User.status == filters["status"])
+            if filters.get("premium") is not None:
+                query = query.filter(User.premium == filters["premium"])
+            records = query.all()
+            
+        elif report_type == "shops":
+            query = Shop.query
+            if filters.get("verification_status"):
+                query = query.filter(Shop.verification_status == filters["verification_status"])
+            if filters.get("is_active") is not None:
+                query = query.filter(Shop.is_active == filters["is_active"])
+            records = query.all()
+            
+        elif report_type == "products":
+            query = Product.query
+            if filters.get("is_active") is not None:
+                query = query.filter(Product.is_active == filters["is_active"])
+            if filters.get("shop_id"):
+                query = query.filter(Product.shop_id == filters["shop_id"])
+            if filters.get("category_id"):
+                query = query.filter(Product.category_id == filters["category_id"])
+            records = query.all()
+            
+        elif report_type == "categories":
+            query = Category.query
+            if filters.get("level") is not None:
+                query = query.filter(Category.level == filters["level"])
+            if filters.get("is_active") is not None:
+                query = query.filter(Category.is_active == filters["is_active"])
+            records = query.all()
+            
+        elif report_type == "verification":
+            # Verification status report
+            query = Shop.query
+            if filters.get("status"):
+                query = query.filter(Shop.verification_status == filters["status"])
+            records = query.all()
+            
+        else:
+            return jsonify({
+                'success': False,
+                'message': 'Invalid report_type'
+            }), 400
+        
+        # Generate export data
+        export_data = []
+        for record in records:
+            if report_type == "users":
+                export_data.append({
+                    'id': record.id,
+                    'username': record.username,
+                    'email': record.email,
+                    'role': record.role,
+                    'status': record.status,
+                    'premium': record.premium,
+                    'created_at': record.created_at.isoformat() if record.created_at else None,
+                    'last_login': record.last_login.isoformat() if record.last_login else None
+                })
+            elif report_type == "shops":
+                export_data.append({
+                    'id': record.id,
+                    'name': record.name,
+                    'owner_id': record.owner_id,
+                    'verification_status': record.verification_status,
+                    'phone_verified': record.phone_verified,
+                    'email_verified': record.email_verified,
+                    'is_active': record.is_active,
+                    'created_at': record.created_at.isoformat() if record.created_at else None,
+                    'verified_at': record.verified_at.isoformat() if record.verified_at else None
+                })
+            elif report_type == "products":
+                export_data.append({
+                    'id': record.id,
+                    'name': record.name,
+                    'shop_id': record.shop_id,
+                    'category_id': record.category_id,
+                    'price': record.price,
+                    'stock': record.stock,
+                    'is_active': record.is_active,
+                    'created_at': record.created_at.isoformat() if record.created_at else None
+                })
+            elif report_type == "categories":
+                export_data.append({
+                    'id': record.id,
+                    'name': record.name,
+                    'level': record.level,
+                    'parent_id': record.parent_id,
+                    'is_active': record.is_active,
+                    'created_at': record.created_at.isoformat() if record.created_at else None
+                })
+            elif report_type == "verification":
+                export_data.append({
+                    'shop_id': record.id,
+                    'shop_name': record.name,
+                    'verification_status': record.verification_status,
+                    'phone_verified': record.phone_verified,
+                    'email_verified': record.email_verified,
+                    'verification_requested_at': record.verification_requested_at.isoformat() if record.verification_requested_at else None,
+                    'verified_at': record.verified_at.isoformat() if record.verified_at else None,
+                    'rejection_reason': record.rejection_reason
+                })
+        
+        # Format response
+        if export_format == "json":
+            return jsonify({
+                'success': True,
+                'report_type': report_type,
+                'format': export_format,
+                'count': len(export_data),
+                'generated_at': datetime.now(datetime.timezone.utc).isoformat(),
+                'data': export_data
+            }), 200
+        
+        elif export_format == "csv":
+            # Simple CSV generation (in production, use csv library)
+            if not export_data:
+                csv_content = "No data found"
+            else:
+                headers = list(export_data[0].keys())
+                csv_rows = [",".join(headers)]
+                for row in export_data:
+                    csv_row = ",".join([str(row.get(h, "")) for h in headers])
+                    csv_rows.append(csv_row)
+                csv_content = "\n".join(csv_rows)
+            
+            return jsonify({
+                'success': True,
+                'report_type': report_type,
+                'format': export_format,
+                'count': len(export_data),
+                'generated_at': datetime.now(datetime.timezone.utc).isoformat(),
+                'csv_content': csv_content
+            }), 200
+        
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'message': 'Error generating report',
+            'error': str(e)
+        }), 500
+
+@admin_bp.route("/reports/compliance")
+def compliance_report():
+    """Generate compliance reports (verification status, premium subscriptions, etc.)"""
+    try:
+        # Verification compliance
+        total_shops = Shop.query.count()
+        verified_shops = Shop.query.filter_by(verification_status=VERIFICATION_STATUS_VERIFIED).count()
+        pending_shops = Shop.query.filter_by(verification_status=VERIFICATION_STATUS_PENDING).count()
+        under_review_shops = Shop.query.filter_by(verification_status=VERIFICATION_STATUS_UNDER_REVIEW).count()
+        rejected_shops = Shop.query.filter_by(verification_status=VERIFICATION_STATUS_REJECTED).count()
+        
+        # Phone/Email verification compliance
+        phone_verified_shops = Shop.query.filter_by(phone_verified=True).count()
+        email_verified_shops = Shop.query.filter_by(email_verified=True).count()
+        fully_verified_shops = Shop.query.filter(
+            Shop.phone_verified == True,
+            Shop.email_verified == True
+        ).count()
+        
+        # User compliance
+        total_users = User.query.count()
+        premium_users = User.query.filter_by(premium=True).count()
+        active_users = User.query.filter_by(status='active').count()
+        
+        # Product compliance
+        total_products = Product.query.count()
+        active_products = Product.query.filter_by(is_active=True).count()
+        out_of_stock_products = Product.query.filter(Product.stock <= 0).count()
+        
+        # Category structure
+        total_categories = Category.query.count()
+        active_categories = Category.query.filter_by(is_active=True).count()
+        
+        return jsonify({
+            'success': True,
+            'report_type': 'compliance',
+            'generated_at': datetime.now(datetime.timezone.utc).isoformat(),
+            'verification_compliance': {
+                'total_shops': total_shops,
+                'verified_shops': verified_shops,
+                'pending_shops': pending_shops,
+                'under_review_shops': under_review_shops,
+                'rejected_shops': rejected_shops,
+                'verification_rate': round((verified_shops / total_shops * 100) if total_shops > 0 else 0, 2),
+                'phone_verified': phone_verified_shops,
+                'email_verified': email_verified_shops,
+                'fully_verified': fully_verified_shops
+            },
+            'user_compliance': {
+                'total_users': total_users,
+                'premium_users': premium_users,
+                'active_users': active_users,
+                'premium_rate': round((premium_users / total_users * 100) if total_users > 0 else 0, 2)
+            },
+            'product_compliance': {
+                'total_products': total_products,
+                'active_products': active_products,
+                'out_of_stock_products': out_of_stock_products,
+                'active_rate': round((active_products / total_products * 100) if total_products > 0 else 0, 2)
+            },
+            'category_compliance': {
+                'total_categories': total_categories,
+                'active_categories': active_categories,
+                'active_rate': round((active_categories / total_categories * 100) if total_categories > 0 else 0, 2)
+            }
+        }), 200
+        
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'message': 'Error generating compliance report',
             'error': str(e)
         }), 500
 

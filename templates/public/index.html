@@ -1,0 +1,268 @@
+{% extends "base.html" %}
+
+{% block title %}Market Window - Your Trusted Marketplace{% endblock %}
+
+{% block content %}
+<!-- Hero Section -->
+<section class="hero-section py-5">
+    <div class="container">
+        <div class="row align-items-center min-vh-100">
+            <div class="col-lg-6">
+                <h1 class="display-4 fw-bold text-white mb-4">
+                    Welcome to <span class="text-warning">Market Window</span>
+                </h1>
+                <p class="lead text-white mb-5">
+                    Connect with trusted local sellers and discover amazing products in your community.
+                </p>
+                <div class="d-flex gap-3">
+                    <a href="/register" class="btn btn-warning btn-lg text-dark fw-bold">
+                        Get Started <i class="bi bi-arrow-right ms-2"></i>
+                    </a>
+                    <a href="/shops" class="btn btn-outline-light btn-lg">
+                        Browse Shops <i class="bi bi-shop ms-2"></i>
+                    </a>
+                </div>
+            </div>
+            <div class="col-lg-6">
+                <div class="text-center">
+                    <img src="https://via.placeholder.com/500x400" alt="Marketplace" class="img-fluid rounded-3 shadow-lg">
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Categories Section (Play Store Style) -->
+<section class="py-4 bg-white">
+    <div class="container">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h3 class="fw-bold mb-0">Browse Categories</h3>
+            <button class="btn btn-sm btn-outline-primary">View All</button>
+        </div>
+        
+        <!-- Horizontal Scrolling Categories -->
+        <div class="category-scroll pb-2">
+            <div class="d-flex gap-3" style="min-width: max-content;">
+                <!-- Category Cards -->
+                <div class="category-card" x-data="{ expanded: false }">
+                    <div class="card border-0 shadow-sm" style="width: 200px;">
+                        <div class="card-body text-center p-3">
+                            <div class="rounded-circle bg-light d-inline-flex align-items-center justify-content-center mb-2" 
+                                 style="width: 60px; height: 60px;">
+                                <i class="bi bi-phone fs-3 text-primary"></i>
+                            </div>
+                            <h6 class="fw-bold">Electronics</h6>
+                            <small class="text-muted">245 products</small>
+                        </div>
+                    </div>
+                    <div class="text-center mt-2">
+                        <button @click="expanded = !expanded" class="btn btn-sm btn-primary">
+                            <i class="bi bi-arrows-expand me-1"></i>Expand
+                        </button>
+                    </div>
+                    
+                    <!-- Expanded View -->
+                    <div x-show="expanded" x-transition 
+                         class="position-fixed top-0 start-0 w-100 h-100 bg-white" 
+                         style="z-index: 1050;">
+                        <div class="container py-4">
+                            <div class="d-flex justify-content-between align-items-center mb-4">
+                                <h4 class="fw-bold">Electronics</h4>
+                                <button @click="expanded = false" class="btn btn-close"></button>
+                            </div>
+                            
+                            <div class="row g-3">
+                                <!-- Products in this category -->
+                                <div class="col-6 col-md-3">
+                                    <div class="card">
+                                        <img src="https://via.placeholder.com/150x100" class="card-img-top" alt="Product">
+                                        <div class="card-body p-2">
+                                            <h6 class="card-title small mb-1">Smartphone</h6>
+                                            <p class="card-text small text-muted mb-1">$299</p>
+                                            <small class="text-success">In Stock</small>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-6 col-md-3">
+                                    <div class="card">
+                                        <img src="https://via.placeholder.com/150x100" class="card-img-top" alt="Product">
+                                        <div class="card-body p-2">
+                                            <h6 class="card-title small mb-1">Laptop</h6>
+                                            <p class="card-text small text-muted mb-1">$899</p>
+                                            <small class="text-success">In Stock</small>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-6 col-md-3">
+                                    <div class="card">
+                                        <img src="https://via.placeholder.com/150x100" class="card-img-top" alt="Product">
+                                        <div class="card-body p-2">
+                                            <h6 class="card-title small mb-1">Headphones</h6>
+                                            <p class="card-text small text-muted mb-1">$79</p>
+                                            <small class="text-warning">Low Stock</small>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-6 col-md-3">
+                                    <div class="card">
+                                        <img src="https://via.placeholder.com/150x100" class="card-img-top" alt="Product">
+                                        <div class="card-body p-2">
+                                            <h6 class="card-title small mb-1">Tablet</h6>
+                                            <p class="card-text small text-muted mb-1">$399</p>
+                                            <small class="text-success">In Stock</small>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- More categories... -->
+                <div class="category-card" x-data="{ expanded: false }">
+                    <div class="card border-0 shadow-sm" style="width: 200px;">
+                        <div class="card-body text-center p-3">
+                            <div class="rounded-circle bg-light d-inline-flex align-items-center justify-content-center mb-2" 
+                                 style="width: 60px; height: 60px;">
+                                <i class="bi bi-tshirt fs-3 text-success"></i>
+                            </div>
+                            <h6 class="fw-bold">Fashion</h6>
+                            <small class="text-muted">189 products</small>
+                        </div>
+                    </div>
+                    <div class="text-center mt-2">
+                        <button @click="expanded = !expanded" class="btn btn-sm btn-primary">
+                            <i class="bi bi-arrows-expand me-1"></i>Expand
+                        </button>
+                    </div>
+                </div>
+
+                <div class="category-card" x-data="{ expanded: false }">
+                    <div class="card border-0 shadow-sm" style="width: 200px;">
+                        <div class="card-body text-center p-3">
+                            <div class="rounded-circle bg-light d-inline-flex align-items-center justify-content-center mb-2" 
+                                 style="width: 60px; height: 60px;">
+                                <i class="bi bi-house fs-3 text-warning"></i>
+                            </div>
+                            <h6 class="fw-bold">Home & Garden</h6>
+                            <small class="text-muted">156 products</small>
+                        </div>
+                    </div>
+                    <div class="text-center mt-2">
+                        <button @click="expanded = !expanded" class="btn btn-sm btn-primary">
+                            <i class="bi bi-arrows-expand me-1"></i>Expand
+                        </button>
+                    </div>
+                </div>
+
+                <div class="category-card" x-data="{ expanded: false }">
+                    <div class="card border-0 shadow-sm" style="width: 200px;">
+                        <div class="card-body text-center p-3">
+                            <div class="rounded-circle bg-light d-inline-flex align-items-center justify-content-center mb-2" 
+                                 style="width: 60px; height: 60px;">
+                                <i class="bi bi-book fs-3 text-danger"></i>
+                            </div>
+                            <h6 class="fw-bold">Books</h6>
+                            <small class="text-muted">98 products</small>
+                        </div>
+                    </div>
+                    <div class="text-center mt-2">
+                        <button @click="expanded = !expanded" class="btn btn-sm btn-primary">
+                            <i class="bi bi-arrows-expand me-1"></i>Expand
+                        </button>
+                    </div>
+                </div>
+
+                <div class="category-card" x-data="{ expanded: false }">
+                    <div class="card border-0 shadow-sm" style="width: 200px;">
+                        <div class="card-body text-center p-3">
+                            <div class="rounded-circle bg-light d-inline-flex align-items-center justify-content-center mb-2" 
+                                 style="width: 60px; height: 60px;">
+                                <i class="bi bi-dumbbell fs-3 text-info"></i>
+                            </div>
+                            <h6 class="fw-bold">Sports</h6>
+                            <small class="text-muted">67 products</small>
+                        </div>
+                    </div>
+                    <div class="text-center mt-2">
+                        <button @click="expanded = !expanded" class="btn btn-sm btn-primary">
+                            <i class="bi bi-arrows-expand me-1"></i>Expand
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Stats Section -->
+<section class="py-5 bg-light">
+    <div class="container">
+        <div class="text-center mb-5">
+            <h2 class="display-5 fw-bold">Trusted by Thousands</h2>
+            <p class="lead text-muted">Join our growing community of buyers and sellers</p>
+        </div>
+
+        <div class="row g-4 text-center">
+            <div class="col-6 col-md-3">
+                <div class="stat-number">500+</div>
+                <div class="text-muted fw-semibold">Verified Shops</div>
+            </div>
+            <div class="col-6 col-md-3">
+                <div class="stat-number">10K+</div>
+                <div class="text-muted fw-semibold">Products Listed</div>
+            </div>
+            <div class="col-6 col-md-3">
+                <div class="stat-number">2K+</div>
+                <div class="text-muted fw-semibold">Happy Customers</div>
+            </div>
+            <div class="col-6 col-md-3">
+                <div class="stat-number">98%</div>
+                <div class="text-muted fw-semibold">Satisfaction Rate</div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- CTA Section -->
+<section class="py-5 bg-primary text-white">
+    <div class="container">
+        <div class="row align-items-center">
+            <div class="col-lg-8">
+                <h2 class="fw-bold mb-3">Ready to Start Selling?</h2>
+                <p class="lead mb-0">Join thousands of trusted sellers on Market Window and grow your business today.</p>
+            </div>
+            <div class="col-lg-4 text-lg-end mt-3 mt-lg-0">
+                <a href="/register" class="btn btn-warning btn-lg text-dark fw-bold">
+                    Become a Seller <i class="bi bi-arrow-right ms-2"></i>
+                </a>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Initialize Bootstrap tooltips
+        var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
+        var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+            return new bootstrap.Tooltip(tooltipTriggerEl)
+        });
+
+        // Animate stats on scroll
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('animate__animated', 'animate__fadeInUp');
+                }
+            });
+        });
+        
+        document.querySelectorAll('.stat-number').forEach(el => {
+            observer.observe(el);
+        });
+    });
+</script>
+{% endblock %}

@@ -2,5 +2,7 @@ Flask
 Flask-SQLAlchemy
 Flask-Migrate
 Flask-Msearch
+Flask-WTF
+WTForms
 gunicorn
 psycopg2-binary

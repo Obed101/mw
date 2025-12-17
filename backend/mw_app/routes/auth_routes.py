@@ -1,4 +1,4 @@
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify, redirect, url_for, flash
 from flask_jwt_extended import (
     create_access_token, create_refresh_token, 
     jwt_required, get_jwt_identity, get_jwt,
@@ -14,24 +14,66 @@ auth_bp = Blueprint('auth', __name__)
 @auth_bp.route('/register', methods=['POST'])
 def register():
     """Register a new user"""
-    data = request.get_json()
+    # Handle both JSON and form data
+    if request.is_json:
+        data = request.get_json()
+    else:
+        data = request.form.to_dict()
     
     # Validate required fields
-    required = ['username', 'email', 'password', 'role']
+    required = ['username', 'email', 'password', 'confirm_password', 'role']
     if not all(field in data for field in required):
-        return jsonify({"error": "Missing required fields"}), 400
+        error_msg = "Missing required fields"
+        if request.is_json:
+            return jsonify({"error": error_msg}), 400
+        else:
+            flash(error_msg, 'error')
+            return redirect(url_for('main_bp.register'))
+    
+    # Validate password confirmation
+    if data['password'] != data['confirm_password']:
+        error_msg = "Passwords do not match"
+        if request.is_json:
+            return jsonify({"error": error_msg}), 400
+        else:
+            flash(error_msg, 'error')
+            return redirect(url_for('main_bp.register'))
+    
+    # Validate terms agreement
+    if 'terms' not in data or not data['terms']:
+        error_msg = "You must agree to the terms of service"
+        if request.is_json:
+            return jsonify({"error": error_msg}), 400
+        else:
+            flash(error_msg, 'error')
+            return redirect(url_for('main_bp.register'))
     
     # Validate role
     valid_roles = [USER_ROLE_ADMIN, USER_ROLE_SELLER, USER_ROLE_BUYER]
     if data['role'] not in valid_roles:
-        return jsonify({"error": "Invalid role"}), 400
+        error_msg = "Invalid role"
+        if request.is_json:
+            return jsonify({"error": error_msg}), 400
+        else:
+            flash(error_msg, 'error')
+            return redirect(url_for('main_bp.register'))
     
     # Check if user already exists
     if User.query.filter_by(email=data['email']).first():
-        return jsonify({"error": "Email already registered"}), 400
+        error_msg = "Email already registered"
+        if request.is_json:
+            return jsonify({"error": error_msg}), 400
+        else:
+            flash(error_msg, 'error')
+            return redirect(url_for('main_bp.register'))
     
     if User.query.filter_by(username=data['username']).first():
-        return jsonify({"error": "Username already taken"}), 400
+        error_msg = "Username already taken"
+        if request.is_json:
+            return jsonify({"error": error_msg}), 400
+        else:
+            flash(error_msg, 'error')
+            return redirect(url_for('main_bp.register'))
     
     # Create new user
     try:
@@ -44,36 +86,49 @@ def register():
         user.set_password(data['password'])
         
         # Add optional fields
-        if 'first_name' in data:
+        if 'first_name' in data and data['first_name']:
             user.first_name = data['first_name']
-        if 'last_name' in data:
+        if 'last_name' in data and data['last_name']:
             user.last_name = data['last_name']
-        if 'phone' in data:
+        if 'phone' in data and data['phone']:
             user.phone = data['phone']
-        if 'region' in data:
+        if 'region' in data and data['region']:
             user.region = data['region']
-        if 'district' in data:
+        if 'district' in data and data['district']:
             user.district = data['district']
-        if 'town' in data:
+        if 'town' in data and data['town']:
             user.town = data['town']
         
         db.session.add(user)
         db.session.commit()
         
-        # Generate tokens
+        # Log user in automatically after registration
+        user.update_last_login()
+        
+        # Generate tokens for API usage
         access_token = create_access_token(identity=user.id)
         refresh_token = create_refresh_token(identity=user.id)
         
-        return jsonify({
-            "message": "User registered successfully",
-            "user": user.to_dict(),
-            "access_token": access_token,
-            "refresh_token": refresh_token
-        }), 201
+        # Handle form vs API responses
+        if request.is_json:
+            return jsonify({
+                "message": "User registered successfully",
+                "user": user.to_dict(),
+                "access_token": access_token,
+                "refresh_token": refresh_token
+            }), 201
+        else:
+            # For form submissions, flash message and redirect
+            flash('Registration successful! You are now logged in.', 'success')
+            return redirect(url_for('main_bp.login'))
         
     except Exception as e:
         db.session.rollback()
-        return jsonify({"error": str(e)}), 500
+        if request.is_json:
+            return jsonify({"error": str(e)}), 500
+        else:
+            flash('An error occurred during registration. Please try again.', 'error')
+            return redirect(url_for('main_bp.register'))
 
 @auth_bp.route('/login', methods=['POST'])
 def login():

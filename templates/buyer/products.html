@@ -1,0 +1,325 @@
+{% extends "base.html" %}
+
+{% block title %}Products - Market Window{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="row mb-4">
+        <div class="col-12">
+            <h1 class="fw-bold">Browse Products</h1>
+            <p class="text-muted">Discover amazing products from verified sellers</p>
+        </div>
+    </div>
+
+    <!-- Search and Filters -->
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="input-group">
+                <span class="input-group-text"><i class="bi bi-search"></i></span>
+                <input type="text" class="form-control" placeholder="Search products...">
+            </div>
+        </div>
+        <div class="col-md-3">
+            <select class="form-select">
+                <option selected>All Categories</option>
+                <option>Electronics</option>
+                <option>Fashion</option>
+                <option>Home & Garden</option>
+            </select>
+        </div>
+        <div class="col-md-3">
+            <select class="form-select">
+                <option selected>Sort by</option>
+                <option>Price: Low to High</option>
+                <option>Price: High to Low</option>
+                <option>Newest</option>
+                <option>Popular</option>
+            </select>
+        </div>
+    </div>
+
+    <!-- Products Grid -->
+    <div class="row g-4">
+        <div class="col-md-6 col-lg-4 col-xl-3">
+            <div class="card h-100 border-0 shadow-sm product-card">
+                <img src="https://via.placeholder.com/250x200" class="card-img-top" alt="Product">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start mb-2">
+                        <h6 class="card-title fw-bold">Smartphone Pro</h6>
+                        <span class="badge bg-success">In Stock</span>
+                    </div>
+                    <p class="card-text text-muted small mb-2">Tech Haven</p>
+                    <div class="d-flex align-items-center mb-2">
+                        <div class="text-warning me-2">
+                            <i class="bi bi-star-fill"></i>
+                            <i class="bi bi-star-fill"></i>
+                            <i class="bi bi-star-fill"></i>
+                            <i class="bi bi-star-fill"></i>
+                            <i class="bi bi-star-half"></i>
+                        </div>
+                        <small class="text-muted">4.5</small>
+                    </div>
+                    <h5 class="text-primary fw-bold mb-2">$299</h5>
+                    <p class="card-text small text-muted">Latest smartphone with amazing features and long battery life.</p>
+                    <div class="d-flex gap-2">
+                        <button class="btn btn-primary btn-sm flex-fill">Add to Cart</button>
+                        <button class="btn btn-outline-primary btn-sm">
+                            <i class="bi bi-heart"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6 col-lg-4 col-xl-3">
+            <div class="card h-100 border-0 shadow-sm product-card">
+                <img src="https://via.placeholder.com/250x200" class="card-img-top" alt="Product">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start mb-2">
+                        <h6 class="card-title fw-bold">Designer Jacket</h6>
+                        <span class="badge bg-success">In Stock</span>
+                    </div>
+                    <p class="card-text text-muted small mb-2">Fashion Forward</p>
+                    <div class="d-flex align-items-center mb-2">
+                        <div class="text-warning me-2">
+                            <i class="bi bi-star-fill"></i>
+                            <i class="bi bi-star-fill"></i>
+                            <i class="bi bi-star-fill"></i>
+                            <i class="bi bi-star-fill"></i>
+                            <i class="bi bi-star"></i>
+                        </div>
+                        <small class="text-muted">4.0</small>
+                    </div>
+                    <h5 class="text-primary fw-bold mb-2">$89</h5>
+                    <p class="card-text small text-muted">Stylish designer jacket perfect for any occasion.</p>
+                    <div class="d-flex gap-2">
+                        <button class="btn btn-primary btn-sm flex-fill">Add to Cart</button>
+                        <button class="btn btn-outline-primary btn-sm">
+                            <i class="bi bi-heart"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6 col-lg-4 col-xl-3">
+            <div class="card h-100 border-0 shadow-sm product-card">
+                <img src="https://via.placeholder.com/250x200" class="card-img-top" alt="Product">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start mb-2">
+                        <h6 class="card-title fw-bold">Coffee Maker</h6>
+                        <span class="badge bg-warning">Low Stock</span>
+                    </div>
+                    <p class="card-text text-muted small mb-2">Home Essentials</p>
+                    <div class="d-flex align-items-center mb-2">
+                        <div class="text-warning me-2">
+                            <i class="bi bi-star-fill"></i>
+                            <i class="bi bi-star-fill"></i>
+                            <i class="bi bi-star-fill"></i>
+                            <i class="bi bi-star-fill"></i>
+                            <i class="bi bi-star-fill"></i>
+                        </div>
+                        <small class="text-muted">5.0</small>
+                    </div>
+                    <h5 class="text-primary fw-bold mb-2">$149</h5>
+                    <p class="card-text small text-muted">Professional coffee maker for the perfect brew every time.</p>
+                    <div class="d-flex gap-2">
+                        <button class="btn btn-primary btn-sm flex-fill">Add to Cart</button>
+                        <button class="btn btn-outline-primary btn-sm">
+                            <i class="bi bi-heart"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6 col-lg-4 col-xl-3">
+            <div class="card h-100 border-0 shadow-sm product-card">
+                <img src="https://via.placeholder.com/250x200" class="card-img-top" alt="Product">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start mb-2">
+                        <h6 class="card-title fw-bold">Bestseller Novel</h6>
+                        <span class="badge bg-success">In Stock</span>
+                    </div>
+                    <p class="card-text text-muted small mb-2">Bookworm's Paradise</p>
+                    <div class="d-flex align-items-center mb-2">
+                        <div class="text-warning me-2">
+                            <i class="bi bi-star-fill"></i>
+                            <i class="bi bi-star-fill"></i>
+                            <i class="bi bi-star-fill"></i>
+                            <i class="bi bi-star-fill"></i>
+                            <i class="bi bi-star-half"></i>
+                        </div>
+                        <small class="text-muted">4.7</small>
+                    </div>
+                    <h5 class="text-primary fw-bold mb-2">$19</h5>
+                    <p class="card-text small text-muted">Captivating story that will keep you turning pages.</p>
+                    <div class="d-flex gap-2">
+                        <button class="btn btn-primary btn-sm flex-fill">Add to Cart</button>
+                        <button class="btn btn-outline-primary btn-sm">
+                            <i class="bi bi-heart"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6 col-lg-4 col-xl-3">
+            <div class="card h-100 border-0 shadow-sm product-card">
+                <img src="https://via.placeholder.com/250x200" class="card-img-top" alt="Product">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start mb-2">
+                        <h6 class="card-title fw-bold">Yoga Mat</h6>
+                        <span class="badge bg-success">In Stock</span>
+                    </div>
+                    <p class="card-text text-muted small mb-2">Sports Central</p>
+                    <div class="d-flex align-items-center mb-2">
+                        <div class="text-warning me-2">
+                            <i class="bi bi-star-fill"></i>
+                            <i class="bi bi-star-fill"></i>
+                            <i class="bi bi-star-fill"></i>
+                            <i class="bi bi-star"></i>
+                            <i class="bi bi-star"></i>
+                        </div>
+                        <small class="text-muted">3.8</small>
+                    </div>
+                    <h5 class="text-primary fw-bold mb-2">$29</h5>
+                    <p class="card-text small text-muted">High-quality yoga mat for comfortable workouts.</p>
+                    <div class="d-flex gap-2">
+                        <button class="btn btn-primary btn-sm flex-fill">Add to Cart</button>
+                        <button class="btn btn-outline-primary btn-sm">
+                            <i class="bi bi-heart"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6 col-lg-4 col-xl-3">
+            <div class="card h-100 border-0 shadow-sm product-card">
+                <img src="https://via.placeholder.com/250x200" class="card-img-top" alt="Product">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start mb-2">
+                        <h6 class="card-title fw-bold">Art Set</h6>
+                        <span class="badge bg-danger">Out of Stock</span>
+                    </div>
+                    <p class="card-text text-muted small mb-2">Artistic Touch</p>
+                    <div class="d-flex align-items-center mb-2">
+                        <div class="text-warning me-2">
+                            <i class="bi bi-star-fill"></i>
+                            <i class="bi bi-star-fill"></i>
+                            <i class="bi bi-star-fill"></i>
+                            <i class="bi bi-star-fill"></i>
+                            <i class="bi bi-star-fill"></i>
+                        </div>
+                        <small class="text-muted">4.9</small>
+                    </div>
+                    <h5 class="text-primary fw-bold mb-2">$39</h5>
+                    <p class="card-text small text-muted">Complete art set for creative expression.</p>
+                    <div class="d-flex gap-2">
+                        <button class="btn btn-secondary btn-sm flex-fill" disabled>Out of Stock</button>
+                        <button class="btn btn-outline-primary btn-sm">
+                            <i class="bi bi-heart"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6 col-lg-4 col-xl-3">
+            <div class="card h-100 border-0 shadow-sm product-card">
+                <img src="https://via.placeholder.com/250x200" class="card-img-top" alt="Product">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start mb-2">
+                        <h6 class="card-title fw-bold">Wireless Headphones</h6>
+                        <span class="badge bg-success">In Stock</span>
+                    </div>
+                    <p class="card-text text-muted small mb-2">Tech Haven</p>
+                    <div class="d-flex align-items-center mb-2">
+                        <div class="text-warning me-2">
+                            <i class="bi bi-star-fill"></i>
+                            <i class="bi bi-star-fill"></i>
+                            <i class="bi bi-star-fill"></i>
+                            <i class="bi bi-star-fill"></i>
+                            <i class="bi bi-star-half"></i>
+                        </div>
+                        <small class="text-muted">4.6</small>
+                    </div>
+                    <h5 class="text-primary fw-bold mb-2">$79</h5>
+                    <p class="card-text small text-muted">Premium wireless headphones with noise cancellation.</p>
+                    <div class="d-flex gap-2">
+                        <button class="btn btn-primary btn-sm flex-fill">Add to Cart</button>
+                        <button class="btn btn-outline-primary btn-sm">
+                            <i class="bi bi-heart"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6 col-lg-4 col-xl-3">
+            <div class="card h-100 border-0 shadow-sm product-card">
+                <img src="https://via.placeholder.com/250x200" class="card-img-top" alt="Product">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start mb-2">
+                        <h6 class="card-title fw-bold">Kitchen Knife Set</h6>
+                        <span class="badge bg-warning">Low Stock</span>
+                    </div>
+                    <p class="card-text text-muted small mb-2">Home Essentials</p>
+                    <div class="d-flex align-items-center mb-2">
+                        <div class="text-warning me-2">
+                            <i class="bi bi-star-fill"></i>
+                            <i class="bi bi-star-fill"></i>
+                            <i class="bi bi-star-fill"></i>
+                            <i class="bi bi-star-fill"></i>
+                            <i class="bi bi-star-fill"></i>
+                        </div>
+                        <small class="text-muted">5.0</small>
+                    </div>
+                    <h5 class="text-primary fw-bold mb-2">$59</h5>
+                    <p class="card-text small text-muted">Professional knife set for all your cooking needs.</p>
+                    <div class="d-flex gap-2">
+                        <button class="btn btn-primary btn-sm flex-fill">Add to Cart</button>
+                        <button class="btn btn-outline-primary btn-sm">
+                            <i class="bi bi-heart"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Pagination -->
+    <nav class="mt-4">
+        <ul class="pagination justify-content-center">
+            <li class="page-item disabled">
+                <a class="page-link" href="#" tabindex="-1">Previous</a>
+            </li>
+            <li class="page-item active"><a class="page-link" href="#">1</a></li>
+            <li class="page-item"><a class="page-link" href="#">2</a></li>
+            <li class="page-item"><a class="page-link" href="#">3</a></li>
+            <li class="page-item">
+                <a class="page-link" href="#">Next</a>
+            </li>
+        </ul>
+    </nav>
+</div>
+{% endblock %}
+
+{% block styles %}
+<style>
+    .product-card {
+        transition: transform 0.2s ease;
+    }
+    
+    .product-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 8px 16px rgba(107, 70, 193, 0.15);
+    }
+    
+    .product-card img {
+        height: 200px;
+        object-fit: cover;
+    }
+</style>
+{% endblock %}

@@ -1,5 +1,5 @@
 from ..extensions import db
-from ..models import Subscription, User, Shop, Product, SUBSCRIPTION_TYPE_USER, SUBSCRIPTION_TYPE_SHOP, SUBSCRIPTION_TYPE_PRODUCT, USER_ROLE_BUYER, USER_ROLE_SELLER
+from ..models import Subscription, User, Shop, Product, SUBSCRIPTION_TYPE_USER, SUBSCRIPTION_TYPE_SHOP, SUBSCRIPTION_TYPE_PRODUCT,USER_ROLE_ADMIN, USER_ROLE_BUYER, USER_ROLE_SELLER
 from datetime import datetime, timezone, timedelta
 import random
 
@@ -93,7 +93,7 @@ def seed_subscriptions():
         )
         db.session.add(subscription)
         subscription_count += 1
-        print(f"Created expired subscription for {target_type.value} ID: {target_id}")
+        print(f"Created expired subscription for {target_type} ID: {target_id}")
     
     db.session.commit()
     print(f"Subscription seeding completed! Created {subscription_count} subscriptions.")

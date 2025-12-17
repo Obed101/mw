@@ -1,0 +1,226 @@
+{% extends "base.html" %}
+
+{% block title %}Shops - Market Window{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="row mb-4">
+        <div class="col-12">
+            <h1 class="fw-bold">Browse Shops</h1>
+            <p class="text-muted">Discover verified local sellers</p>
+        </div>
+    </div>
+
+    <!-- Search and Filters -->
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="input-group">
+                <span class="input-group-text"><i class="bi bi-search"></i></span>
+                <input type="text" class="form-control" placeholder="Search shops...">
+            </div>
+        </div>
+        <div class="col-md-3">
+            <select class="form-select">
+                <option selected>All Categories</option>
+                <option>Electronics</option>
+                <option>Fashion</option>
+                <option>Home & Garden</option>
+            </select>
+        </div>
+        <div class="col-md-3">
+            <select class="form-select">
+                <option selected>Sort by</option>
+                <option>Newest</option>
+                <option>Most Popular</option>
+                <option>Rating</option>
+            </select>
+        </div>
+    </div>
+
+    <!-- Shops Grid -->
+    <div class="row g-4">
+        <div class="col-md-6 col-lg-4">
+            <div class="card h-100 border-0 shadow-sm">
+                <img src="https://via.placeholder.com/300x200" class="card-img-top" alt="Shop">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start mb-2">
+                        <h5 class="card-title fw-bold">Tech Haven</h5>
+                        <span class="badge bg-success">Verified</span>
+                    </div>
+                    <p class="card-text text-muted small mb-2">Electronics & Gadgets</p>
+                    <div class="d-flex align-items-center mb-2">
+                        <div class="text-warning me-2">
+                            <i class="bi bi-star-fill"></i>
+                            <i class="bi bi-star-fill"></i>
+                            <i class="bi bi-star-fill"></i>
+                            <i class="bi bi-star-fill"></i>
+                            <i class="bi bi-star-half"></i>
+                        </div>
+                        <small class="text-muted">4.5 (128 reviews)</small>
+                    </div>
+                    <p class="card-text small">Specializing in quality electronics and tech accessories since 2020.</p>
+                    <div class="d-flex justify-content-between align-items-center">
+                        <small class="text-muted"><i class="bi bi-box me-1"></i>245 products</small>
+                        <a href="/shops/1" class="btn btn-primary btn-sm">Visit Shop</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6 col-lg-4">
+            <div class="card h-100 border-0 shadow-sm">
+                <img src="https://via.placeholder.com/300x200" class="card-img-top" alt="Shop">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start mb-2">
+                        <h5 class="card-title fw-bold">Fashion Forward</h5>
+                        <span class="badge bg-success">Verified</span>
+                    </div>
+                    <p class="card-text text-muted small mb-2">Fashion & Apparel</p>
+                    <div class="d-flex align-items-center mb-2">
+                        <div class="text-warning me-2">
+                            <i class="bi bi-star-fill"></i>
+                            <i class="bi bi-star-fill"></i>
+                            <i class="bi bi-star-fill"></i>
+                            <i class="bi bi-star-fill"></i>
+                            <i class="bi bi-star"></i>
+                        </div>
+                        <small class="text-muted">4.0 (89 reviews)</small>
+                    </div>
+                    <p class="card-text small">Trendy fashion for all ages. Quality clothing at affordable prices.</p>
+                    <div class="d-flex justify-content-between align-items-center">
+                        <small class="text-muted"><i class="bi bi-box me-1"></i>189 products</small>
+                        <a href="/shops/2" class="btn btn-primary btn-sm">Visit Shop</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6 col-lg-4">
+            <div class="card h-100 border-0 shadow-sm">
+                <img src="https://via.placeholder.com/300x200" class="card-img-top" alt="Shop">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start mb-2">
+                        <h5 class="card-title fw-bold">Home Essentials</h5>
+                        <span class="badge bg-warning">Pending</span>
+                    </div>
+                    <p class="card-text text-muted small mb-2">Home & Garden</p>
+                    <div class="d-flex align-items-center mb-2">
+                        <div class="text-warning me-2">
+                            <i class="bi bi-star-fill"></i>
+                            <i class="bi bi-star-fill"></i>
+                            <i class="bi bi-star-fill"></i>
+                            <i class="bi bi-star-fill"></i>
+                            <i class="bi bi-star-fill"></i>
+                        </div>
+                        <small class="text-muted">5.0 (34 reviews)</small>
+                    </div>
+                    <p class="card-text small">Everything you need to make your house a home.</p>
+                    <div class="d-flex justify-content-between align-items-center">
+                        <small class="text-muted"><i class="bi bi-box me-1"></i>156 products</small>
+                        <a href="/shops/3" class="btn btn-primary btn-sm">Visit Shop</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6 col-lg-4">
+            <div class="card h-100 border-0 shadow-sm">
+                <img src="https://via.placeholder.com/300x200" class="card-img-top" alt="Shop">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start mb-2">
+                        <h5 class="card-title fw-bold">Bookworm's Paradise</h5>
+                        <span class="badge bg-success">Verified</span>
+                    </div>
+                    <p class="card-text text-muted small mb-2">Books & Stationery</p>
+                    <div class="d-flex align-items-center mb-2">
+                        <div class="text-warning me-2">
+                            <i class="bi bi-star-fill"></i>
+                            <i class="bi bi-star-fill"></i>
+                            <i class="bi bi-star-fill"></i>
+                            <i class="bi bi-star-fill"></i>
+                            <i class="bi bi-star-half"></i>
+                        </div>
+                        <small class="text-muted">4.7 (156 reviews)</small>
+                    </div>
+                    <p class="card-text small">Wide selection of books, from bestsellers to rare finds.</p>
+                    <div class="d-flex justify-content-between align-items-center">
+                        <small class="text-muted"><i class="bi bi-box me-1"></i>98 products</small>
+                        <a href="/shops/4" class="btn btn-primary btn-sm">Visit Shop</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6 col-lg-4">
+            <div class="card h-100 border-0 shadow-sm">
+                <img src="https://via.placeholder.com/300x200" class="card-img-top" alt="Shop">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start mb-2">
+                        <h5 class="card-title fw-bold">Sports Central</h5>
+                        <span class="badge bg-success">Verified</span>
+                    </div>
+                    <p class="card-text text-muted small mb-2">Sports & Fitness</ transit</p>
+                    <div class="d-flex align-items-center mb-2">
+                        <div class="text-warning me-2">
+                            <i class="bi bi-star-fill"></i>
+                            <i class="bi bi-star-fill"></i>
+                            <i class="bi bi-star-fill"></i>
+                            <i class="bi bi-star"></i>
+                            <i class="bi bi-star"></i>
+                        </div>
+                        <small class="text-muted">3.8 (67 reviews)</small>
+                    </div>
+                    <p class="card-text small">Equipment and gear for all your fitness needs.</p>
+                    <div class="d-flex justify-content-between align-items-center">
+                        <small class="text-muted"><i class="bi bi-box me-1"></i>67 products</small>
+                        <a href="/shops/5" class="btn btn-primary btn-sm">Visit Shop</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6 col-lg-4">
+            <div class="card h-100 border-0 shadow-sm">
+                <img src="https://via.placeholder.com/300x200" class="card-img-top" alt="Shop">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start mb-2">
+                        <h5 class="card-title fw-bold">Artistic Touch</h5>
+                        <span class="badge bg-success">Verified</span>
+                    </div>
+                    <p class="card-text text-muted small mb-2">Arts & Crafts</p>
+                    <div class="d-flex align-items-center mb-2">
+                        <div class="text-warning me-2">
+                            <i class="bi bi-star-fill"></i>
+                            <i class="bi bi-star-fill"></i>
+                            <i class="bi bi-star-fill"></i>
+                            <i class="bi bi-star-fill"></i>
+                            <i class="bi bi-star-fill"></i>
+                        </div>
+                        <small class="text-muted">4.9 (92 reviews)</small>
+                    </div>
+                    <p class="card-text small">Handcrafted items and art supplies for creative minds.</p>
+                    <div class="d-flex justify-content-between align-items-center">
+                        <small class="text-muted"><i class="bi bi-box me-1"></i>45 products</small>
+                        <a href="/shops/6" class="btn btn-primary btn-sm">Visit Shop</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Pagination -->
+    <nav class="mt-4">
+        <ul class="pagination justify-content-center">
+            <li class="page-item disabled">
+                <a class="page-link" href="#" tabindex="-1">Previous</a>
+            </li>
+            <li class="page-item active"><a class="page-link" href="#">1</a></li>
+            <li class="page-item"><a class="page-link" href="#">2</a></li>
+            <li class="page-item"><a class="page-link" href="#">3</a></li>
+            <li class="page-item">
+                <a class="page-link" href="#">Next</a>
+            </li>
+        </ul>
+    </nav>
+</div>
+{% endblock %}

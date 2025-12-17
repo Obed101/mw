@@ -3,6 +3,7 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from sqlalchemy import func, event
 from ..extensions import db
 
+
 # User status and role constants
 USER_STATUS_ACTIVE = 'active'
 USER_STATUS_SUSPENDED = 'suspended'
@@ -43,6 +44,10 @@ class User(db.Model):
     email_verified_at = db.Column(db.DateTime)
     is_phone_verified = db.Column(db.Boolean, default=False)
     phone_verified_at = db.Column(db.DateTime)
+    
+    # Premium status
+    premium = db.Column(db.Boolean, default=False)
+    
     last_login = db.Column(db.DateTime)
     last_activity = db.Column(db.DateTime)
     created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
@@ -129,6 +134,7 @@ class User(db.Model):
             'town': self.town,
             'is_email_verified': self.is_email_verified,
             'is_phone_verified': self.is_phone_verified,
+            'premium': self.premium,
             'created_at': self.created_at.isoformat() if self.created_at else None,
             'last_login': self.last_login.isoformat() if self.last_login else None
         }
@@ -189,6 +195,20 @@ class User(db.Model):
     def check_password(self, password):
         """Check if provided password matches the hash"""
         return check_password_hash(self.password_hash, password)
+    
+    def make_premium(self):
+        """Upgrade user to premium status"""
+        self.premium = True
+        db.session.commit()
+    
+    def revoke_premium(self):
+        """Revoke premium status from user"""
+        self.premium = False
+        db.session.commit()
+    
+    def is_premium(self):
+        """Check if user has premium status"""
+        return self.premium
     
     def __repr__(self):
         return f'<User {self.username}>'
