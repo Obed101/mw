@@ -1,15 +1,11 @@
-from flask import Blueprint, request, jsonify, redirect, url_for, flash
-from flask_jwt_extended import (
-    create_access_token, create_refresh_token, 
-    jwt_required, get_jwt_identity, get_jwt,
-    verify_jwt_in_request, get_jti
-)
-from werkzeug.security import generate_password_hash, check_password_hash
-from datetime import datetime, timezone, timedelta
-from ..extensions import db, jwt, token_blacklist
-from ..models import User, USER_STATUS_ACTIVE, USER_ROLE_ADMIN, USER_ROLE_SELLER, USER_ROLE_BUYER, AuthToken, TOKEN_TYPE_API
+from flask import request, jsonify, url_for, redirect, flash, Blueprint
+from flask_jwt_extended import create_access_token, create_refresh_token, jwt_required, get_jwt_identity, get_jwt
+from flask_login import login_user, logout_user, current_user
+from datetime import datetime, timezone
+from ..extensions import db, token_blacklist
+from ..models.user_model import User, USER_STATUS_ACTIVE, USER_ROLE_ADMIN, USER_ROLE_SELLER, USER_ROLE_BUYER, AuthToken
 
-auth_bp = Blueprint('auth', __name__)
+auth_bp = Blueprint('auth', __name__, url_prefix='/api/auth')
 
 @auth_bp.route('/register', methods=['POST'])
 def register():
@@ -20,8 +16,15 @@ def register():
     else:
         data = request.form.to_dict()
     
+    # Check if this is OAuth registration (no password required)
+    is_oauth = data.get('is_oauth', False)
+    
     # Validate required fields
-    required = ['username', 'email', 'password', 'confirm_password', 'role']
+    if is_oauth:
+        required = ['username', 'email', 'role']
+    else:
+        required = ['username', 'email', 'password', 'confirm_password', 'role']
+    
     if not all(field in data for field in required):
         error_msg = "Missing required fields"
         if request.is_json:
@@ -30,14 +33,15 @@ def register():
             flash(error_msg, 'error')
             return redirect(url_for('main_bp.register'))
     
-    # Validate password confirmation
-    if data['password'] != data['confirm_password']:
-        error_msg = "Passwords do not match"
-        if request.is_json:
-            return jsonify({"error": error_msg}), 400
-        else:
-            flash(error_msg, 'error')
-            return redirect(url_for('main_bp.register'))
+    # Validate password confirmation (only for non-OAuth users)
+    if not is_oauth:
+        if data['password'] != data['confirm_password']:
+            error_msg = "Passwords do not match"
+            if request.is_json:
+                return jsonify({"error": error_msg}), 400
+            else:
+                flash(error_msg, 'error')
+                return redirect(url_for('main_bp.register'))
     
     # Validate terms agreement
     if 'terms' not in data or not data['terms']:
@@ -83,7 +87,10 @@ def register():
             role=data['role'],
             status=USER_STATUS_ACTIVE
         )
-        user.set_password(data['password'])
+        
+        # Set password only for non-OAuth users
+        if not is_oauth:
+            user.set_password(data['password'])
         
         # Add optional fields
         if 'first_name' in data and data['first_name']:
@@ -104,6 +111,9 @@ def register():
         
         # Log user in automatically after registration
         user.update_last_login()
+        
+        # Log user in with Flask-Login for session management
+        login_user(user)
         
         # Generate tokens for API usage
         access_token = create_access_token(identity=user.id)
@@ -133,35 +143,94 @@ def register():
 @auth_bp.route('/login', methods=['POST'])
 def login():
     """User login"""
-    data = request.get_json()
+    # Handle both JSON and form data
+    if request.is_json:
+        data = request.get_json()
+    else:
+        data = request.form.to_dict()
     
     # Validate required fields
-    if not data or not data.get('email') or not data.get('password'):
-        return jsonify({"error": "Email and password are required"}), 400
+    if not data or not data.get('username'):
+        error_msg = "Username is required"
+        if request.is_json:
+            return jsonify({"error": error_msg}), 400
+        else:
+            flash(error_msg, 'error')
+            return redirect(url_for('main_bp.login'))
     
-    # Find user
-    user = User.query.filter_by(email=data['email']).first()
-    if not user or not user.check_password(data['password']):
-        return jsonify({"error": "Invalid email or password"}), 401
+    # Check if this is OAuth login (no password required)
+    is_oauth = data.get('is_oauth', False)
+    
+    if not is_oauth and not data.get('password'):
+        error_msg = "Password is required"
+        if request.is_json:
+            return jsonify({"error": error_msg}), 400
+        else:
+            flash(error_msg, 'error')
+            return redirect(url_for('main_bp.login'))
+    
+    # Find user (try username first, then email)
+    user = User.query.filter_by(username=data['username']).first()
+    if not user:
+        user = User.query.filter_by(email=data['username']).first()
+    
+    if not user:
+        error_msg = "Invalid username/email"
+        if request.is_json:
+            return jsonify({"error": error_msg}), 401
+        else:
+            flash(error_msg, 'error')
+            return redirect(url_for('main_bp.login'))
+    
+    # For OAuth users, no password check needed
+    if not is_oauth:
+        if not user.password_hash or not user.check_password(data['password']):
+            error_msg = "Invalid password"
+            if request.is_json:
+                return jsonify({"error": error_msg}), 401
+            else:
+                flash(error_msg, 'error')
+                return redirect(url_for('main_bp.login'))
     
     # Check if user is active
     if not user.is_active():
-        return jsonify({"error": "Account is not active"}), 401
+        error_msg = "Account is not active"
+        if request.is_json:
+            return jsonify({"error": error_msg}), 401
+        else:
+            flash(error_msg, 'error')
+            return redirect(url_for('main_bp.login'))
     
     # Update last login
     user.update_last_login()
     
-    # Generate tokens
+    # Log user in with Flask-Login for session management
+    login_user(user)
+    
+    # Generate tokens for API usage
     access_token = create_access_token(identity=user.id)
     refresh_token = create_refresh_token(identity=user.id)
     
-    return jsonify({
-        "message": "Login successful",
-        "user": user.to_dict(),
-        "access_token": access_token,
-        "refresh_token": refresh_token,
-        "token_type": "Bearer"
-    }), 200
+    # Handle form vs API responses
+    if request.is_json:
+        return jsonify({
+            "message": "Login successful",
+            "user": user.to_dict(),
+            "access_token": access_token,
+            "refresh_token": refresh_token,
+            "token_type": "Bearer"
+        }), 200
+    else:
+        # For form submissions, flash message and redirect to appropriate dashboard
+        flash(f'Welcome back! {user.first_name} {user.last_name}', 'success')
+        
+        # Redirect based on user role
+        if user.role == 'admin':
+            return redirect(url_for('admin_template_bp.admin_dashboard'))
+        elif user.role == 'seller':
+            return redirect(url_for('seller_template_bp.seller_dashboard'))
+        else:
+            return redirect(url_for('main_bp.index'))
 
 @auth_bp.route('/refresh', methods=['POST'])
 @jwt_required(refresh=True)
@@ -172,24 +241,19 @@ def refresh():
     return jsonify({"access_token": access_token}), 200
 
 @auth_bp.route('/logout', methods=['POST'])
-@jwt_required()
 def logout():
-    """Logout user and revoke token"""
-    jti = get_jwt()['jti']
-    current_user_id = get_jwt_identity()
-    
-    # Add token to blacklist
-    token_blacklist.add(jti)
-    
-    # Also mark as used in database if record exists
-    try:
-        auth_token = AuthToken.query.filter_by(token=jti).first()
-        if auth_token:
-            auth_token.mark_as_used()
-        
+    """Logout user"""
+    # Handle both JSON and form requests
+    if request.is_json:
+        # For API requests, revoke JWT token
+        jti = get_jwt()['jti']
+        token_blacklist.add(jti)
         return jsonify({"message": "Successfully logged out"}), 200
-    except Exception as e:
-        return jsonify({"error": "Error during logout"}), 500
+    else:
+        # For form requests, use Flask-Login logout
+        logout_user()
+        flash('You have been logged out successfully.', 'success')
+        return redirect(url_for('main_bp.index'))
 
 @auth_bp.route('/revoke', methods=['POST'])
 @jwt_required()

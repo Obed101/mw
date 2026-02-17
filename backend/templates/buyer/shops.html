@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+
+{% block title %}Shops - Market Window{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="row mb-4">
+        <div class="col-12">
+            <h1 class="fw-bold">Browse Shops</h1>
+            <p class="text-muted">Discover verified local sellers</p>
+        </div>
+    </div>
+
+    <!-- Search and Filters -->
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="input-group">
+                <span class="input-group-text"><i class="bi bi-search"></i></span>
+                <input type="text" class="form-control" name="search" placeholder="Search shops..." hx-get="{{ url_for('buyer_bp.browse_shops') }}" hx-trigger="keyup changed delay:500ms" hx-target="#shops-container" hx-include="[name='sort_by'], [name='category']">
+            </div>
+        </div>
+        <div class="col-md-3">
+            <select class="form-select" name="category" hx-get="{{ url_for('buyer_bp.browse_shops') }}" hx-trigger="change" hx-target="#shops-container" hx-include="[name='search'], [name='sort_by']">
+                <option value="">All Categories</option>
+                <option>Electronics</option>
+                <option>Fashion</option>
+                <option>Home & Garden</option>
+            </select>
+        </div>
+        <div class="col-md-3">
+            <select class="form-select" name="sort_by" hx-get="{{ url_for('buyer_bp.browse_shops') }}" hx-trigger="change" hx-target="#shops-container" hx-include="[name='search'], [name='category']">
+                <option value="name" selected>Sort by Name</option>
+                <option value="last_updated">Newest</option>
+                <option value="most_popular">Most Popular</option>
+                <option value="rating">Rating</option>
+            </select>
+        </div>
+    </div>
+
+    <!-- Shops Grid -->
+    <div class="row g-4" id="shops-container" hx-get="{{ url_for('buyer_bp.browse_shops') }}" hx-trigger="load">
+        <!-- Initial loading spinner -->
+        <div class="col-12 text-center py-5">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden text-light">Loading shops...</span>
+            </div>
+            <p class="mt-2 text-mw">Loading shops...</p>
+        </div>
+    </div>
+
+    <!-- Load More Button Container -->
+    <div class="text-center mt-4" id="load-more-container" hx-swap-oob="true">
+        <!-- Will be populated by HTMX -->
+    </div>
+</div>
+{% endblock %}

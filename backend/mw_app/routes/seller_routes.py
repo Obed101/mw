@@ -1,14 +1,18 @@
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, jsonify, request, render_template
+from flask_jwt_extended import jwt_required
 from ..extensions import db
 from ..models import Shop, UserFollowShop, User, Product, StockUpdate, VerificationOTP, VERIFICATION_STATUS_VERIFIED, VERIFICATION_STATUS_UNDER_REVIEW, VERIFICATION_STATUS_PENDING
+from ..utils.helpers import seller_required
 from datetime import datetime
 
 seller_bp = Blueprint('seller_bp', __name__, url_prefix='/seller')
 
 @seller_bp.route("/")
+@seller_required
 def seller_dashboard():
     """Seller dashboard with shop overview and product statistics"""
-    return jsonify({"message": "Seller dashboard"})
+    # return jsonify({"message": "Seller dashboard"})
+    return render_template("seller/seller_dashboard.html")
 
 @seller_bp.route("/shop")
 def my_shop():

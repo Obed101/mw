@@ -1,6 +1,7 @@
 from datetime import datetime, timedelta, timezone
 from werkzeug.security import generate_password_hash, check_password_hash
 from sqlalchemy import func, event
+from flask_login import UserMixin
 from ..extensions import db
 
 
@@ -17,11 +18,11 @@ USER_ROLE_BUYER = 'buyer'
 VALID_USER_STATUSES = {USER_STATUS_ACTIVE, USER_STATUS_SUSPENDED, USER_STATUS_PENDING}
 VALID_USER_ROLES = {USER_ROLE_ADMIN, USER_ROLE_SELLER, USER_ROLE_BUYER}
 
-class User(db.Model):
+class User(db.Model, UserMixin):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(80), unique=True, nullable=False, index=True)
     email = db.Column(db.String(120), unique=True, nullable=False, index=True)
-    password_hash = db.Column(db.String(255), nullable=False)
+    password_hash = db.Column(db.String(255), nullable=True)
     
     # Role and status management
     role = db.Column(db.String(20), nullable=False, default=USER_ROLE_BUYER)
@@ -209,6 +210,19 @@ class User(db.Model):
     def is_premium(self):
         """Check if user has premium status"""
         return self.premium
+    
+    # Flask-Login required methods
+    def is_authenticated(self):
+        """Return True if user is authenticated."""
+        return True
+    
+    def is_active(self):
+        """Return True if user is active and not suspended."""
+        return self.status == USER_STATUS_ACTIVE
+    
+    def get_id(self):
+        """Return user ID as string."""
+        return str(self.id)
     
     def __repr__(self):
         return f'<User {self.username}>'

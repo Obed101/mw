@@ -1,0 +1,29 @@
+{% for shop in shops %}
+<div class="col-md-6 col-lg-4">
+    <div class="card h-100 border-0 shadow-sm">
+        <img src="{{ url_for('static', filename='images/mw_logo_trans.png') }}" class="card-img-top" alt="Shop">
+        <div class="card-body">
+            <div class="d-flex justify-content-between align-items-start mb-2">
+                <h5 class="card-title fw-bold">{{ shop.name }}</h5>
+                <span class="badge bg-success">Verified</span>
+            </div>
+            <p class="card-text text-muted small mb-2">{{ shop.description or 'Various Products' }}</p>
+            <div class="d-flex align-items-center mb-2">
+                <div class="text-warning me-2">
+                    <i class="bi bi-star-fill"></i>
+                    <i class="bi bi-star-fill"></i>
+                    <i class="bi bi-star-fill"></i>
+                    <i class="bi bi-star-fill"></i>
+                    <i class="bi bi-star-half"></i>
+                </div>
+                <small class="text-muted">4.5 (128 reviews)</small>
+            </div>
+            <p class="card-text small">{{ shop.description or 'Quality products and service' }}</p>
+            <div class="d-flex justify-content-between align-items-center">
+                <small class="text-muted"><i class="bi bi-box me-1"></i>{{ shop.products|length if shop.products else '0' }} products</small>
+                <a href="{{ url_for('buyer_bp.view_shop', shop_id=shop.id) }}" class="btn btn-primary btn-sm">Visit Shop</a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endfor %}

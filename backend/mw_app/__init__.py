@@ -1,8 +1,7 @@
 from flask import Flask
 from flask_migrate import Migrate
 from flask_wtf.csrf import CSRFProtect
-
-from .extensions import db, jwt, cors, search
+from .extensions import db, jwt, cors, search, login_manager, session, oauth
 
 def create_app():
     import os
@@ -15,10 +14,32 @@ def create_app():
     # Configure CSRF protection
     csrf = CSRFProtect(app)
     
+    # Initialize session & oauth
+    session.init_app(app)
+    oauth.init_app(app)
+
+    oauth.register(
+        name='google',
+        client_id=app.config.get('GOOGLE_CLIENT_ID'),
+        client_secret=app.config.get('GOOGLE_CLIENT_SECRET'),
+        server_metadata_url='https://accounts.google.com/.well-known/openid-configuration',
+        client_kwargs={
+            'scope': 'openid email profile'
+        }
+    )
+
+
+    
     # Initialize extensions
     db.init_app(app)
     jwt.init_app(app)
     csrf.init_app(app)
+    login_manager.init_app(app)
+    
+    # Configure Flask-Login
+    login_manager.login_view = 'main_bp.login'
+    login_manager.login_message = 'Please log in to access this page.'
+    login_manager.refresh_message = 'Please reauthenticate to access this page.'
 
     # Settings for flask Msearch
     if 'sqlalchemy' not in app.extensions:

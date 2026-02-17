@@ -1,0 +1,374 @@
+{% extends "base.html" %}
+
+{% block title %}Profile - Market Window{% endblock %}
+
+{% block styles %}
+<style>
+.profile-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-radius: 20px;
+    padding: 2rem;
+    margin-bottom: 2rem;
+    position: relative;
+    overflow: hidden;
+}
+
+.profile-header::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.05'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+}
+
+.avatar-container {
+    position: relative;
+    width: 120px;
+    height: 120px;
+    margin: 0 auto 1rem;
+}
+
+.avatar {
+    width: 120px;
+    height: 120px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 4px solid rgba(255, 255, 255, 0.2);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+    backdrop-filter: blur(10px);
+}
+
+.avatar i {
+    font-size: 3rem;
+    color: white;
+}
+
+.status-badge {
+    position: absolute;
+    bottom: 5px;
+    right: 5px;
+    width: 24px;
+    height: 24px;
+    background: #10b981;
+    border: 3px solid white;
+    border-radius: 50%;
+}
+
+.stat-card {
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 15px;
+    padding: 1rem;
+    text-align: center;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.stat-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+}
+
+.stat-number {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: white;
+}
+
+.stat-label {
+    font-size: 0.875rem;
+    color: rgba(255, 255, 255, 0.8);
+}
+
+.modern-card {
+    background: white;
+    border-radius: 20px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.08);
+    border: 1px solid rgba(0, 0, 0, 0.05);
+    overflow: hidden;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.modern-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.12);
+}
+
+.card-header-modern {
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    padding: 1.5rem;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.form-control-modern {
+    border: 2px solid #e5e7eb;
+    border-radius: 12px;
+    padding: 0.75rem 1rem;
+    transition: all 0.3s ease;
+    background: #f9fafb;
+}
+
+.form-control-modern:focus {
+    border-color: #667eea;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    background: white;
+}
+
+.form-label-modern {
+    font-weight: 600;
+    color: #374151;
+    margin-bottom: 0.5rem;
+    font-size: 0.875rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.btn-modern {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border: none;
+    border-radius: 12px;
+    padding: 0.75rem 2rem;
+    font-weight: 600;
+    color: white;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+}
+
+.btn-modern:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(102, 126, 234, 0.4);
+    background: linear-gradient(135deg, #5a6fd8 0%, #6a4190 100%);
+}
+
+.activity-item {
+    padding: 1rem;
+    border-left: 3px solid #e5e7eb;
+    margin-bottom: 1rem;
+    background: #f9fafb;
+    border-radius: 0 12px 12px 0;
+    transition: all 0.3s ease;
+}
+
+.activity-item:hover {
+    border-left-color: #667eea;
+    background: white;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+}
+
+.activity-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.2rem;
+    margin-right: 1rem;
+}
+
+@media (max-width: 768px) {
+    .profile-header {
+        padding: 1.5rem;
+        margin-bottom: 1rem;
+    }
+    
+    .stat-card {
+        margin-bottom: 0.5rem;
+    }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-3 px-lg-4 py-4">
+    <!-- Flash Messages -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="alert alert-{{ 'success' if category == 'success' else 'danger' }} alert-dismissible fade show" role="alert">
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+    
+    <!-- Profile Header -->
+    <div class="profile-header">
+        <div class="row align-items-center">
+            <div class="col-md-3 text-center text-md-start">
+                <div class="avatar-container">
+                    <div class="avatar">
+                        <i class="bi bi-person"></i>
+                    </div>
+                    <div class="status-badge"></div>
+                </div>
+            </div>
+            <div class="col-md-6 text-center text-md-start">
+                <h2 class="text-white mb-2 fw-bold">
+                    {{ current_user.first_name or current_user.username }} 
+                    {{ current_user.last_name or '' }}
+                </h2>
+                <p class="text-white-50 mb-2">{{ current_user.email }}</p>
+                <div class="d-flex gap-2 justify-content-center justify-content-md-start">
+                    {% if current_user.is_email_verified %}
+                    <span class="badge bg-success text-white px-3 py-2">
+                        <i class="bi bi-patch-check-fill me-1"></i>Verified
+                    </span>
+                    {% endif %}
+                    {% if current_user.premium %}
+                    <span class="badge bg-white text-dark px-3 py-2">
+                        <i class="bi bi-star-fill text-warning me-1"></i>Premium
+                    </span>
+                    {% endif %}
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="row g-2">
+                    <div class="col-6">
+                        <div class="stat-card">
+                            <div class="stat-number">{{ user_stats.orders_count }}</div>
+                            <div class="stat-label">Orders</div>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="stat-card">
+                            <div class="stat-number">{{ user_stats.reviews_count }}</div>
+                            <div class="stat-label">Reviews</div>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="stat-card">
+                            <div class="stat-number">{{ user_stats.rating }}</div>
+                            <div class="stat-label">Rating</div>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="stat-card">
+                            <div class="stat-number">{{ user_stats.member_duration }}</div>
+                            <div class="stat-label">Member</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Profile Information -->
+        <div class="col-lg-8 mb-4">
+            <div class="modern-card">
+                <div class="card-header-modern">
+                    <h5 class="mb-0 fw-bold">
+                        <i class="bi bi-person-gear me-2 text-primary"></i>Profile Information
+                    </h5>
+                </div>
+                <div class="card-body p-4">
+                    <form>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label-modern">First Name</label>
+                                <input type="text" class="form-control form-control-modern" 
+                                       value="{{ current_user.first_name or '' }}" name="first_name">
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label-modern">Last Name</label>
+                                <input type="text" class="form-control form-control-modern" 
+                                       value="{{ current_user.last_name or '' }}" name="last_name">
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label-modern">Email Address</label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-light border-0">
+                                    <i class="bi bi-envelope text-muted"></i>
+                                </span>
+                                <input type="email" class="form-control form-control-modern border-start-0" 
+                                       value="{{ current_user.email }}" name="email" readonly>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label-modern">Phone Number</label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-light border-0">
+                                    <i class="bi bi-telephone text-muted"></i>
+                                </span>
+                                <input type="tel" class="form-control form-control-modern border-start-0" 
+                                       value="{{ current_user.phone or '' }}" name="phone">
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label-modern">Region</label>
+                                <input type="text" class="form-control form-control-modern" 
+                                       value="{{ current_user.region or '' }}" name="region">
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label-modern">District</label>
+                                <input type="text" class="form-control form-control-modern" 
+                                       value="{{ current_user.district or '' }}" name="district">
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label-modern">Town</label>
+                                <input type="text" class="form-control form-control-modern" 
+                                       value="{{ current_user.town or '' }}" name="town">
+                            </div>
+                        </div>
+                        
+                        <div class="mb-4">
+                            <label class="form-label-modern">Address</label>
+                            <textarea class="form-control form-control-modern" rows="3" 
+                                      placeholder="Enter your address..." name="address">{{ current_user.address or '' }}</textarea>
+                        </div>
+                        
+                        <div class="d-flex gap-2">
+                            <button type="submit" class="btn btn-modern">
+                                <i class="bi bi-check-lg me-2"></i>Update Profile
+                            </button>
+                            <button onclick="history.back()" type="button" class="btn btn-outline-secondary">
+                                <i class="bi bi-x-lg me-2"></i>Close
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Recent Activity -->
+        <div class="col-lg-4 mb-4">
+            <div class="modern-card">
+                <div class="card-header-modern">
+                    <h5 class="mb-0 fw-bold">
+                        <i class="bi bi-clock-history me-2 text-primary"></i>Recent Activity
+                    </h5>
+                </div>
+                <div class="card-body p-4">
+                    {% for activity in recent_activity %}
+                    <div class="activity-item">
+                        <div class="d-flex align-items-start">
+                            <div class="activity-icon bg-{{ activity.color }} bg-opacity-10 text-{{ activity.color }}">
+                                <i class="bi bi-{{ activity.icon }}"></i>
+                            </div>
+                            <div class="flex-grow-1">
+                                <h6 class="mb-1 fw-semibold">{{ activity.title }}</h6>
+                                <p class="text-muted mb-1 small">{{ activity.description }}</p>
+                                <span class="text-muted small">{{ activity.time_ago }}</span>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                    
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

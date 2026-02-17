@@ -1,8 +1,9 @@
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, jsonify, request, render_template
 from ..extensions import db, search
 from ..models import Category, User, UserBrowsingHistory, Product, Shop, UserFollowShop, VERIFICATION_STATUS_VERIFIED
 
 buyer_bp = Blueprint('buyer_bp', __name__, url_prefix='/explore')
+SHOPS_PER_PAGE = 3
 
 @buyer_bp.route("/")
 def buyer_dashboard():
@@ -16,7 +17,10 @@ def browse_shops():
         # Get query parameters
         search_term = request.args.get('search', '').strip()
         sort_by = request.args.get('sort_by', 'name')  # name, last_updated
+        category = request.args.get('category', '')
         user_id = request.args.get('user_id', type=int)
+        page = request.args.get('page', 1, type=int)
+        per_page = SHOPS_PER_PAGE  
         
         # Build query - only show verified and active shops
         query = Shop.query.filter_by(
@@ -26,13 +30,14 @@ def browse_shops():
         
         # Use Flask-Msearch for full-text search
         if search_term:
-            shops = query.search(search_term).all()
+            shops = query.search(search_term).paginate(page=page, per_page=per_page, error_out=False)
         else:
             # Sort if no search
             if sort_by == 'last_updated':
-                shops = query.order_by(Shop.last_updated.desc()).all()
+                query = query.order_by(Shop.last_updated.desc())
             else:
-                shops = query.order_by(Shop.name).all()
+                query = query.order_by(Shop.name)
+            shops = query.paginate(page=page, per_page=per_page, error_out=False)
         
         # Get user's followed shops if user_id provided
         followed_shop_ids = set()
@@ -40,27 +45,42 @@ def browse_shops():
             follows = UserFollowShop.query.filter_by(user_id=user_id).all()
             followed_shop_ids = {follow.shop_id for follow in follows}
         
-        # Build response
-        shops_list = []
-        for shop in shops:
-            shop_dict = {
-                'id': shop.id,
-                'name': shop.name,
-                'description': shop.description,
-                'address': shop.address,
-                'phone': shop.phone,
-                'email': shop.email,
-                'is_following': shop.id in followed_shop_ids if user_id else False
-            }
-            shops_list.append(shop_dict)
+        # Check if this is an HTMX request
+        is_htmx = request.headers.get('HX-Request') == 'true'
         
-        return jsonify({
-            'success': True,
-            'count': len(shops_list),
-            'shops': shops_list
-        }), 200
+        if is_htmx:
+            # Return the shop cards partial
+            response = render_template('buyer/shop_cards.html', 
+                                     shops=shops.items, 
+                                     followed_shop_ids=followed_shop_ids,
+                                     user_id=user_id)
+            
+            # Add load more button if there are more pages
+            if shops.has_next:
+                load_more_button = f'''
+                <div class="text-center mt-4" id="load-more-container">
+                    <button class="btn btn-primary" hx-get="{url_for('buyer_bp.browse_shops', page=shops.page + 1)}" hx-target="#shops-container" hx-swap="beforeend">
+                        <i class="bi bi-arrow-down-circle me-2"></i>Load More Shops
+                    </button>
+                </div>
+                '''
+                response += load_more_button
+            
+            return response
+        else:
+            # Full page load - render the main template
+            return render_template('buyer/shops.html',
+                                 shops=shops.items,
+                                 total=shops.total,
+                                 pages=shops.pages,
+                                 current_page=shops.page,
+                                 has_next=shops.has_next,
+                                 followed_shop_ids=followed_shop_ids,
+                                 user_id=user_id)
         
     except Exception as e:
+        if request.headers.get('HX-Request') == 'true':
+            return "<div class='alert alert-danger'>Error loading shops</div>", 500
         return jsonify({
             'success': False,
             'message': 'Error browsing shops',
@@ -103,7 +123,7 @@ def view_shop(shop_id):
                 'is_following': is_following
             }
         }), 200
-        
+    
     except Exception as e:
         return jsonify({
             'success': False,

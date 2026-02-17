@@ -39,10 +39,10 @@
     </div>
 
     <!-- Products Grid -->
-    <div class="row g-4">
+    <div class="row g-4" id="products-container">
         <div class="col-md-6 col-lg-4 col-xl-3">
             <div class="card h-100 border-0 shadow-sm product-card">
-                <img src="https://via.placeholder.com/250x200" class="card-img-top" alt="Product">
+                <img src="{{ url_for('static', filename='images/mw_logo_trans.png') }}" class="card-img-top" alt="Product">
                 <div class="card-body">
                     <div class="d-flex justify-content-between align-items-start mb-2">
                         <h6 class="card-title fw-bold">Smartphone Pro</h6>
@@ -73,7 +73,7 @@
 
         <div class="col-md-6 col-lg-4 col-xl-3">
             <div class="card h-100 border-0 shadow-sm product-card">
-                <img src="https://via.placeholder.com/250x200" class="card-img-top" alt="Product">
+                <img src="{{ url_for('static', filename='images/mw_logo_trans.png') }}" class="card-img-top" alt="Product">
                 <div class="card-body">
                     <div class="d-flex justify-content-between align-items-start mb-2">
                         <h6 class="card-title fw-bold">Designer Jacket</h6>
@@ -104,7 +104,7 @@
 
         <div class="col-md-6 col-lg-4 col-xl-3">
             <div class="card h-100 border-0 shadow-sm product-card">
-                <img src="https://via.placeholder.com/250x200" class="card-img-top" alt="Product">
+                <img src="{{ url_for('static', filename='images/mw_logo_trans.png') }}" class="card-img-top" alt="Product">
                 <div class="card-body">
                     <div class="d-flex justify-content-between align-items-start mb-2">
                         <h6 class="card-title fw-bold">Coffee Maker</h6>
@@ -135,7 +135,7 @@
 
         <div class="col-md-6 col-lg-4 col-xl-3">
             <div class="card h-100 border-0 shadow-sm product-card">
-                <img src="https://via.placeholder.com/250x200" class="card-img-top" alt="Product">
+                <img src="{{ url_for('static', filename='images/mw_logo_trans.png') }}" class="card-img-top" alt="Product">
                 <div class="card-body">
                     <div class="d-flex justify-content-between align-items-start mb-2">
                         <h6 class="card-title fw-bold">Bestseller Novel</h6>
@@ -166,7 +166,7 @@
 
         <div class="col-md-6 col-lg-4 col-xl-3">
             <div class="card h-100 border-0 shadow-sm product-card">
-                <img src="https://via.placeholder.com/250x200" class="card-img-top" alt="Product">
+                <img src="{{ url_for('static', filename='images/mw_logo_trans.png') }}" class="card-img-top" alt="Product">
                 <div class="card-body">
                     <div class="d-flex justify-content-between align-items-start mb-2">
                         <h6 class="card-title fw-bold">Yoga Mat</h6>
@@ -197,7 +197,7 @@
 
         <div class="col-md-6 col-lg-4 col-xl-3">
             <div class="card h-100 border-0 shadow-sm product-card">
-                <img src="https://via.placeholder.com/250x200" class="card-img-top" alt="Product">
+                <img src="{{ url_for('static', filename='images/mw_logo_trans.png') }}" class="card-img-top" alt="Product">
                 <div class="card-body">
                     <div class="d-flex justify-content-between align-items-start mb-2">
                         <h6 class="card-title fw-bold">Art Set</h6>
@@ -228,7 +228,7 @@
 
         <div class="col-md-6 col-lg-4 col-xl-3">
             <div class="card h-100 border-0 shadow-sm product-card">
-                <img src="https://via.placeholder.com/250x200" class="card-img-top" alt="Product">
+                <img src="{{ url_for('static', filename='images/mw_logo_trans.png') }}" class="card-img-top" alt="Product">
                 <div class="card-body">
                     <div class="d-flex justify-content-between align-items-start mb-2">
                         <h6 class="card-title fw-bold">Wireless Headphones</h6>
@@ -259,7 +259,7 @@
 
         <div class="col-md-6 col-lg-4 col-xl-3">
             <div class="card h-100 border-0 shadow-sm product-card">
-                <img src="https://via.placeholder.com/250x200" class="card-img-top" alt="Product">
+                <img src="{{ url_for('static', filename='images/mw_logo_trans.png') }}" class="card-img-top" alt="Product">
                 <div class="card-body">
                     <div class="d-flex justify-content-between align-items-start mb-2">
                         <h6 class="card-title fw-bold">Kitchen Knife Set</h6>
@@ -289,20 +289,12 @@
         </div>
     </div>
 
-    <!-- Pagination -->
-    <nav class="mt-4">
-        <ul class="pagination justify-content-center">
-            <li class="page-item disabled">
-                <a class="page-link" href="#" tabindex="-1">Previous</a>
-            </li>
-            <li class="page-item active"><a class="page-link" href="#">1</a></li>
-            <li class="page-item"><a class="page-link" href="#">2</a></li>
-            <li class="page-item"><a class="page-link" href="#">3</a></li>
-            <li class="page-item">
-                <a class="page-link" href="#">Next</a>
-            </li>
-        </ul>
-    </nav>
+    <!-- Load More Button -->
+    <div class="text-center mt-4">
+        <button class="btn btn-primary" hx-get="/products?page=2" hx-target="#products-container" hx-swap="beforeend">
+            <i class="bi bi-arrow-down-circle me-2"></i>Load More Products
+        </button>
+    </div>
 </div>
 {% endblock %}
 

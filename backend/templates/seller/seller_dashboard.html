@@ -1,0 +1,838 @@
+{% extends "base.html" %}
+
+{% block title %}Seller Dashboard - Market Window{% endblock %}
+
+{% block styles %}
+<style>
+    /* Dashboard Specific Styles */
+    :root {
+        --primary-purple: #6B46C1;
+        --secondary-mauve: #9333EA;
+        --accent-blue: #3B82F6;
+        --success-green: #10b981;
+        --warning-orange: #f59e0b;
+        --danger-red: #ef4444;
+        --info-cyan: #06b6d4;
+    }
+
+    .metric-card {
+        background: white;
+        border-radius: 12px;
+        border: 1px solid #e5e7eb;
+        padding: 1.5rem;
+        transition: all 0.3s ease;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+    }
+
+    .metric-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 8px 16px rgba(107, 70, 193, 0.12);
+    }
+
+    .metric-card.border-left-primary {
+        border-left: 4px solid var(--primary-purple) !important;
+    }
+
+    .metric-card.border-left-success {
+        border-left: 4px solid var(--success-green) !important;
+    }
+
+    .metric-card.border-left-warning {
+        border-left: 4px solid var(--warning-orange) !important;
+    }
+
+    .metric-card.border-left-info {
+        border-left: 4px solid var(--info-cyan) !important;
+    }
+
+    .metric-icon {
+        width: 60px;
+        height: 60px;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.75rem;
+    }
+
+    .metric-icon.primary {
+        background: rgba(107, 70, 193, 0.1);
+        color: var(--primary-purple);
+    }
+
+    .metric-icon.success {
+        background: rgba(16, 185, 129, 0.1);
+        color: var(--success-green);
+    }
+
+    .metric-icon.warning {
+        background: rgba(245, 158, 11, 0.1);
+        color: var(--warning-orange);
+    }
+
+    .metric-icon.info {
+        background: rgba(6, 182, 212, 0.1);
+        color: var(--info-cyan);
+    }
+
+    .metric-label {
+        font-size: 0.875rem;
+        font-weight: 600;
+        color: #6b7280;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin-bottom: 0.5rem;
+    }
+
+    .metric-value {
+        font-size: 2rem;
+        font-weight: 800;
+        color: #111827;
+        line-height: 1;
+    }
+
+    .metric-change {
+        font-size: 0.875rem;
+        margin-top: 0.75rem;
+        padding: 0.5rem 0.75rem;
+        border-radius: 6px;
+        display: inline-block;
+    }
+
+    .metric-change.positive {
+        background: rgba(16, 185, 129, 0.1);
+        color: var(--success-green);
+    }
+
+    .metric-change.negative {
+        background: rgba(239, 68, 68, 0.1);
+        color: var(--danger-red);
+    }
+
+    /* Quick Action Cards */
+    .quick-action-btn {
+        background: white;
+        border: 1px solid #e5e7eb;
+        border-radius: 10px;
+        padding: 1.5rem;
+        text-align: center;
+        transition: all 0.3s ease;
+        text-decoration: none;
+        color: #374151;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 1rem;
+    }
+
+    .quick-action-btn:hover {
+        border-color: var(--primary-purple);
+        background: rgba(107, 70, 193, 0.05);
+        transform: translateY(-4px);
+        box-shadow: 0 8px 16px rgba(107, 70, 193, 0.12);
+        color: var(--primary-purple);
+    }
+
+    .quick-action-icon {
+        width: 50px;
+        height: 50px;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.5rem;
+        background: rgba(107, 70, 193, 0.1);
+        color: var(--primary-purple);
+    }
+
+    .quick-action-label {
+        font-weight: 600;
+        font-size: 0.95rem;
+    }
+
+    /* Alert Cards */
+    .alert-item {
+        background: white;
+        border-left: 4px solid #f59e0b;
+        border-radius: 8px;
+        padding: 1rem;
+        margin-bottom: 1rem;
+        display: flex;
+        gap: 1rem;
+        align-items: flex-start;
+    }
+
+    .alert-item.success {
+        border-left-color: var(--success-green);
+    }
+
+    .alert-item.error {
+        border-left-color: var(--danger-red);
+    }
+
+    .alert-item.info {
+        border-left-color: var(--info-cyan);
+    }
+
+    .alert-icon {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+        font-size: 1.25rem;
+    }
+
+    .alert-item.success .alert-icon {
+        background: rgba(16, 185, 129, 0.1);
+        color: var(--success-green);
+    }
+
+    .alert-item.error .alert-icon {
+        background: rgba(239, 68, 68, 0.1);
+        color: var(--danger-red);
+    }
+
+    .alert-item.info .alert-icon {
+        background: rgba(6, 182, 212, 0.1);
+        color: var(--info-cyan);
+    }
+
+    .alert-content {
+        flex: 1;
+    }
+
+    .alert-title {
+        font-weight: 600;
+        color: #111827;
+        margin-bottom: 0.25rem;
+    }
+
+    .alert-message {
+        font-size: 0.875rem;
+        color: #6b7280;
+    }
+
+    /* Activity List */
+    .activity-item {
+        padding: 1rem;
+        border-bottom: 1px solid #e5e7eb;
+        display: flex;
+        gap: 1rem;
+        align-items: flex-start;
+    }
+
+    .activity-item:last-child {
+        border-bottom: none;
+    }
+
+    .activity-avatar {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        background: rgba(107, 70, 193, 0.1);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: var(--primary-purple);
+        font-weight: 600;
+        flex-shrink: 0;
+    }
+
+    .activity-content {
+        flex: 1;
+    }
+
+    .activity-title {
+        font-weight: 600;
+        color: #111827;
+        margin-bottom: 0.25rem;
+    }
+
+    .activity-meta {
+        font-size: 0.875rem;
+        color: #6b7280;
+    }
+
+    .activity-time {
+        font-size: 0.75rem;
+        color: #9ca3af;
+        margin-top: 0.25rem;
+    }
+
+    /* Status Badge */
+    .status-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.5rem 1rem;
+        border-radius: 6px;
+        font-weight: 600;
+        font-size: 0.875rem;
+    }
+
+    .status-badge.verified {
+        background: rgba(16, 185, 129, 0.1);
+        color: var(--success-green);
+    }
+
+    .status-badge.pending {
+        background: rgba(245, 158, 11, 0.1);
+        color: var(--warning-orange);
+    }
+
+    .status-badge.unverified {
+        background: rgba(239, 68, 68, 0.1);
+        color: var(--danger-red);
+    }
+
+    /* Card Styles */
+    .dashboard-card {
+        background: white;
+        border-radius: 12px;
+        border: 1px solid #e5e7eb;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+    }
+
+    .dashboard-card-header {
+        padding: 1.5rem;
+        border-bottom: 1px solid #e5e7eb;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .dashboard-card-header h3 {
+        margin: 0;
+        font-size: 1.125rem;
+        font-weight: 700;
+        color: #111827;
+    }
+
+    .dashboard-card-body {
+        padding: 1.5rem;
+    }
+
+    /* Chart Placeholder */
+    .chart-placeholder {
+        background: #f9fafb;
+        border-radius: 8px;
+        padding: 2rem;
+        text-align: center;
+        color: #9ca3af;
+        min-height: 300px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-direction: column;
+    }
+
+    .chart-placeholder i {
+        font-size: 3rem;
+        margin-bottom: 1rem;
+        opacity: 0.5;
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+        .metric-card {
+            padding: 1rem;
+        }
+
+        .metric-value {
+            font-size: 1.5rem;
+        }
+
+        .quick-action-btn {
+            padding: 1rem;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-3 px-lg-4 py-4">
+    <!-- Page Header -->
+    <div class="d-flex justify-content-between align-items-center mb-5">
+        <div>
+            <h1 class="h2 fw-bold mb-1">Seller Dashboard</h1>
+            <p class="text-muted mb-0">Welcome back! Here's your shop performance overview.</p>
+        </div>
+        <div class="d-flex gap-2">
+            <button class="btn btn-outline-secondary btn-sm" title="Export Dashboard">
+                <i class="bi bi-download me-1"></i>Export
+            </button>
+            <button class="btn btn-outline-secondary btn-sm" title="Refresh Data">
+                <i class="bi bi-arrow-clockwise me-1"></i>Refresh
+            </button>
+        </div>
+    </div>
+
+    <!-- Alerts & Notifications Section -->
+    <div class="row mb-4" id="alerts-section">
+        <div class="col-12">
+            <div class="dashboard-card">
+                <div class="dashboard-card-header">
+                    <h3>
+                        <i class="bi bi-exclamation-triangle me-2"></i>Alerts & Notifications
+                    </h3>
+                    <a href="#" class="btn btn-sm btn-link text-decoration-none">View All</a>
+                </div>
+                <div class="dashboard-card-body">
+                    <!-- Alert: New Inquiry -->
+                    <div class="alert-item info">
+                        <div class="alert-icon">
+                            <i class="bi bi-chat-dots"></i>
+                        </div>
+                        <div class="alert-content">
+                            <div class="alert-title">New Customer Inquiry</div>
+                            <div class="alert-message">You have 3 new inquiries waiting for response</div>
+                        </div>
+                        <a href="/seller/inquiries" class="btn btn-sm btn-outline-primary">View</a>
+                    </div>
+
+                    <!-- Alert: Low Stock -->
+                    <div class="alert-item warning">
+                        <div class="alert-icon">
+                            <i class="bi bi-exclamation-circle"></i>
+                        </div>
+                        <div class="alert-content">
+                            <div class="alert-title">Low Stock Alert</div>
+                            <div class="alert-message">2 products are running low on stock. Update inventory soon.</div>
+                        </div>
+                        <a href="/seller/products" class="btn btn-sm btn-outline-primary">Manage</a>
+                    </div>
+
+                    <!-- Alert: Verification Status -->
+                    <div class="alert-item warning">
+                        <div class="alert-icon">
+                            <i class="bi bi-shield-exclamation"></i>
+                        </div>
+                        <div class="alert-content">
+                            <div class="alert-title">Verification Pending</div>
+                            <div class="alert-message">Your shop verification is pending. Complete your profile to speed up the process.</div>
+                        </div>
+                        <a href="/seller/verification" class="btn btn-sm btn-outline-primary">Complete</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Key Metrics Section -->
+    <div class="row g-4 mb-5">
+        <!-- Profile Views Today -->
+        <div class="col-12 col-sm-6 col-lg-3">
+            <div class="metric-card border-left-primary">
+                <div class="d-flex justify-content-between align-items-start mb-2">
+                    <div>
+                        <div class="metric-label">Profile Views Today</div>
+                        <div class="metric-value" id="profile-views">324</div>
+                    </div>
+                    <div class="metric-icon primary">
+                        <i class="bi bi-eye"></i>
+                    </div>
+                </div>
+                <div class="metric-change positive">
+                    <i class="bi bi-arrow-up"></i> 12% from yesterday
+                </div>
+            </div>
+        </div>
+
+        <!-- Product Views -->
+        <div class="col-12 col-sm-6 col-lg-3">
+            <div class="metric-card border-left-success">
+                <div class="d-flex justify-content-between align-items-start mb-2">
+                    <div>
+                        <div class="metric-label">Product Views</div>
+                        <div class="metric-value" id="product-views">1,847</div>
+                    </div>
+                    <div class="metric-icon success">
+                        <i class="bi bi-box"></i>
+                    </div>
+                </div>
+                <div class="metric-change positive">
+                    <i class="bi bi-arrow-up"></i> 8% this week
+                </div>
+            </div>
+        </div>
+
+        <!-- New Inquiries -->
+        <div class="col-12 col-sm-6 col-lg-3">
+            <div class="metric-card border-left-info">
+                <div class="d-flex justify-content-between align-items-start mb-2">
+                    <div>
+                        <div class="metric-label">New Inquiries</div>
+                        <div class="metric-value" id="new-inquiries">12</div>
+                    </div>
+                    <div class="metric-icon info">
+                        <i class="bi bi-chat-dots"></i>
+                    </div>
+                </div>
+                <div class="metric-change positive">
+                    <i class="bi bi-arrow-up"></i> 3 unread
+                </div>
+            </div>
+        </div>
+
+        <!-- Wishlist Saves -->
+        <div class="col-12 col-sm-6 col-lg-3">
+            <div class="metric-card border-left-warning">
+                <div class="d-flex justify-content-between align-items-start mb-2">
+                    <div>
+                        <div class="metric-label">Wishlist Saves</div>
+                        <div class="metric-value" id="wishlist-saves">456</div>
+                    </div>
+                    <div class="metric-icon warning">
+                        <i class="bi bi-heart"></i>
+                    </div>
+                </div>
+                <div class="metric-change positive">
+                    <i class="bi bi-arrow-up"></i> 24 new this week
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Actions Section -->
+    <div class="row mb-5">
+        <div class="col-12">
+            <h3 class="fw-bold mb-3">Quick Actions</h3>
+        </div>
+        <div class="col-12 col-sm-6 col-lg-3">
+            <a href="/seller/products/new" class="quick-action-btn">
+                <div class="quick-action-icon">
+                    <i class="bi bi-plus-circle"></i>
+                </div>
+                <div class="quick-action-label">Add New Product</div>
+            </a>
+        </div>
+        <div class="col-12 col-sm-6 col-lg-3">
+            <a href="/seller/products?filter=low-stock" class="quick-action-btn">
+                <div class="quick-action-icon" style="background: rgba(245, 158, 11, 0.1); color: var(--warning-orange);">
+                    <i class="bi bi-exclamation-circle"></i>
+                </div>
+                <div class="quick-action-label">Update Stock</div>
+            </a>
+        </div>
+        <div class="col-12 col-sm-6 col-lg-3">
+            <a href="/seller/inquiries" class="quick-action-btn">
+                <div class="quick-action-icon" style="background: rgba(6, 182, 212, 0.1); color: var(--info-cyan);">
+                    <i class="bi bi-chat-left-text"></i>
+                </div>
+                <div class="quick-action-label">View Inquiries</div>
+            </a>
+        </div>
+        <div class="col-12 col-sm-6 col-lg-3">
+            <a href="/seller/shop/edit" class="quick-action-btn">
+                <div class="quick-action-icon" style="background: rgba(16, 185, 129, 0.1); color: var(--success-green);">
+                    <i class="bi bi-pencil-square"></i>
+                </div>
+                <div class="quick-action-label">Edit Shop Profile</div>
+            </a>
+        </div>
+    </div>
+
+    <!-- Status Overview Section -->
+    <div class="row mb-5">
+        <div class="col-12">
+            <div class="dashboard-card">
+                <div class="dashboard-card-header">
+                    <h3>
+                        <i class="bi bi-shield-check me-2"></i>Account Status Overview
+                    </h3>
+                </div>
+                <div class="dashboard-card-body">
+                    <div class="row g-4">
+                        <!-- Email Verification -->
+                        <div class="col-12 col-md-6 col-lg-4">
+                            <div class="d-flex align-items-center justify-content-between">
+                                <div class="d-flex align-items-center gap-2">
+                                    <i class="bi bi-envelope-fill" style="font-size: 1.5rem; color: var(--primary-purple);"></i>
+                                    <div>
+                                        <div class="fw-bold">Email Verification</div>
+                                        <small class="text-muted">obed@example.com</small>
+                                    </div>
+                                </div>
+                                <span class="status-badge verified">
+                                    <i class="bi bi-check-circle"></i> Verified
+                                </span>
+                            </div>
+                        </div>
+
+                        <!-- Phone Verification -->
+                        <div class="col-12 col-md-6 col-lg-4">
+                            <div class="d-flex align-items-center justify-content-between">
+                                <div class="d-flex align-items-center gap-2">
+                                    <i class="bi bi-telephone-fill" style="font-size: 1.5rem; color: var(--success-green);"></i>
+                                    <div>
+                                        <div class="fw-bold">Phone Verification</div>
+                                        <small class="text-muted">+233 XX XXX XXXX</small>
+                                    </div>
+                                </div>
+                                <span class="status-badge pending">
+                                    <i class="bi bi-clock"></i> Pending
+                                </span>
+                            </div>
+                        </div>
+
+                        <!-- Shop Verification -->
+                        <div class="col-12 col-md-6 col-lg-4">
+                            <div class="d-flex align-items-center justify-content-between">
+                                <div class="d-flex align-items-center gap-2">
+                                    <i class="bi bi-shop" style="font-size: 1.5rem; color: var(--info-cyan);"></i>
+                                    <div>
+                                        <div class="fw-bold">Shop Verification</div>
+                                        <small class="text-muted">Business License</small>
+                                    </div>
+                                </div>
+                                <span class="status-badge unverified">
+                                    <i class="bi bi-x-circle"></i> Not Verified
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mt-4 pt-4 border-top">
+                        <a href="/seller/verification" class="btn btn-primary">
+                            <i class="bi bi-shield-check me-2"></i>Complete Verification
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Activity Section -->
+    <div class="row mb-5">
+        <div class="col-12 col-lg-6">
+            <div class="dashboard-card">
+                <div class="dashboard-card-header">
+                    <h3>
+                        <i class="bi bi-clock-history me-2"></i>Recent Inquiries
+                    </h3>
+                    <a href="/seller/inquiries" class="btn btn-sm btn-link text-decoration-none">View All</a>
+                </div>
+                <div class="dashboard-card-body p-0">
+                    <!-- Inquiry 1 -->
+                    <div class="activity-item">
+                        <div class="activity-avatar">JD</div>
+                        <div class="activity-content">
+                            <div class="activity-title">John Doe</div>
+                            <div class="activity-meta">"Is this product available in blue?"</div>
+                            <div class="activity-time">2 hours ago</div>
+                        </div>
+                    </div>
+
+                    <!-- Inquiry 2 -->
+                    <div class="activity-item">
+                        <div class="activity-avatar" style="background: rgba(16, 185, 129, 0.1); color: var(--success-green);">SA</div>
+                        <div class="activity-content">
+                            <div class="activity-title">Sarah Anderson</div>
+                            <div class="activity-meta">"What's the shipping cost to Accra?"</div>
+                            <div class="activity-time">5 hours ago</div>
+                        </div>
+                    </div>
+
+                    <!-- Inquiry 3 -->
+                    <div class="activity-item">
+                        <div class="activity-avatar" style="background: rgba(6, 182, 212, 0.1); color: var(--info-cyan);">MK</div>
+                        <div class="activity-content">
+                            <div class="activity-title">Michael King</div>
+                            <div class="activity-meta">"Do you offer bulk discounts?"</div>
+                            <div class="activity-time">1 day ago</div>
+                        </div>
+                    </div>
+
+                    <!-- View More -->
+                    <div class="activity-item border-top pt-3">
+                        <a href="/seller/inquiries" class="btn btn-sm btn-outline-primary w-100">
+                            View All Inquiries
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Popular Products Section -->
+        <div class="col-12 col-lg-6">
+            <div class="dashboard-card">
+                <div class="dashboard-card-header">
+                    <h3>
+                        <i class="bi bi-fire me-2"></i>Popular Products
+                    </h3>
+                    <a href="/seller/products" class="btn btn-sm btn-link text-decoration-none">View All</a>
+                </div>
+                <div class="dashboard-card-body p-0">
+                    <!-- Product 1 -->
+                    <div class="activity-item">
+                        <div class="activity-avatar" style="background: rgba(245, 158, 11, 0.1); color: var(--warning-orange); font-size: 1.25rem;">
+                            <i class="bi bi-box"></i>
+                        </div>
+                        <div class="activity-content">
+                            <div class="activity-title">Wireless Headphones</div>
+                            <div class="activity-meta">
+                                <i class="bi bi-eye me-1"></i>342 views
+                                <span class="ms-3"><i class="bi bi-heart me-1"></i>28 saves</span>
+                            </div>
+                        </div>
+                        <span class="badge bg-success">Top</span>
+                    </div>
+
+                    <!-- Product 2 -->
+                    <div class="activity-item">
+                        <div class="activity-avatar" style="background: rgba(245, 158, 11, 0.1); color: var(--warning-orange); font-size: 1.25rem;">
+                            <i class="bi bi-box"></i>
+                        </div>
+                        <div class="activity-content">
+                            <div class="activity-title">USB-C Cable Pack</div>
+                            <div class="activity-meta">
+                                <i class="bi bi-eye me-1"></i>287 views
+                                <span class="ms-3"><i class="bi bi-heart me-1"></i>19 saves</span>
+                            </div>
+                        </div>
+                        <span class="badge bg-info">Trending</span>
+                    </div>
+
+                    <!-- Product 3 -->
+                    <div class="activity-item">
+                        <div class="activity-avatar" style="background: rgba(245, 158, 11, 0.1); color: var(--warning-orange); font-size: 1.25rem;">
+                            <i class="bi bi-box"></i>
+                        </div>
+                        <div class="activity-content">
+                            <div class="activity-title">Phone Case Pro</div>
+                            <div class="activity-meta">
+                                <i class="bi bi-eye me-1"></i>156 views
+                                <span class="ms-3"><i class="bi bi-heart me-1"></i>12 saves</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- View More -->
+                    <div class="activity-item border-top pt-3">
+                        <a href="/seller/products" class="btn btn-sm btn-outline-primary w-100">
+                            View All Products
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Performance Charts Section -->
+    <div class="row mb-5">
+        <!-- Views Trend Chart -->
+        <div class="col-12 col-lg-6">
+            <div class="dashboard-card">
+                <div class="dashboard-card-header">
+                    <h3>
+                        <i class="bi bi-graph-up me-2"></i>Views Trend
+                    </h3>
+                    <div class="btn-group btn-group-sm" role="group">
+                        <input type="radio" class="btn-check" name="chart-period-1" id="week-1" checked>
+                        <label class="btn btn-outline-secondary" for="week-1">Week</label>
+                        <input type="radio" class="btn-check" name="chart-period-1" id="month-1">
+                        <label class="btn btn-outline-secondary" for="month-1">Month</label>
+                    </div>
+                </div>
+                <div class="dashboard-card-body">
+                    <div class="chart-placeholder">
+                        <i class="bi bi-graph-up"></i>
+                        <p>Chart will be rendered here using Chart.js or similar library</p>
+                        <small class="text-muted">Profile views and product views trend</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Inquiry Sources Chart -->
+        <div class="col-12 col-lg-6">
+            <div class="dashboard-card">
+                <div class="dashboard-card-header">
+                    <h3>
+                        <i class="bi bi-pie-chart me-2"></i>Inquiry Sources
+                    </h3>
+                    <div class="btn-group btn-group-sm" role="group">
+                        <input type="radio" class="btn-check" name="chart-period-2" id="week-2" checked>
+                        <label class="btn btn-outline-secondary" for="week-2">Week</label>
+                        <input type="radio" class="btn-check" name="chart-period-2" id="month-2">
+                        <label class="btn btn-outline-secondary" for="month-2">Month</label>
+                    </div>
+                </div>
+                <div class="dashboard-card-body">
+                    <div class="chart-placeholder">
+                        <i class="bi bi-pie-chart"></i>
+                        <p>Chart will be rendered here using Chart.js or similar library</p>
+                        <small class="text-muted">Where your inquiries are coming from</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Product Performance Chart -->
+    <div class="row mb-5">
+        <div class="col-12">
+            <div class="dashboard-card">
+                <div class="dashboard-card-header">
+                    <h3>
+                        <i class="bi bi-bar-chart me-2"></i>Top Performing Products
+                    </h3>
+                    <div class="btn-group btn-group-sm" role="group">
+                        <input type="radio" class="btn-check" name="chart-period-3" id="week-3" checked>
+                        <label class="btn btn-outline-secondary" for="week-3">Week</label>
+                        <input type="radio" class="btn-check" name="chart-period-3" id="month-3">
+                        <label class="btn btn-outline-secondary" for="month-3">Month</label>
+                    </div>
+                </div>
+                <div class="dashboard-card-body">
+                    <div class="chart-placeholder" style="min-height: 250px;">
+                        <i class="bi bi-bar-chart"></i>
+                        <p>Chart will be rendered here using Chart.js or similar library</p>
+                        <small class="text-muted">Product performance based on views, inquiries, and sales</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Load dashboard data via HTMX or fetch API
+        // Example: Load alerts dynamically
+        // htmx.ajax('GET', '/api/seller/alerts', '#alerts-section');
+
+        // Animate metric cards on load
+        const metricCards = document.querySelectorAll('.metric-card');
+        metricCards.forEach((card, index) => {
+            setTimeout(() => {
+                card.style.opacity = '0';
+                card.style.transform = 'translateY(20px)';
+                card.style.transition = 'all 0.6s ease';
+                
+                requestAnimationFrame(() => {
+                    card.style.opacity = '1';
+                    card.style.transform = 'translateY(0)';
+                });
+            }, index * 100);
+        });
+
+        // Example: Load real data from API
+        // fetch('/api/seller/dashboard/metrics')
+        //     .then(response => response.json())
+        //     .then(data => {
+        //         document.getElementById('profile-views').textContent = data.profile_views;
+        //         document.getElementById('product-views').textContent = data.product_views;
+        //         document.getElementById('new-inquiries').textContent = data.new_inquiries;
+        //         document.getElementById('wishlist-saves').textContent = data.wishlist_saves;
+        //     });
+    });
+</script>
+{% endblock %}
