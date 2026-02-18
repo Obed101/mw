@@ -256,9 +256,19 @@ def oauth_authorize():
         # 1. Exchange code for token
         token = oauth.google.authorize_access_token()
 
-        # 2. Fetch user info explicitly
-        resp = oauth.google.get('userinfo')
-        user_info = resp.json()
+        # 2. Fetch user info (prefer endpoint from metadata, fallback to Google OIDC URL)
+        user_info = token.get('userinfo')
+        if not user_info:
+            userinfo_url = 'https://openidconnect.googleapis.com/v1/userinfo'
+            try:
+                metadata = oauth.google.load_server_metadata()
+                userinfo_url = metadata.get('userinfo_endpoint', userinfo_url)
+            except Exception:
+                pass
+
+            resp = oauth.google.get(userinfo_url)
+            if resp.ok:
+                user_info = resp.json()
 
         if not user_info:
             flash('Failed to get user information from Google', 'error')
@@ -277,6 +287,7 @@ def oauth_authorize():
 
         if user:
             login_user(user)
+            flash(f"Welcome back, {user.first_name or user.username}!", "success")
         else:
             username = email.split('@')[0]
             counter = 1
@@ -299,6 +310,7 @@ def oauth_authorize():
             db.session.commit()
 
             login_user(user)
+            flash(f"Welcome to Market Window, {user.first_name or user.username}!", "success")
 
         # 4. Redirect
         if user.role == 'admin':

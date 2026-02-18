@@ -87,7 +87,7 @@ def create_category():
         return jsonify({"error": "Branch categories require a trunk parent"}), 400
     elif category_level == CATEGORY_LEVEL_LEAF and not parent_id:
         return jsonify({"error": "Leaf categories require a branch parent"}), 400
-    
+
     # Check if parent exists and is of correct level
     if parent_id:
         parent = Category.query.get(parent_id)
@@ -98,7 +98,7 @@ def create_category():
            (category_level == CATEGORY_LEVEL_LEAF and parent.level != CATEGORY_LEVEL_BRANCH):
             level_names = {0: 'trunk', 1: 'branch', 2: 'leaf'}
             return jsonify({"error": f"Invalid parent category level for {level_names[category_level]}"}), 400
-    
+
     # Create category
     try:
         category = Category(

@@ -2,6 +2,7 @@ from flask import request, jsonify, url_for, redirect, flash, Blueprint
 from flask_jwt_extended import create_access_token, create_refresh_token, jwt_required, get_jwt_identity, get_jwt
 from flask_login import login_user, logout_user, current_user
 from datetime import datetime, timezone
+from sqlalchemy import func
 from ..extensions import db, token_blacklist
 from ..models.user_model import User, USER_STATUS_ACTIVE, USER_ROLE_ADMIN, USER_ROLE_SELLER, USER_ROLE_BUYER, AuthToken
 
@@ -21,9 +22,9 @@ def register():
     
     # Validate required fields
     if is_oauth:
-        required = ['username', 'email', 'role']
+        required = ['username', 'email']
     else:
-        required = ['username', 'email', 'password', 'confirm_password', 'role']
+        required = ['username', 'email', 'password', 'confirm_password']
     
     if not all(field in data for field in required):
         error_msg = "Missing required fields"
@@ -52,9 +53,12 @@ def register():
             flash(error_msg, 'error')
             return redirect(url_for('main_bp.register'))
     
+    # Default role to buyer if omitted from UI/form
+    role = (data.get('role') or USER_ROLE_BUYER).strip()
+
     # Validate role
     valid_roles = [USER_ROLE_ADMIN, USER_ROLE_SELLER, USER_ROLE_BUYER]
-    if data['role'] not in valid_roles:
+    if role not in valid_roles:
         error_msg = "Invalid role"
         if request.is_json:
             return jsonify({"error": error_msg}), 400
@@ -84,7 +88,7 @@ def register():
         user = User(
             username=data['username'],
             email=data['email'],
-            role=data['role'],
+            role=role,
             status=USER_STATUS_ACTIVE
         )
         
@@ -150,8 +154,12 @@ def login():
         data = request.form.to_dict()
     
     # Validate required fields
-    if not data or not data.get('username'):
-        error_msg = "Username is required"
+    identifier = ''
+    if data:
+        identifier = (data.get('username') or data.get('email') or '').strip()
+
+    if not identifier:
+        error_msg = "Username or email is required"
         if request.is_json:
             return jsonify({"error": error_msg}), 400
         else:
@@ -170,9 +178,9 @@ def login():
             return redirect(url_for('main_bp.login'))
     
     # Find user (try username first, then email)
-    user = User.query.filter_by(username=data['username']).first()
+    user = User.query.filter_by(username=identifier).first()
     if not user:
-        user = User.query.filter_by(email=data['username']).first()
+        user = User.query.filter(func.lower(User.email) == identifier.lower()).first()
     
     if not user:
         error_msg = "Invalid username/email"

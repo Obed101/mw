@@ -95,6 +95,39 @@
         </div>
     </nav>
 
+    {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+    <div id="mw-toast-container" class="mw-toast-container" aria-live="polite" aria-atomic="true">
+        {% for category, message in messages %}
+            {% set tone = category if category in ['success', 'error', 'warning', 'info'] else 'info' %}
+            {% if tone == 'success' %}
+                {% set icon = 'bi-check-circle-fill' %}
+            {% elif tone == 'error' %}
+                {% set icon = 'bi-x-octagon-fill' %}
+            {% elif tone == 'warning' %}
+                {% set icon = 'bi-exclamation-triangle-fill' %}
+            {% else %}
+                {% set icon = 'bi-info-circle-fill' %}
+            {% endif %}
+            <div class="mw-toast mw-toast-{{ tone }}" data-autodismiss="15000" role="status">
+                <div class="mw-toast-icon"><i class="bi {{ icon }}"></i></div>
+                <div class="mw-toast-message">{{ message }}</div>
+                <button type="button" class="mw-toast-close" aria-label="Dismiss notification">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+            </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+    {% endwith %}
+
+    <div id="global-loading-overlay" class="global-loading-overlay" aria-hidden="true">
+        <div class="global-loading-card">
+            <div class="spinner-border text-primary" role="status"></div>
+            <p id="global-loading-text" class="mb-0 mt-3 fw-semibold">Please wait...</p>
+        </div>
+    </div>
+
     <!-- Sidebar Navigation (Desktop) -->
     <nav class="sidebar-nav">
         <a href="/" class="sidebar-nav-item {{ is_active('/') }}">
@@ -177,6 +210,7 @@
 
     <!-- Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
     
     {% block scripts %}{% endblock %}
 </body>
