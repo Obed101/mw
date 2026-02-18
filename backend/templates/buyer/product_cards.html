@@ -1,0 +1,47 @@
+{% if products %}
+    {% for product in products %}
+    <div class="col-md-6 col-lg-4 col-xl-3">
+        <div class="card h-100 border-0 shadow-sm product-card">
+            <img src="{{ url_for('static', filename='images/mw_logo_trans.png') }}" class="card-img-top" alt="{{ product.name }}">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start mb-2">
+                    <h6 class="card-title fw-bold mb-0">{{ product.name }}</h6>
+                    {% if product.stock > 10 %}
+                    <span class="badge bg-success">In Stock</span>
+                    {% elif product.stock > 0 %}
+                    <span class="badge bg-warning text-dark">Low Stock</span>
+                    {% else %}
+                    <span class="badge bg-danger">Out of Stock</span>
+                    {% endif %}
+                </div>
+                <p class="card-text text-muted small mb-1">{{ product.shop.name if product.shop else "Unknown Shop" }}</p>
+                <p class="card-text text-muted small mb-2">{{ product.category.name if product.category else "Uncategorized" }}</p>
+                <h5 class="text-primary fw-bold mb-2">₵{{ '%.2f'|format(product.price) }}</h5>
+                <p class="card-text small text-muted mb-3 line-clamp-2">
+                    {{ product.description or "No description available." }}
+                </p>
+                <small class="text-muted"><i class="bi bi-box-seam me-1"></i>{{ product.stock }} available</small>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+{% elif not next_page %}
+<div class="col-12">
+    <div class="alert alert-light border text-center mb-0">
+        No products matched your current filters.
+    </div>
+</div>
+{% endif %}
+
+<div class="text-center mt-4" id="product-load-more-container" hx-swap-oob="true">
+    {% if has_next %}
+    <button
+        class="btn btn-primary"
+        hx-get="{{ url_for('buyer_bp.browse_products', page=next_page, search=search_term, category_id=category_id, shop_id=shop_id, min_price=min_price, max_price=max_price, in_stock=in_stock, sort_by=sort_by) }}"
+        hx-target="#products-container"
+        hx-swap="beforeend"
+    >
+        <i class="bi bi-arrow-down-circle me-2"></i>Load More Products
+    </button>
+    {% endif %}
+</div>

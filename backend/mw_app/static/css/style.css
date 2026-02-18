@@ -567,6 +567,15 @@ body {
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1) !important;
 }
 
+.line-clamp-2 {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    line-clamp: 2;
+}
+
 /* ===== ANIMATIONS ===== */
 @keyframes fadeInUp {
     from {

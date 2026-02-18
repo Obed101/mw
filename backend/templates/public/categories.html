@@ -7,95 +7,79 @@
     <div class="row mb-4">
         <div class="col-12">
             <h1 class="fw-bold">Browse Categories</h1>
-            <p class="text-muted">Discover products by category</p>
+            <p class="text-muted">Live category data from your seeded database</p>
         </div>
     </div>
 
+    <form method="get" class="mb-4" x-data="{ showExtraCriteria: false }">
+        <div class="row g-3 align-items-center">
+            <div class="col-md-8">
+                <div class="input-group">
+                    <span class="input-group-text"><i class="bi bi-search"></i></span>
+                    <input
+                        type="text"
+                        class="form-control"
+                        name="search"
+                        value="{{ search_term or '' }}"
+                        placeholder="Search categories..."
+                    >
+                    <button type="submit" class="btn btn-primary">Search</button>
+                </div>
+            </div>
+            <div class="col-md-4 text-md-end">
+                <button
+                    type="button"
+                    class="btn btn-outline-secondary btn-sm"
+                    @click="showExtraCriteria = !showExtraCriteria"
+                    :aria-expanded="showExtraCriteria.toString()"
+                >
+                    Extra Search Criteria
+                    <i class="bi ms-1" :class="showExtraCriteria ? 'bi-caret-up-fill' : 'bi-caret-down-fill'"></i>
+                </button>
+            </div>
+        </div>
+
+        <div class="row g-3 mt-1" x-show="showExtraCriteria" x-transition>
+            <div class="col-md-6">
+                <select class="form-select" name="sort_by">
+                    <option value="name" {% if sort_by == 'name' %}selected{% endif %}>Sort: Name</option>
+                    <option value="product_count_desc" {% if sort_by == 'product_count_desc' %}selected{% endif %}>Sort: Most Products</option>
+                    <option value="product_count_asc" {% if sort_by == 'product_count_asc' %}selected{% endif %}>Sort: Least Products</option>
+                </select>
+            </div>
+            <div class="col-md-4 d-flex align-items-center">
+                <div class="form-check mt-1">
+                    <input class="form-check-input" type="checkbox" id="with-products" name="with_products" value="true" {% if with_products %}checked{% endif %}>
+                    <label class="form-check-label" for="with-products">Only categories with products</label>
+                </div>
+            </div>
+            <div class="col-md-2 text-md-end">
+                <button type="submit" class="btn btn-primary w-100">Apply</button>
+            </div>
+        </div>
+    </form>
+
     <div class="row g-4">
-        <!-- Category Grid -->
+        {% for category in categories %}
         <div class="col-md-6 col-lg-4">
             <div class="card h-100 border-0 shadow-sm feature-card">
-                <div class="card-body text-center p-4">
-                    <div class="rounded-circle bg-light d-inline-flex align-items-center justify-content-center mb-3" 
-                         style="width: 80px; height: 80px;">
-                        <i class="bi bi-phone fs-2 text-primary"></i>
+                <div class="card-body p-4">
+                    <div class="d-flex justify-content-between align-items-start mb-3">
+                        <h5 class="fw-bold mb-0">{{ category.name }}</h5>
+                        <span class="badge bg-light text-dark">{{ category.product_count }} products</span>
                     </div>
-                    <h4 class="fw-bold">Electronics</h4>
-                    <p class="text-muted">245 products</p>
-                    <a href="/categories/electronics" class="btn btn-primary">Browse</a>
+                    <p class="text-muted small mb-4">{{ category.description or "Product category available in the marketplace." }}</p>
+                    <a href="{{ url_for('main_bp.products', category_id=category.id) }}" class="btn btn-primary btn-sm">Browse Products</a>
                 </div>
             </div>
         </div>
+        {% endfor %}
 
-        <div class="col-md-6 col-lg-4">
-            <div class="card h-100 border-0 shadow-sm feature-card">
-                <div class="card-body text-center p-4">
-                    <div class="rounded-circle bg-light d-inline-flex align-items-center justify-content-center mb-3" 
-                         style="width: 80px; height: 80px;">
-                        <i class="bi bi-tshirt fs-2 text-success"></i>
-                    </div>
-                    <h4 class="fw-bold">Fashion</h4>
-                    <p class="text-muted">189 products</p>
-                    <a href="/categories/fashion" class="btn btn-primary">Browse</a>
-                </div>
-            </div>
+        {% if not categories %}
+        <div class="col-12">
+            <div class="alert alert-light border text-center mb-0">No categories matched your filters.</div>
         </div>
-
-        <div class="col-md-6 col-lg-4">
-            <div class="card h-100 border-0 shadow-sm feature-card">
-                <div class="card-body text-center p-4">
-                    <div class="rounded-circle bg-light d-inline-flex align-items-center justify-content-center mb-3" 
-                         style="width: 80px; height: 80px;">
-                        <i class="bi bi-house fs-2 text-warning"></i>
-                    </div>
-                    <h4 class="fw-bold">Home & Garden</h4>
-                    <p class="text-muted">156 products</p>
-                    <a href="/categories/home-garden" class="btn btn-primary">Browse</a>
-                </div>
-            </div>
-        </div>
-
-        <div class="col-md-6 col-lg-4">
-            <div class="card h-100 border-0 shadow-sm feature-card">
-                <div class="card-body text-center p-4">
-                    <div class="rounded-circle bg-light d-inline-flex align-items-center justify-content-center mb-3" 
-                         style="width: 80px; height: 80px;">
-                        <i class="bi bi-book fs-2 text-danger"></i>
-                    </div>
-                    <h4 class="fw-bold">Books</h4>
-                    <p class="text-muted">98 products</p>
-                    <a href="/categories/books" class="btn btn-primary">Browse</a>
-                </div>
-            </div>
-        </div>
-
-        <div class="col-md-6 col-lg-4">
-            <div class="card h-100 border-0 shadow-sm feature-card">
-                <div class="card-body text-center p-4">
-                    <div class="rounded-circle bg-light d-inline-flex align-items-center justify-content-center mb-3" 
-                         style="width: 80px; height: 80px;">
-                        <i class="bi bi-dumbbell fs-2 text-info"></i>
-                    </div>
-                    <h4 class="fw-bold">Sports</h4>
-                    <p class="text-muted">67 products</p>
-                    <a href="/categories/sports" class="btn btn-primary">Browse</a>
-                </div>
-            </div>
-        </div>
-
-        <div class="col-md-6 col-lg-4">
-            <div class="card h-100 border-0 shadow-sm feature-card">
-                <div class="card-body text-center p-4">
-                    <div class="rounded-circle bg-light d-inline-flex align-items-center justify-content-center mb-3" 
-                         style="width: 80px; height: 80px;">
-                        <i class="bi bi-palette fs-2" style="color: var(--secondary-mauve);"></i>
-                    </div>
-                    <h4 class="fw-bold">Arts & Crafts</h4>
-                    <p class="text-muted">45 products</p>
-                    <a href="/categories/arts" class="btn btn-primary">Browse</a>
-                </div>
-            </div>
-        </div>
+        {% endif %}
     </div>
 </div>
 {% endblock %}

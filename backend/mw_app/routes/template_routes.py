@@ -1,9 +1,17 @@
 # Template routes for HTMX frontend
-from flask import Blueprint, render_template, request, redirect, url_for, flash, session
+from flask import Blueprint, render_template, request, redirect, url_for, flash, session, current_app
+from sqlalchemy import func, or_
 from flask_login import login_user, current_user, logout_user, login_required
 from ..forms import LoginForm, RegistrationForm
 from ..utils.helpers import seller_required, admin_required
-from ..models.user_model import User, USER_ROLE_BUYER
+from ..models import (
+    Category,
+    Product,
+    Shop,
+    User,
+    USER_ROLE_BUYER,
+    VERIFICATION_STATUS_VERIFIED,
+)
 from ..extensions import oauth, db
 import secrets
 
@@ -17,7 +25,42 @@ admin_bp = Blueprint('admin_template_bp', __name__, url_prefix='/admin')
 @main_bp.route('/')
 def index():
     """Homepage - marketplace overview"""
-    return render_template('public/index.html')
+    verified_shops = Shop.query.filter(
+        Shop.is_active.is_(True),
+        Shop.verification_status == VERIFICATION_STATUS_VERIFIED,
+    )
+
+    featured_shops = verified_shops.order_by(
+        Shop.promoted.desc(),
+        Shop.last_updated.desc(),
+    ).limit(6).all()
+
+    featured_products = Product.query.join(Shop).filter(
+        Product.is_active.is_(True),
+        Shop.is_active.is_(True),
+        Shop.verification_status == VERIFICATION_STATUS_VERIFIED,
+    ).order_by(
+        Product.created_at.desc(),
+    ).limit(12).all()
+
+    category_rows = db.session.query(
+        Category.id,
+        Category.name,
+        func.count(Product.id).label("product_count"),
+    ).outerjoin(
+        Product, Product.category_id == Category.id
+    ).group_by(
+        Category.id, Category.name
+    ).order_by(
+        func.count(Product.id).desc(), Category.name.asc()
+    ).limit(12).all()
+
+    return render_template(
+        'public/index.html',
+        featured_shops=featured_shops,
+        featured_products=featured_products,
+        top_categories=category_rows,
+    )
 
 @main_bp.route('/login')
 def login():
@@ -34,17 +77,58 @@ def register():
 @main_bp.route('/shops')
 def shops():
     """Browse shops page"""
-    return render_template('buyer/shops.html')
+    categories = Category.query.filter_by(is_active=True).order_by(Category.name.asc()).all()
+    return render_template('buyer/shops.html', categories=categories)
 
 @main_bp.route('/products')
 def products():
     """Browse products page"""
-    return render_template('buyer/products.html')
+    categories = Category.query.filter_by(is_active=True).order_by(Category.name.asc()).all()
+    return render_template('buyer/products.html', categories=categories)
 
 @main_bp.route('/categories')
 def categories():
     """Browse categories page"""
-    return render_template('public/categories.html')
+    search_term = request.args.get('search', '').strip()
+    sort_by = request.args.get('sort_by', 'name')
+    with_products = request.args.get('with_products', '').lower() in ('1', 'true', 'yes', 'on')
+
+    categories_data = db.session.query(
+        Category.id,
+        Category.name,
+        Category.description,
+        func.count(Product.id).label("product_count"),
+    ).outerjoin(
+        Product, Product.category_id == Category.id
+    ).group_by(
+        Category.id, Category.name, Category.description
+    )
+
+    if search_term:
+        categories_data = categories_data.filter(
+            or_(
+                Category.name.ilike(f'%{search_term}%'),
+                Category.description.ilike(f'%{search_term}%'),
+            )
+        )
+
+    if with_products:
+        categories_data = categories_data.having(func.count(Product.id) > 0)
+
+    if sort_by == 'product_count_desc':
+        categories_data = categories_data.order_by(func.count(Product.id).desc(), Category.name.asc())
+    elif sort_by == 'product_count_asc':
+        categories_data = categories_data.order_by(func.count(Product.id).asc(), Category.name.asc())
+    else:
+        categories_data = categories_data.order_by(Category.name.asc())
+
+    return render_template(
+        'public/categories.html',
+        categories=categories_data.all(),
+        search_term=search_term,
+        sort_by=sort_by,
+        with_products=with_products,
+    )
 
 @main_bp.route('/profile', methods=['GET', 'POST'])
 @login_required
@@ -268,12 +352,14 @@ def buyer_dashboard():
 @buyer_bp.route('/shops')
 def buyer_shops():
     """Browse shops page"""
-    return render_template('buyer/shops.html')
+    categories = Category.query.filter_by(is_active=True).order_by(Category.name.asc()).all()
+    return render_template('buyer/shops.html', categories=categories)
 
 @buyer_bp.route('/products')
 def buyer_products():
     """Browse products page"""
-    return render_template('buyer/products.html')
+    categories = Category.query.filter_by(is_active=True).order_by(Category.name.asc()).all()
+    return render_template('buyer/products.html', categories=categories)
 
 @buyer_bp.route('/shop/<int:shop_id>')
 def buyer_shop_detail(shop_id):

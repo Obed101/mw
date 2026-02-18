@@ -3,754 +3,99 @@
 {% block title %}Market Window - Your Trusted Marketplace{% endblock %}
 
 {% block content %}
-<!-- Hero Section -->
 <section class="hero-section py-5">
     <div class="container-fluid px-3 px-lg-4">
-        <div class="row align-items-center min-vh-100 g-4 g-lg-5">
-            <div class="col-lg-6 hero-content">
-                <h1 class="display-4 fw-bold text-white mb-4">
-                    Welcome to <span class="text-warning">Market Window</span>
+        <div class="row align-items-center min-vh-50 g-4">
+            <div class="col-lg-7 hero-content">
+                <h1 class="display-5 fw-bold text-white mb-3">
+                    Find verified shops and real inventory.
                 </h1>
-                <p class="lead text-white mb-5">
-                    Ghana's smart window-shopping platform: compare shop ratings, prices, bulk options, and contact details in one place before you buy.
-                </p>
-                <p class="text-white-50 mb-5">
-                    Market Window helps buyers quickly find nearby shops, call or message sellers directly, and make informed choices—while giving shop owners free visibility to compete and grow.
+                <p class="lead text-white mb-4">
+                    Compare prices, browse categories, and discover products from trusted sellers.
                 </p>
                 <div class="d-flex flex-column flex-sm-row gap-3">
-                    <a href="/register" class="btn btn-warning btn-lg text-dark fw-bold">
-                        <i class="bi bi-rocket-takeoff me-2"></i>LOG IN
-                    </a>
-                    <a href="/shops" class="btn btn-outline-light btn-lg">
-                        <i class="bi bi-shop me-2"></i>Find Shops
-                    </a>
+                    <a href="{{ url_for('main_bp.products') }}" class="btn btn-warning btn-lg text-dark fw-bold">Browse Products</a>
+                    <a href="{{ url_for('main_bp.shops') }}" class="btn btn-outline-light btn-lg">Find Shops</a>
                 </div>
             </div>
-            <div class="col-lg-6 d-none d-lg-block">
-                <div class="text-center">
-                    <img src="{{ url_for('static', filename='images/mw_logo_trans.png') }}" alt="Marketplace" class="img-fluid rounded-4 shadow-lg">
-                </div>
+            <div class="col-lg-5 d-none d-lg-block text-center">
+                <img src="{{ url_for('static', filename='images/mw_logo_trans.png') }}" alt="Market Window" class="img-fluid rounded-4 shadow-lg">
             </div>
         </div>
     </div>
 </section>
 
-<!-- Categories with Horizontal Scroll (Play Store Style) -->
 <section class="py-5 bg-white">
     <div class="container-fluid px-3 px-lg-4">
-        <!-- Electronics Category -->
-        <div class="mb-5 fade-in-up">
-            <div class="d-flex justify-content-between align-items-center mb-4">
-                <div>
-                    <h3 class="fw-bold mb-1">
-                        <i class="bi bi-phone text-primary me-2"></i>Electronics & Gadgets
-                    </h3>
-                    <small class="text-muted">Discover the latest tech and gadgets</small>
-                </div>
-                <button class="btn btn-sm btn-outline-primary" hx-get="/categories/electronics?page=2" hx-target="#electronics-container" hx-swap="beforeend">
-                    Load More <i class="bi bi-arrow-down-circle ms-1"></i>
-                </button>
-            </div>
-            
-            <div class="category-scroll">
-                <div class="d-flex gap-3" style="min-width: max-content;" id="electronics-container">
-                    <!-- Product Card 1 -->
-                    <div class="product-card" style="min-width: 200px; max-width: 200px;">
-                        <img src="{{ url_for('static', filename='images/mw_logo_trans.png') }}" alt="Smartphone" class="product-card-img">
-                        <div class="product-card-body">
-                            <h6 class="product-card-title">Wireless Headphones</h6>
-                            <div class="product-card-price">₵89.99</div>
-                            <div class="product-card-meta">
-                                <i class="bi bi-star-fill text-warning"></i>
-                                <i class="bi bi-star-fill text-warning"></i>
-                                <i class="bi bi-star-fill text-warning"></i>
-                                <i class="bi bi-star-fill text-warning"></i>
-                                <i class="bi bi-star text-warning"></i>
-                                <span class="ms-1">(124)</span>
-                            </div>
-                            <div class="product-card-footer">
-                                <button class="btn btn-sm btn-primary product-card-btn" hx-get="/products/1/quick-view" hx-target="#quickViewModal">
-                                    <i class="bi bi-eye me-1"></i>View
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Product Card 2 -->
-                    <div class="product-card" style="min-width: 200px; max-width: 200px;">
-                        <img src="{{ url_for('static', filename='images/mw_logo_trans.png') }}" alt="Laptop" class="product-card-img">
-                        <div class="product-card-body">
-                            <h6 class="product-card-title">USB-C Cable</h6>
-                            <div class="product-card-price">₵24.99</div>
-                            <div class="product-card-meta">
-                                <i class="bi bi-star-fill text-warning"></i>
-                                <i class="bi bi-star-fill text-warning"></i>
-                                <i class="bi bi-star-fill text-warning"></i>
-                                <i class="bi bi-star-fill text-warning"></i>
-                                <i class="bi bi-star-fill text-warning"></i>
-                                <span class="ms-1">(89)</span>
-                            </div>
-                            <div class="product-card-footer">
-                                <button class="btn btn-sm btn-primary product-card-btn" hx-get="/products/2/quick-view" hx-target="#quickViewModal">
-                                    <i class="bi bi-eye me-1"></i>View
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Product Card 3 -->
-                    <div class="product-card" style="min-width: 200px; max-width: 200px;">
-                        <img src="{{ url_for('static', filename='images/mw_logo_trans.png') }}" alt="Phone Case" class="product-card-img">
-                        <div class="product-card-body">
-                            <h6 class="product-card-title">Phone Case Pro</h6>
-                            <div class="product-card-price">₵34.99</div>
-                            <div class="product-card-meta">
-                                <i class="bi bi-star-fill text-warning"></i>
-                                <i class="bi bi-star-fill text-warning"></i>
-                                <i class="bi bi-star-fill text-warning"></i>
-                                <i class="bi bi-star-fill text-warning"></i>
-                                <span class="ms-1">(156)</span>
-                            </div>
-                            <div class="product-card-footer">
-                                <button class="btn btn-sm btn-primary product-card-btn" hx-get="/products/3/quick-view" hx-target="#quickViewModal">
-                                    <i class="bi bi-eye me-1"></i>View
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Product Card 4 -->
-                    <div class="product-card" style="min-width: 200px; max-width: 200px;">
-                        <img src="{{ url_for('static', filename='images/mw_logo_trans.png') }}" alt="Tablet" class="product-card-img">
-                        <div class="product-card-body">
-                            <h6 class="product-card-title">Screen Protector</h6>
-                            <div class="product-card-price">₵12.99</div>
-                            <div class="product-card-meta">
-                                <i class="bi bi-star-fill text-warning"></i>
-                                <i class="bi bi-star-fill text-warning"></i>
-                                <i class="bi bi-star-fill text-warning"></i>
-                                <i class="bi bi-star-fill text-warning"></i>
-                                <i class="bi bi-star-fill text-warning"></i>
-                                <span class="ms-1">(203)</span>
-                            </div>
-                            <div class="product-card-footer">
-                                <button class="btn btn-sm btn-primary product-card-btn" hx-get="/products/4/quick-view" hx-target="#quickViewModal">
-                                    <i class="bi bi-eye me-1"></i>View
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Product Card 5 -->
-                    <div class="product-card" style="min-width: 200px; max-width: 200px;">
-                        <img src="{{ url_for('static', filename='images/mw_logo_trans.png') }}" alt="Power Bank" class="product-card-img">
-                        <div class="product-card-body">
-                            <h6 class="product-card-title">Power Bank 20000mAh</h6>
-                            <div class="product-card-price">₵54.99</div>
-                            <div class="product-card-meta">
-                                <i class="bi bi-star-fill text-warning"></i>
-                                <i class="bi bi-star-fill text-warning"></i>
-                                <i class="bi bi-star-fill text-warning"></i>
-                                <i class="bi bi-star-fill text-warning"></i>
-                                <span class="ms-1">(98)</span>
-                            </div>
-                            <div class="product-card-footer">
-                                <button class="btn btn-sm btn-primary product-card-btn" hx-get="/products/5/quick-view" hx-target="#quickViewModal">
-                                    <i class="bi bi-eye me-1"></i>View
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h3 class="fw-bold mb-0">Top Categories</h3>
+            <a href="{{ url_for('main_bp.categories') }}" class="btn btn-sm btn-outline-primary">View All</a>
         </div>
-
-        <!-- Fashion Category -->
-        <div class="mb-5 fade-in-up">
-            <div class="d-flex justify-content-between align-items-center mb-4">
-                <div>
-                    <h3 class="fw-bold mb-1">
-                        <i class="bi bi-bag text-success me-2"></i>Fashion & Apparel
-                    </h3>
-                    <small class="text-muted">Latest trends and styles</small>
-                </div>
-                <button class="btn btn-sm btn-outline-primary" hx-get="/categories/fashion?page=2" hx-target="#fashion-container" hx-swap="beforeend">
-                    Load More <i class="bi bi-arrow-down-circle ms-1"></i>
-                </button>
-            </div>
-            
-            <div class="category-scroll">
-                <div class="d-flex gap-3" style="min-width: max-content;" id="fashion-container">
-                    <!-- Product Card 1 -->
-                    <div class="product-card" style="min-width: 200px; max-width: 200px;">
-                        <img src="{{ url_for('static', filename='images/mw_logo_trans.png') }}" alt="T-Shirt" class="product-card-img">
-                        <div class="product-card-body">
-                            <h6 class="product-card-title">Classic T-Shirt</h6>
-                            <div class="product-card-price">₵29.99</div>
-                            <div class="product-card-meta">
-                                <i class="bi bi-star-fill text-warning"></i>
-                                <i class="bi bi-star-fill text-warning"></i>
-                                <i class="bi bi-star-fill text-warning"></i>
-                                <i class="bi bi-star-fill text-warning"></i>
-                                <i class="bi bi-star-fill text-warning"></i>
-                                <span class="ms-1">(267)</span>
-                            </div>
-                            <div class="product-card-footer">
-                                <button class="btn btn-sm btn-primary product-card-btn" hx-get="/products/6/quick-view" hx-target="#quickViewModal">
-                                    <i class="bi bi-eye me-1"></i>View
-                                </button>
-                            </div>
+        <div class="row g-3">
+            {% for category in top_categories %}
+            <div class="col-md-6 col-lg-3">
+                <a href="{{ url_for('main_bp.products', category_id=category.id) }}" class="text-decoration-none">
+                    <div class="card border-0 shadow-sm h-100">
+                        <div class="card-body">
+                            <h6 class="fw-bold text-dark mb-1">{{ category.name }}</h6>
+                            <small class="text-muted">{{ category.product_count }} products</small>
                         </div>
                     </div>
-
-                    <!-- Product Card 2 -->
-                    <div class="product-card" style="min-width: 200px; max-width: 200px;">
-                        <img src="{{ url_for('static', filename='images/mw_logo_trans.png') }}" alt="Jeans" class="product-card-img">
-                        <div class="product-card-body">
-                            <h6 class="product-card-title">Denim Jeans</h6>
-                            <div class="product-card-price">₵64.99</div>
-                            <div class="product-card-meta">
-                                <i class="bi bi-star-fill text-warning"></i>
-                                <i class="bi bi-star-fill text-warning"></i>
-                                <i class="bi bi-star-fill text-warning"></i>
-                                <i class="bi bi-star-fill text-warning"></i>
-                                <span class="ms-1">(145)</span>
-                            </div>
-                            <div class="product-card-footer">
-                                <button class="btn btn-sm btn-primary product-card-btn" hx-get="/products/7/quick-view" hx-target="#quickViewModal">
-                                    <i class="bi bi-eye me-1"></i>View
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Product Card 3 -->
-                    <div class="product-card" style="min-width: 200px; max-width: 200px;">
-                        <img src="{{ url_for('static', filename='images/mw_logo_trans.png') }}" alt="Sneakers" class="product-card-img">
-                        <div class="product-card-body">
-                            <h6 class="product-card-title">Running Sneakers</h6>
-                            <div class="product-card-price">₵79.99</div>
-                            <div class="product-card-meta">
-                                <i class="bi bi-star-fill text-warning"></i>
-                                <i class="bi bi-star-fill text-warning"></i>
-                                <i class="bi bi-star-fill text-warning"></i>
-                                <i class="bi bi-star-fill text-warning"></i>
-                                <i class="bi bi-star-fill text-warning"></i>
-                                <span class="ms-1">(312)</span>
-                            </div>
-                            <div class="product-card-footer">
-                                <button class="btn btn-sm btn-primary product-card-btn" hx-get="/products/8/quick-view" hx-target="#quickViewModal">
-                                    <i class="bi bi-eye me-1"></i>View
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Product Card 4 -->
-                    <div class="product-card" style="min-width: 200px; max-width: 200px;">
-                        <img src="{{ url_for('static', filename='images/mw_logo_trans.png') }}" alt="Jacket" class="product-card-img">
-                        <div class="product-card-body">
-                            <h6 class="product-card-title">Winter Jacket</h6>
-                            <div class="product-card-price">₵124.99</div>
-                            <div class="product-card-meta">
-                                <i class="bi bi-star-fill text-warning"></i>
-                                <i class="bi bi-star-fill text-warning"></i>
-                                <i class="bi bi-star-fill text-warning"></i>
-                                <i class="bi bi-star-fill text-warning"></i>
-                                <span class="ms-1">(87)</span>
-                            </div>
-                            <div class="product-card-footer">
-                                <button class="btn btn-sm btn-primary product-card-btn" hx-get="/products/9/quick-view" hx-target="#quickViewModal">
-                                    <i class="bi bi-eye me-1"></i>View
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Product Card 5 -->
-                    <div class="product-card" style="min-width: 200px; max-width: 200px;">
-                        <img src="{{ url_for('static', filename='images/mw_logo_trans.png') }}" alt="Hat" class="product-card-img">
-                        <div class="product-card-body">
-                            <h6 class="product-card-title">Baseball Cap</h6>
-                            <div class="product-card-price">₵19.99</div>
-                            <div class="product-card-meta">
-                                <i class="bi bi-star-fill text-warning"></i>
-                                <i class="bi bi-star-fill text-warning"></i>
-                                <i class="bi bi-star-fill text-warning"></i>
-                                <i class="bi bi-star-fill text-warning"></i>
-                                <i class="bi bi-star-fill text-warning"></i>
-                                <span class="ms-1">(234)</span>
-                            </div>
-                            <div class="product-card-footer">
-                                <button class="btn btn-sm btn-primary product-card-btn" hx-get="/products/10/quick-view" hx-target="#quickViewModal">
-                                    <i class="bi bi-eye me-1"></i>View
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Home & Garden Category -->
-        <div class="mb-5 fade-in-up">
-            <div class="d-flex justify-content-between align-items-center mb-4">
-                <div>
-                    <h3 class="fw-bold mb-1">
-                        <i class="bi bi-flower1 text-warning me-2"></i>Home & Garden
-                    </h3>
-                    <small class="text-muted">Everything for your home</small>
-                </div>
-                <button class="btn btn-sm btn-outline-primary" hx-get="/categories/home-garden?page=2" hx-target="#home-garden-container" hx-swap="beforeend">
-                    Load More <i class="bi bi-arrow-down-circle ms-1"></i>
-                </button>
-            </div>
-            
-            <div class="category-scroll">
-                <div class="d-flex gap-3" style="min-width: max-content;" id="home-garden-container">
-                    <!-- Product Card 1 -->
-                    <div class="product-card" style="min-width: 200px; max-width: 200px;">
-                        <img src="{{ url_for('static', filename='images/mw_logo_trans.png') }}" alt="Pillow" class="product-card-img">
-                        <div class="product-card-body">
-                            <h6 class="product-card-title">Memory Foam Pillow</h6>
-                            <div class="product-card-price">₵44.99</div>
-                            <div class="product-card-meta">
-                                <i class="bi bi-star-fill text-warning"></i>
-                                <i class="bi bi-star-fill text-warning"></i>
-                                <i class="bi bi-star-fill text-warning"></i>
-                                <i class="bi bi-star-fill text-warning"></i>
-                                <i class="bi bi-star-fill text-warning"></i>
-                                <span class="ms-1">(178)</span>
-                            </div>
-                            <div class="product-card-footer">
-                                <button class="btn btn-sm btn-primary product-card-btn" hx-get="/products/11/quick-view" hx-target="#quickViewModal">
-                                    <i class="bi bi-eye me-1"></i>View
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Product Card 2 -->
-                    <div class="product-card" style="min-width: 200px; max-width: 200px;">
-                        <img src="{{ url_for('static', filename='images/mw_logo_trans.png') }}" alt="Lamp" class="product-card-img">
-                        <div class="product-card-body">
-                            <h6 class="product-card-title">LED Table Lamp</h6>
-                            <div class="product-card-price">₵39.99</div>
-                            <div class="product-card-meta">
-                                <i class="bi bi-star-fill text-warning"></i>
-                                <i class="bi bi-star-fill text-warning"></i>
-                                <i class="bi bi-star-fill text-warning"></i>
-                                <i class="bi bi-star-fill text-warning"></i>
-                                <span class="ms-1">(92)</span>
-                            </div>
-                            <div class="product-card-footer">
-                                <button class="btn btn-sm btn-primary product-card-btn" hx-get="/products/12/quick-view" hx-target="#quickViewModal">
-                                    <i class="bi bi-eye me-1"></i>View
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Product Card 3 -->
-                    <div class="product-card" style="min-width: 200px; max-width: 200px;">
-                        <img src="{{ url_for('static', filename='images/mw_logo_trans.png') }}" alt="Plant Pot" class="product-card-img">
-                        <div class="product-card-body">
-                            <h6 class="product-card-title">Ceramic Plant Pot</h6>
-                            <div class="product-card-price">₵24.99</div>
-                            <div class="product-card-meta">
-                                <i class="bi bi-star-fill text-warning"></i>
-                                <i class="bi bi-star-fill text-warning"></i>
-                                <i class="bi bi-star-fill text-warning"></i>
-                                <i class="bi bi-star-fill text-warning"></i>
-                                <i class="bi bi-star-fill text-warning"></i>
-                                <span class="ms-1">(156)</span>
-                            </div>
-                            <div class="product-card-footer">
-                                <button class="btn btn-sm btn-primary product-card-btn" hx-get="/products/13/quick-view" hx-target="#quickViewModal">
-                                    <i class="bi bi-eye me-1"></i>View
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Product Card 4 -->
-                    <div class="product-card" style="min-width: 200px; max-width: 200px;">
-                        <img src="{{ url_for('static', filename='images/mw_logo_trans.png') }}" alt="Rug" class="product-card-img">
-                        <div class="product-card-body">
-                            <h6 class="product-card-title">Area Rug 5x7</h6>
-                            <div class="product-card-price">₵89.99</div>
-                            <div class="product-card-meta">
-                                <i class="bi bi-star-fill text-warning"></i>
-                                <i class="bi bi-star-fill text-warning"></i>
-                                <i class="bi bi-star-fill text-warning"></i>
-                                <i class="bi bi-star-fill text-warning"></i>
-                                <span class="ms-1">(64)</span>
-                            </div>
-                            <div class="product-card-footer">
-                                <button class="btn btn-sm btn-primary product-card-btn" hx-get="/products/14/quick-view" hx-target="#quickViewModal">
-                                    <i class="bi bi-eye me-1"></i>View
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Product Card 5 -->
-                    <div class="product-card" style="min-width: 200px; max-width: 200px;">
-                        <img src="{{ url_for('static', filename='images/mw_logo_trans.png') }}" alt="Curtains" class="product-card-img">
-                        <div class="product-card-body">
-                            <h6 class="product-card-title">Blackout Curtains</h6>
-                            <div class="product-card-price">₵59.99</div>
-                            <div class="product-card-meta">
-                                <i class="bi bi-star-fill text-warning"></i>
-                                <i class="bi bi-star-fill text-warning"></i>
-                                <i class="bi bi-star-fill text-warning"></i>
-                                <i class="bi bi-star-fill text-warning"></i>
-                                <i class="bi bi-star-fill text-warning"></i>
-                                <span class="ms-1">(201)</span>
-                            </div>
-                            <div class="product-card-footer">
-                                <button class="btn btn-sm btn-primary product-card-btn" hx-get="/products/15/quick-view" hx-target="#quickViewModal">
-                                    <i class="bi bi-eye me-1"></i>View
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Books & Media Category -->
-        <div class="mb-5 fade-in-up">
-            <div class="d-flex justify-content-between align-items-center mb-4">
-                <div>
-                    <h3 class="fw-bold mb-1">
-                        <i class="bi bi-book text-danger me-2"></i>Books & Media
-                    </h3>
-                    <small class="text-muted">Knowledge and entertainment</small>
-                </div>
-                <button class="btn btn-sm btn-outline-primary" hx-get="/categories/books?page=2" hx-target="#books-container" hx-swap="beforeend">
-                    Load More <i class="bi bi-arrow-down-circle ms-1"></i>
-                </button>
-            </div>
-            
-            <div class="category-scroll">
-                <div class="d-flex gap-3" style="min-width: max-content;" id="books-container">
-                    <!-- Product Card 1 -->
-                    <div class="product-card" style="min-width: 200px; max-width: 200px;">
-                        <img src="{{ url_for('static', filename='images/mw_logo_trans.png') }}" alt="Book" class="product-card-img">
-                        <div class="product-card-body">
-                            <h6 class="product-card-title">Fiction Novel</h6>
-                            <div class="product-card-price">₵16.99</div>
-                            <div class="product-card-meta">
-                                <i class="bi bi-star-fill text-warning"></i>
-                                <i class="bi bi-star-fill text-warning"></i>
-                                <i class="bi bi-star-fill text-warning"></i>
-                                <i class="bi bi-star-fill text-warning"></i>
-                                <i class="bi bi-star-fill text-warning"></i>
-                                <span class="ms-1">(423)</span>
-                            </div>
-                            <div class="product-card-footer">
-                                <button class="btn btn-sm btn-primary product-card-btn" hx-get="/products/16/quick-view" hx-target="#quickViewModal">
-                                    <i class="bi bi-eye me-1"></i>View
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Product Card 2 -->
-                    <div class="product-card" style="min-width: 200px; max-width: 200px;">
-                        <img src="{{ url_for('static', filename='images/mw_logo_trans.png') }}" alt="Self-Help" class="product-card-img">
-                        <div class="product-card-body">
-                            <h6 class="product-card-title">Self-Help Guide</h6>
-                            <div class="product-card-price">₵22.99</div>
-                            <div class="product-card-meta">
-                                <i class="bi bi-star-fill text-warning"></i>
-                                <i class="bi bi-star-fill text-warning"></i>
-                                <i class="bi bi-star-fill text-warning"></i>
-                                <i class="bi bi-star-fill text-warning"></i>
-                                <span class="ms-1">(189)</span>
-                            </div>
-                            <div class="product-card-footer">
-                                <button class="btn btn-sm btn-primary product-card-btn" hx-get="/products/17/quick-view" hx-target="#quickViewModal">
-                                    <i class="bi bi-eye me-1"></i>View
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Product Card 3 -->
-                    <div class="product-card" style="min-width: 200px; max-width: 200px;">
-                        <img src="{{ url_for('static', filename='images/mw_logo_trans.png') }}" alt="Cookbook" class="product-card-img">
-                        <div class="product-card-body">
-                            <h6 class="product-card-title">Cooking Recipes</h6>
-                            <div class="product-card-price">₵19.99</div>
-                            <div class="product-card-meta">
-                                <i class="bi bi-star-fill text-warning"></i>
-                                <i class="bi bi-star-fill text-warning"></i>
-                                <i class="bi bi-star-fill text-warning"></i>
-                                <i class="bi bi-star-fill text-warning"></i>
-                                <i class="bi bi-star-fill text-warning"></i>
-                                <span class="ms-1">(267)</span>
-                            </div>
-                            <div class="product-card-footer">
-                                <button class="btn btn-sm btn-primary product-card-btn" hx-get="/products/18/quick-view" hx-target="#quickViewModal">
-                                    <i class="bi bi-eye me-1"></i>View
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Product Card 4 -->
-                    <div class="product-card" style="min-width: 200px; max-width: 200px;">
-                        <img src="{{ url_for('static', filename='images/mw_logo_trans.png') }}" alt="Biography" class="product-card-img">
-                        <div class="product-card-body">
-                            <h6 class="product-card-title">Biography</h6>
-                            <div class="product-card-price">₵24.99</div>
-                            <div class="product-card-meta">
-                                <i class="bi bi-star-fill text-warning"></i>
-                                <i class="bi bi-star-fill text-warning"></i>
-                                <i class="bi bi-star-fill text-warning"></i>
-                                <i class="bi bi-star-fill text-warning"></i>
-                                <span class="ms-1">(145)</span>
-                            </div>
-                            <div class="product-card-footer">
-                                <button class="btn btn-sm btn-primary product-card-btn" hx-get="/products/19/quick-view" hx-target="#quickViewModal">
-                                    <i class="bi bi-eye me-1"></i>View
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Product Card 5 -->
-                    <div class="product-card" style="min-width: 200px; max-width: 200px;">
-                        <img src="{{ url_for('static', filename='images/mw_logo_trans.png') }}" alt="Comic" class="product-card-img">
-                        <div class="product-card-body">
-                            <h6 class="product-card-title">Comic Series</h6>
-                            <div class="product-card-price">₵14.99</div>
-                            <div class="product-card-meta">
-                                <i class="bi bi-star-fill text-warning"></i>
-                                <i class="bi bi-star-fill text-warning"></i>
-                                <i class="bi bi-star-fill text-warning"></i>
-                                <i class="bi bi-star-fill text-warning"></i>
-                                <i class="bi bi-star-fill text-warning"></i>
-                                <span class="ms-1">(312)</span>
-                            </div>
-                            <div class="product-card-footer">
-                                <button class="btn btn-sm btn-primary product-card-btn" hx-get="/products/20/quick-view" hx-target="#quickViewModal">
-                                    <i class="bi bi-eye me-1"></i>View
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Sports & Outdoors Category -->
-        <div class="mb-5 fade-in-up">
-            <div class="d-flex justify-content-between align-items-center mb-4">
-                <div>
-                    <h3 class="fw-bold mb-1">
-                        <i class="bi bi-bicycle text-info me-2"></i>Sports & Outdoors
-                    </h3>
-                    <small class="text-muted">Gear for active lifestyle</small>
-                </div>
-                <button class="btn btn-sm btn-outline-primary" hx-get="/categories/sports?page=2" hx-target="#sports-container" hx-swap="beforeend">
-                    Load More <i class="bi bi-arrow-down-circle ms-1"></i>
-                </button>
-            </div>
-            
-            <div class="category-scroll">
-                <div class="d-flex gap-3" style="min-width: max-content;" id="sports-container">
-                    <!-- Product Card 1 -->
-                    <div class="product-card" style="min-width: 200px; max-width: 200px;">
-                        <img src="{{ url_for('static', filename='images/mw_logo_trans.png') }}" alt="Yoga Mat" class="product-card-img">
-                        <div class="product-card-body">
-                            <h6 class="product-card-title">Yoga Mat Premium</h6>
-                            <div class="product-card-price">₵34.99</div>
-                            <div class="product-card-meta">
-                                <i class="bi bi-star-fill text-warning"></i>
-                                <i class="bi bi-star-fill text-warning"></i>
-                                <i class="bi bi-star-fill text-warning"></i>
-                                <i class="bi bi-star-fill text-warning"></i>
-                                <i class="bi bi-star-fill text-warning"></i>
-                                <span class="ms-1">(234)</span>
-                            </div>
-                            <div class="product-card-footer">
-                                <button class="btn btn-sm btn-primary product-card-btn" hx-get="/products/21/quick-view" hx-target="#quickViewModal">
-                                    <i class="bi bi-eye me-1"></i>View
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Product Card 2 -->
-                    <div class="product-card" style="min-width: 200px; max-width: 200px;">
-                        <img src="{{ url_for('static', filename='images/mw_logo_trans.png') }}" alt="Dumbbell" class="product-card-img">
-                        <div class="product-card-body">
-                            <h6 class="product-card-title">Dumbbell Set 20kg</h6>
-                            <div class="product-card-price">₵79.99</div>
-                            <div class="product-card-meta">
-                                <i class="bi bi-star-fill text-warning"></i>
-                                <i class="bi bi-star-fill text-warning"></i>
-                                <i class="bi bi-star-fill text-warning"></i>
-                                <i class="bi bi-star-fill text-warning"></i>
-                                <span class="ms-1">(156)</span>
-                            </div>
-                            <div class="product-card-footer">
-                                <button class="btn btn-sm btn-primary product-card-btn" hx-get="/products/22/quick-view" hx-target="#quickViewModal">
-                                    <i class="bi bi-eye me-1"></i>View
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Product Card 3 -->
-                    <div class="product-card" style="min-width: 200px; max-width: 200px;">
-                        <img src="{{ url_for('static', filename='images/mw_logo_trans.png') }}" alt="Water Bottle" class="product-card-img">
-                        <div class="product-card-body">
-                            <h6 class="product-card-title">Insulated Water Bottle</h6>
-                            <div class="product-card-price">₵29.99</div>
-                            <div class="product-card-meta">
-                                <i class="bi bi-star-fill text-warning"></i>
-                                <i class="bi bi-star-fill text-warning"></i>
-                                <i class="bi bi-star-fill text-warning"></i>
-                                <i class="bi bi-star-fill text-warning"></i>
-                                <i class="bi bi-star-fill text-warning"></i>
-                                <span class="ms-1">(389)</span>
-                            </div>
-                            <div class="product-card-footer">
-                                <button class="btn btn-sm btn-primary product-card-btn" hx-get="/products/23/quick-view" hx-target="#quickViewModal">
-                                    <i class="bi bi-eye me-1"></i>View
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Product Card 4 -->
-                    <div class="product-card" style="min-width: 200px; max-width: 200px;">
-                        <img src="{{ url_for('static', filename='images/mw_logo_trans.png') }}" alt="Backpack" class="product-card-img">
-                        <div class="product-card-body">
-                            <h6 class="product-card-title">Hiking Backpack</h6>
-                            <div class="product-card-price">₵69.99</div>
-                            <div class="product-card-meta">
-                                <i class="bi bi-star-fill text-warning"></i>
-                                <i class="bi bi-star-fill text-warning"></i>
-                                <i class="bi bi-star-fill text-warning"></i>
-                                <i class="bi bi-star-fill text-warning"></i>
-                                <span class="ms-1">(98)</span>
-                            </div>
-                            <div class="product-card-footer">
-                                <button class="btn btn-sm btn-primary product-card-btn" hx-get="/products/24/quick-view" hx-target="#quickViewModal">
-                                    <i class="bi bi-eye me-1"></i>View
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Product Card 5 -->
-                    <div class="product-card" style="min-width: 200px; max-width: 200px;">
-                        <img src="{{ url_for('static', filename='images/mw_logo_trans.png') }}" alt="Tennis Racket" class="product-card-img">
-                        <div class="product-card-body">
-                            <h6 class="product-card-title">Tennis Racket Pro</h6>
-                            <div class="product-card-price">₵99.99</div>
-                            <div class="product-card-meta">
-                                <i class="bi bi-star-fill text-warning"></i>
-                                <i class="bi bi-star-fill text-warning"></i>
-                                <i class="bi bi-star-fill text-warning"></i>
-                                <i class="bi bi-star-fill text-warning"></i>
-                                <i class="bi bi-star-fill text-warning"></i>
-                                <span class="ms-1">(145)</span>
-                            </div>
-                            <div class="product-card-footer">
-                                <button class="btn btn-sm btn-primary product-card-btn" hx-get="/products/25/quick-view" hx-target="#quickViewModal">
-                                    <i class="bi bi-eye me-1"></i>View
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-</section>
-
-<!-- Stats Section -->
-<section class="py-5 bg-light">
-    <div class="container-fluid px-3 px-lg-4">
-        <div class="text-center mb-5">
-            <h2 class="display-5 fw-bold mb-3">Trusted by Thousands</h2>
-            <p class="lead text-muted">Join our growing community of buyers and sellers</p>
-        </div>
-
-        <div class="row g-4 text-center">
-            <div class="col-6 col-md-3">
-                <div class="stat-number">500+</div>
-                <div class="stat-label">Verified Shops</div>
-            </div>
-            <div class="col-6 col-md-3">
-                <div class="stat-number">10K+</div>
-                <div class="stat-label">Products Listed</div>
-            </div>
-            <div class="col-6 col-md-3">
-                <div class="stat-number">2K+</div>
-                <div class="stat-label">Happy Customers</div>
-            </div>
-            <div class="col-6 col-md-3">
-                <div class="stat-number">98%</div>
-                <div class="stat-label">Satisfaction Rate</div>
-            </div>
-        </div>
-    </div>
-</section>
-
-<!-- CTA Section -->
-<section class="py-5" style="background: var(--gradient-primary); color: white;">
-    <div class="container-fluid px-3 px-lg-4">
-        <div class="row align-items-center g-4">
-            <div class="col-lg-8">
-                <h2 class="fw-bold mb-3 display-6">Ready to Start Selling?</h2>
-                <p class="lead mb-0">Join thousands of trusted sellers on Market Window and grow your business today. It's free to list your products.</p>
-            </div>
-            <div class="col-lg-4 text-lg-end">
-                <a href="/register?role=seller" class="btn btn-warning btn-lg text-dark fw-bold">
-                    <i class="bi bi-shop me-2"></i>ADD YOUR SHOP
                 </a>
             </div>
+            {% endfor %}
         </div>
     </div>
 </section>
 
-<!-- Quick View Modal (HTMX target) -->
-<div id="quickViewModal"></div>
+<section class="py-5">
+    <div class="container-fluid px-3 px-lg-4">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h3 class="fw-bold mb-0">Latest Products</h3>
+            <a href="{{ url_for('main_bp.products') }}" class="btn btn-sm btn-outline-primary">Browse More</a>
+        </div>
+        <div class="row g-4">
+            {% for product in featured_products %}
+            <div class="col-md-6 col-lg-4 col-xl-3">
+                <div class="card h-100 border-0 shadow-sm product-card">
+                    <img src="{{ url_for('static', filename='images/mw_logo_trans.png') }}" class="card-img-top" alt="{{ product.name }}">
+                    <div class="card-body">
+                        <h6 class="card-title fw-bold mb-1">{{ product.name }}</h6>
+                        <p class="text-muted small mb-1">{{ product.shop.name if product.shop else "Unknown Shop" }}</p>
+                        <p class="text-muted small mb-2">{{ product.category.name if product.category else "Uncategorized" }}</p>
+                        <h5 class="text-primary fw-bold mb-0">₵{{ '%.2f'|format(product.price) }}</h5>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</section>
 
-{% endblock %}
-
-{% block scripts %}
-<script>
-    document.addEventListener('DOMContentLoaded', function() {
-        // Animate elements on scroll
-        const observer = new IntersectionObserver((entries) => {
-            entries.forEach(entry => {
-                if (entry.isIntersecting) {
-                    entry.target.classList.add('fade-in-up');
-                }
-            });
-        }, { threshold: 0.1 });
-        
-        document.querySelectorAll('[class*="category"]').forEach(el => {
-            observer.observe(el);
-        });
-
-        // Set active nav item based on current page
-        const currentPath = window.location.pathname;
-        document.querySelectorAll('.sidebar-nav-item, .bottom-nav-item').forEach(item => {
-            if (item.getAttribute('href') === currentPath) {
-                item.classList.add('active');
-            } else {
-                item.classList.remove('active');
-            }
-        });
-    });
-</script>
+<section class="py-5 bg-white">
+    <div class="container-fluid px-3 px-lg-4">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h3 class="fw-bold mb-0">Recommended Shops</h3>
+            <a href="{{ url_for('main_bp.shops') }}" class="btn btn-sm btn-outline-primary">More...</a>
+        </div>
+        <div class="row g-4">
+            {% for shop in featured_shops %}
+            <div class="col-md-6 col-lg-4">
+                <div class="card h-100 border-0 shadow-sm">
+                    <img src="{{ url_for('static', filename='images/mw_logo_trans.png') }}" class="card-img-top" alt="{{ shop.name }}">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-start mb-2">
+                            <h5 class="fw-bold mb-0">{{ shop.name }}
+                                <span class="bi bi-patch-check text-mw"></span>
+                            </h5>
+                        </div>
+                        <p class="text-muted small mb-1"><i class="bi bi-geo-alt me-1"></i>{{ shop.town or shop.region or "Location unavailable" }}</p>
+                        <p class="small mb-0 line-clamp-2">{{ shop.description or "Trusted marketplace seller." }}</p>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</section>
 {% endblock %}

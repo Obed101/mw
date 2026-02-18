@@ -1,29 +1,45 @@
-{% for shop in shops %}
-<div class="col-md-6 col-lg-4">
-    <div class="card h-100 border-0 shadow-sm">
-        <img src="{{ url_for('static', filename='images/mw_logo_trans.png') }}" class="card-img-top" alt="Shop">
-        <div class="card-body">
-            <div class="d-flex justify-content-between align-items-start mb-2">
-                <h5 class="card-title fw-bold">{{ shop.name }}</h5>
-                <span class="badge bg-success">Verified</span>
-            </div>
-            <p class="card-text text-muted small mb-2">{{ shop.description or 'Various Products' }}</p>
-            <div class="d-flex align-items-center mb-2">
-                <div class="text-warning me-2">
-                    <i class="bi bi-star-fill"></i>
-                    <i class="bi bi-star-fill"></i>
-                    <i class="bi bi-star-fill"></i>
-                    <i class="bi bi-star-fill"></i>
-                    <i class="bi bi-star-half"></i>
+{% if shops %}
+    {% for shop in shops %}
+    <div class="col-md-6 col-lg-4">
+        <div class="card h-100 border-0 shadow-sm">
+            <img src="{{ url_for('static', filename='images/mw_logo_trans.png') }}" class="card-img-top" alt="{{ shop.name }}">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start mb-2">
+                    <h5 class="fw-bold mb-0">{{ shop.name }}
+                        <span class="bi bi-patch-check text-mw" aria-label="Verified shop"></span>
+                    </h5>
                 </div>
-                <small class="text-muted">4.5 (128 reviews)</small>
-            </div>
-            <p class="card-text small">{{ shop.description or 'Quality products and service' }}</p>
-            <div class="d-flex justify-content-between align-items-center">
-                <small class="text-muted"><i class="bi bi-box me-1"></i>{{ shop.products|length if shop.products else '0' }} products</small>
-                <a href="{{ url_for('buyer_bp.view_shop', shop_id=shop.id) }}" class="btn btn-primary btn-sm">Visit Shop</a>
+                <p class="card-text text-muted small mb-2">
+                    <i class="bi bi-geo-alt me-1"></i>{{ shop.town or shop.region or "Location unavailable" }}
+                </p>
+                <p class="card-text small mb-3 line-clamp-2">{{ shop.description or 'Quality products and service' }}</p>
+                <div class="d-flex justify-content-between align-items-center">
+                    <small class="text-muted">
+                        <i class="bi bi-box-seam me-1"></i>{{ shop.products | selectattr('is_active') | list | length }} active products
+                    </small>
+                    <a href="{{ url_for('main_bp.products', shop_id=shop.id) }}" class="btn btn-primary btn-sm">Visit Shop</a>
+                </div>
             </div>
         </div>
     </div>
+    {% endfor %}
+{% elif not next_page %}
+<div class="col-12">
+    <div class="alert alert-light border text-center mb-0">
+        No shops matched your current filters.
+    </div>
 </div>
-{% endfor %}
+{% endif %}
+
+<div class="text-center mt-4" id="load-more-container" hx-swap-oob="true">
+    {% if has_next %}
+    <button
+        class="btn btn-primary"
+        hx-get="{{ url_for('buyer_bp.browse_shops', page=next_page, search=search_term, sort_by=sort_by, category_id=category_id, user_id=user_id) }}"
+        hx-target="#shops-container"
+        hx-swap="beforeend"
+    >
+        <i class="bi bi-arrow-down-circle me-2"></i>Load More Shops
+    </button>
+    {% endif %}
+</div>

@@ -11,35 +11,80 @@
         </div>
     </div>
 
-    <!-- Search and Filters -->
-    <div class="row mb-4">
-        <div class="col-md-6">
-            <div class="input-group">
-                <span class="input-group-text"><i class="bi bi-search"></i></span>
-                <input type="text" class="form-control" name="search" placeholder="Search shops..." hx-get="{{ url_for('buyer_bp.browse_shops') }}" hx-trigger="keyup changed delay:500ms" hx-target="#shops-container" hx-include="[name='sort_by'], [name='category']">
+    <div x-data="{ showExtraCriteria: false }" class="mb-4">
+        <div class="row g-3 align-items-center">
+            <div class="col-md-8">
+                <div class="input-group">
+                    <span class="input-group-text"><i class="bi bi-search"></i></span>
+                    <input
+                        type="text"
+                        class="form-control"
+                        name="search"
+                        placeholder="Search shops by name, description, location..."
+                        hx-get="{{ url_for('buyer_bp.browse_shops') }}"
+                        hx-trigger="keyup changed delay:400ms"
+                        hx-target="#shops-container"
+                        hx-include="[name='sort_by'], [name='category_id']"
+                        hx-swap="innerHTML"
+                    >
+                </div>
+            </div>
+            <div class="col-md-4 text-md-end">
+                <button
+                    type="button"
+                    class="btn btn-outline-secondary btn-sm"
+                    @click="showExtraCriteria = !showExtraCriteria"
+                    :aria-expanded="showExtraCriteria.toString()"
+                >
+                    Extra Search Criteria
+                    <i class="bi ms-1" :class="showExtraCriteria ? 'bi-caret-up-fill' : 'bi-caret-down-fill'"></i>
+                </button>
             </div>
         </div>
-        <div class="col-md-3">
-            <select class="form-select" name="category" hx-get="{{ url_for('buyer_bp.browse_shops') }}" hx-trigger="change" hx-target="#shops-container" hx-include="[name='search'], [name='sort_by']">
-                <option value="">All Categories</option>
-                <option>Electronics</option>
-                <option>Fashion</option>
-                <option>Home & Garden</option>
-            </select>
-        </div>
-        <div class="col-md-3">
-            <select class="form-select" name="sort_by" hx-get="{{ url_for('buyer_bp.browse_shops') }}" hx-trigger="change" hx-target="#shops-container" hx-include="[name='search'], [name='category']">
-                <option value="name" selected>Sort by Name</option>
-                <option value="last_updated">Newest</option>
-                <option value="most_popular">Most Popular</option>
-                <option value="rating">Rating</option>
-            </select>
+
+        <div class="row g-3 mt-1" x-show="showExtraCriteria" x-transition>
+            <div class="col-md-6">
+                <select
+                    class="form-select"
+                    name="category_id"
+                    hx-get="{{ url_for('buyer_bp.browse_shops') }}"
+                    hx-trigger="change"
+                    hx-target="#shops-container"
+                    hx-include="[name='search'], [name='sort_by']"
+                    hx-swap="innerHTML"
+                >
+                    <option value="">All Categories</option>
+                    {% for category in categories %}
+                    <option value="{{ category.id }}">{{ category.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-6">
+                <select
+                    class="form-select"
+                    name="sort_by"
+                    hx-get="{{ url_for('buyer_bp.browse_shops') }}"
+                    hx-trigger="change"
+                    hx-target="#shops-container"
+                    hx-include="[name='search'], [name='category_id']"
+                    hx-swap="innerHTML"
+                >
+                    <option value="name" selected>Sort by Name</option>
+                    <option value="last_updated">Newest</option>
+                    <option value="promoted">Promoted First</option>
+                </select>
+            </div>
         </div>
     </div>
 
-    <!-- Shops Grid -->
-    <div class="row g-4" id="shops-container" hx-get="{{ url_for('buyer_bp.browse_shops') }}" hx-trigger="load">
-        <!-- Initial loading spinner -->
+    <div
+        class="row g-4"
+        id="shops-container"
+        hx-get="{{ url_for('buyer_bp.browse_shops') }}"
+        hx-trigger="load"
+        hx-target="#shops-container"
+        hx-swap="innerHTML"
+    >
         <div class="col-12 text-center py-5">
             <div class="spinner-border text-primary" role="status">
                 <span class="visually-hidden text-light">Loading shops...</span>
@@ -48,9 +93,6 @@
         </div>
     </div>
 
-    <!-- Load More Button Container -->
-    <div class="text-center mt-4" id="load-more-container" hx-swap-oob="true">
-        <!-- Will be populated by HTMX -->
-    </div>
+    <div class="text-center mt-4" id="load-more-container"></div>
 </div>
 {% endblock %}

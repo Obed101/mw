@@ -1,9 +1,23 @@
 from flask import Blueprint, jsonify, request, render_template
-from ..extensions import db, search
-from ..models import Category, User, UserBrowsingHistory, Product, Shop, UserFollowShop, VERIFICATION_STATUS_VERIFIED
+from sqlalchemy import or_
+from ..extensions import db
+from ..models import (
+    Category,
+    User,
+    UserBrowsingHistory,
+    Product,
+    Shop,
+    UserFollowShop,
+    VERIFICATION_STATUS_VERIFIED,
+)
 
 buyer_bp = Blueprint('buyer_bp', __name__, url_prefix='/explore')
 SHOPS_PER_PAGE = 3
+PRODUCTS_PER_PAGE = 12
+
+
+def _is_htmx_request():
+    return request.headers.get('HX-Request') == 'true'
 
 @buyer_bp.route("/")
 def buyer_dashboard():
@@ -14,72 +28,90 @@ def buyer_dashboard():
 def browse_shops():
     """Browse all shops in the marketplace"""
     try:
-        # Get query parameters
         search_term = request.args.get('search', '').strip()
-        sort_by = request.args.get('sort_by', 'name')  # name, last_updated
-        category = request.args.get('category', '')
+        sort_by = request.args.get('sort_by', 'name')
+        category_id = request.args.get('category_id', type=int) or request.args.get('category', type=int)
         user_id = request.args.get('user_id', type=int)
         page = request.args.get('page', 1, type=int)
-        per_page = SHOPS_PER_PAGE  
-        
-        # Build query - only show verified and active shops
-        query = Shop.query.filter_by(
-            is_active=True,
-            verification_status=VERIFICATION_STATUS_VERIFIED
+        per_page = request.args.get('per_page', SHOPS_PER_PAGE, type=int)
+
+        query = Shop.query.filter(
+            Shop.is_active.is_(True),
+            Shop.verification_status == VERIFICATION_STATUS_VERIFIED,
         )
-        
-        # Use Flask-Msearch for full-text search
+
         if search_term:
-            shops = query.search(search_term).paginate(page=page, per_page=per_page, error_out=False)
+            query = query.filter(
+                or_(
+                    Shop.name.ilike(f'%{search_term}%'),
+                    Shop.description.ilike(f'%{search_term}%'),
+                    Shop.region.ilike(f'%{search_term}%'),
+                    Shop.town.ilike(f'%{search_term}%'),
+                )
+            )
+
+        if category_id:
+            query = query.join(Product).filter(
+                Product.category_id == category_id,
+                Product.is_active.is_(True),
+            )
+
+        query = query.distinct()
+
+        if sort_by == 'last_updated':
+            query = query.order_by(Shop.last_updated.desc())
+        elif sort_by == 'promoted':
+            query = query.order_by(Shop.promoted.desc(), Shop.name.asc())
         else:
-            # Sort if no search
-            if sort_by == 'last_updated':
-                query = query.order_by(Shop.last_updated.desc())
-            else:
-                query = query.order_by(Shop.name)
-            shops = query.paginate(page=page, per_page=per_page, error_out=False)
-        
-        # Get user's followed shops if user_id provided
+            query = query.order_by(Shop.name.asc())
+
+        shops = query.paginate(page=page, per_page=per_page, error_out=False)
+
         followed_shop_ids = set()
         if user_id:
             follows = UserFollowShop.query.filter_by(user_id=user_id).all()
             followed_shop_ids = {follow.shop_id for follow in follows}
-        
-        # Check if this is an HTMX request
-        is_htmx = request.headers.get('HX-Request') == 'true'
-        
-        if is_htmx:
-            # Return the shop cards partial
-            response = render_template('buyer/shop_cards.html', 
-                                     shops=shops.items, 
-                                     followed_shop_ids=followed_shop_ids,
-                                     user_id=user_id)
-            
-            # Add load more button if there are more pages
-            if shops.has_next:
-                load_more_button = f'''
-                <div class="text-center mt-4" id="load-more-container">
-                    <button class="btn btn-primary" hx-get="{url_for('buyer_bp.browse_shops', page=shops.page + 1)}" hx-target="#shops-container" hx-swap="beforeend">
-                        <i class="bi bi-arrow-down-circle me-2"></i>Load More Shops
-                    </button>
-                </div>
-                '''
-                response += load_more_button
-            
-            return response
-        else:
-            # Full page load - render the main template
-            return render_template('buyer/shops.html',
-                                 shops=shops.items,
-                                 total=shops.total,
-                                 pages=shops.pages,
-                                 current_page=shops.page,
-                                 has_next=shops.has_next,
-                                 followed_shop_ids=followed_shop_ids,
-                                 user_id=user_id)
-        
+
+        if _is_htmx_request():
+            return render_template(
+                'buyer/shop_cards.html',
+                shops=shops.items,
+                followed_shop_ids=followed_shop_ids,
+                user_id=user_id,
+                has_next=shops.has_next,
+                next_page=shops.next_num,
+                search_term=search_term,
+                sort_by=sort_by,
+                category_id=category_id,
+            )
+
+        shop_rows = []
+        for shop in shops.items:
+            shop_rows.append(
+                {
+                    'id': shop.id,
+                    'name': shop.name,
+                    'description': shop.description,
+                    'region': shop.region,
+                    'town': shop.town,
+                    'product_count': len([p for p in shop.products if p.is_active]),
+                }
+            )
+
+        return jsonify(
+            {
+                'success': True,
+                'count': len(shop_rows),
+                'total': shops.total,
+                'page': shops.page,
+                'pages': shops.pages,
+                'has_next': shops.has_next,
+                'shops': shop_rows,
+            }
+        ), 200
+
     except Exception as e:
-        if request.headers.get('HX-Request') == 'true':
+        if _is_htmx_request():
             return "<div class='alert alert-danger'>Error loading shops</div>", 500
         return jsonify({
             'success': False,
@@ -223,7 +255,7 @@ def get_recommended_categories():
 def track_browsing():
     """Track a browsing event (product view, category view, etc.)"""
     try:
-        data = request.get_json()
+        data = request.get_json(silent=True) or {}
         
         # Get user_id from request
         user_id = data.get('user_id') or request.args.get('user_id', type=int)
@@ -268,9 +300,12 @@ def track_browsing():
 def browse_products():
     """Browse all products across all shops with filters"""
     try:
-        # Get user_id from request (for tracking)
         user_id = request.args.get('user_id', type=int)
         category_id = request.args.get('category_id', type=int)
+        search_term = request.args.get('search', '').strip()
+        sort_by = request.args.get('sort_by', 'name')
+        page = request.args.get('page', 1, type=int)
+        per_page = request.args.get('per_page', PRODUCTS_PER_PAGE, type=int)
         
         # Track category view if user_id and category_id are provided
         if user_id and category_id:
@@ -284,11 +319,10 @@ def browse_products():
                 # Don't fail the request if tracking fails
                 pass
         
-        # Build query - only products from verified shops
         query = Product.query.join(Shop).filter(
-            Shop.verification_status == VerificationStatus.VERIFIED,
-            Shop.is_active == True,
-            Product.is_active == True
+            Shop.verification_status == VERIFICATION_STATUS_VERIFIED,
+            Shop.is_active.is_(True),
+            Product.is_active.is_(True),
         )
         
         # Filter by category
@@ -300,58 +334,73 @@ def browse_products():
         if shop_id:
             query = query.filter(Product.shop_id == shop_id)
         
-        # Filter by price range
         min_price = request.args.get('min_price', type=float)
         max_price = request.args.get('max_price', type=float)
         if min_price is not None:
             query = query.filter(Product.price >= min_price)
         if max_price is not None:
             query = query.filter(Product.price <= max_price)
-        
-        # Filter by stock
+
         in_stock = request.args.get('in_stock')
         if in_stock and in_stock.lower() in ('true', '1', 'yes'):
             query = query.filter(Product.stock > 0)
-        
-        # Search
-        search = request.args.get('search', '').strip()
-        if search:
+
+        if search_term:
             query = query.filter(
-                db.or_(
-                    Product.name.ilike(f'%{search}%'),
-                    Product.description.ilike(f'%{search}%')
+                or_(
+                    Product.name.ilike(f'%{search_term}%'),
+                    Product.description.ilike(f'%{search_term}%'),
+                    Shop.name.ilike(f'%{search_term}%'),
                 )
             )
-        
-        # Sort
-        sort_by = request.args.get('sort_by', 'name')
+
         if sort_by == 'price':
             query = query.order_by(Product.price.asc())
         elif sort_by == 'price_desc':
             query = query.order_by(Product.price.desc())
         elif sort_by == 'stock':
             query = query.order_by(Product.stock.desc())
+        elif sort_by == 'newest':
+            query = query.order_by(Product.created_at.desc())
         else:
-            query = query.order_by(Product.name)
-        
-        products = query.all()
-        
-        # Build response
+            query = query.order_by(Product.name.asc())
+
+        products = query.paginate(page=page, per_page=per_page, error_out=False)
+
+        if _is_htmx_request():
+            return render_template(
+                'buyer/product_cards.html',
+                products=products.items,
+                has_next=products.has_next,
+                next_page=products.next_num,
+                search_term=search_term,
+                category_id=category_id,
+                shop_id=shop_id,
+                min_price=min_price,
+                max_price=max_price,
+                in_stock=in_stock,
+                sort_by=sort_by,
+            )
+
         products_list = []
-        for product in products:
-            product_dict = {
-                'id': product.id,
-                'name': product.name,
-                'price': product.price,
-                'stock': product.stock,
-                'category_id': product.category_id,
-                'shop_id': product.shop_id,
-                'shop_name': product.shop.name if product.shop else None
-            }
-            products_list.append(product_dict)
-        
+        for product in products.items:
+            products_list.append(
+                {
+                    'id': product.id,
+                    'name': product.name,
+                    'price': product.price,
+                    'stock': product.stock,
+                    'category_id': product.category_id,
+                    'shop_id': product.shop_id,
+                    'shop_name': product.shop.name if product.shop else None,
+                }
+            )
+
         return jsonify({
             'success': True,
+            'total': products.total,
+            'page': products.page,
+            'pages': products.pages,
             'count': len(products_list),
             'products': products_list
         }), 200
@@ -370,8 +419,8 @@ def view_product(product_id):
         # Only show products from verified shops
         product = Product.query.join(Shop).filter(
             Product.id == product_id,
-            Shop.verification_status == VerificationStatus.VERIFIED,
-            Shop.is_active == True
+            Shop.verification_status == VERIFICATION_STATUS_VERIFIED,
+            Shop.is_active.is_(True),
         ).first_or_404()
         
         # Get user_id from request (from session, JWT token, or query param)
@@ -398,7 +447,9 @@ def view_product(product_id):
                 'price': product.price,
                 'stock': product.stock,
                 'category_id': product.category_id,
-                'shop_id': product.shop_id
+                'shop_id': product.shop_id,
+                'shop_name': product.shop.name if product.shop else None,
+                'description': product.description,
             }
         }), 200
         
@@ -565,7 +616,7 @@ def get_followed_shops():
         shops = []
         for follow in follows:
             shop = Shop.query.get(follow.shop_id)
-            if shop and shop.is_active and shop.verification_status == VerificationStatus.VERIFIED:
+            if shop and shop.is_active and shop.verification_status == VERIFICATION_STATUS_VERIFIED:
                 shop_dict = {
                     'id': shop.id,
                     'name': shop.name,

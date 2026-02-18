@@ -3,315 +3,147 @@
 {% block title %}Products - Market Window{% endblock %}
 
 {% block content %}
+{% set selected_category_id = request.args.get('category_id', '') %}
+{% set selected_shop_id = request.args.get('shop_id', '') %}
 <div class="container py-4">
     <div class="row mb-4">
         <div class="col-12">
             <h1 class="fw-bold">Browse Products</h1>
-            <p class="text-muted">Discover amazing products from verified sellers</p>
+            <p class="text-muted">Real inventory from verified shops</p>
         </div>
     </div>
 
-    <!-- Search and Filters -->
-    <div class="row mb-4">
-        <div class="col-md-6">
-            <div class="input-group">
-                <span class="input-group-text"><i class="bi bi-search"></i></span>
-                <input type="text" class="form-control" placeholder="Search products...">
-            </div>
-        </div>
-        <div class="col-md-3">
-            <select class="form-select">
-                <option selected>All Categories</option>
-                <option>Electronics</option>
-                <option>Fashion</option>
-                <option>Home & Garden</option>
-            </select>
-        </div>
-        <div class="col-md-3">
-            <select class="form-select">
-                <option selected>Sort by</option>
-                <option>Price: Low to High</option>
-                <option>Price: High to Low</option>
-                <option>Newest</option>
-                <option>Popular</option>
-            </select>
-        </div>
-    </div>
-
-    <!-- Products Grid -->
-    <div class="row g-4" id="products-container">
-        <div class="col-md-6 col-lg-4 col-xl-3">
-            <div class="card h-100 border-0 shadow-sm product-card">
-                <img src="{{ url_for('static', filename='images/mw_logo_trans.png') }}" class="card-img-top" alt="Product">
-                <div class="card-body">
-                    <div class="d-flex justify-content-between align-items-start mb-2">
-                        <h6 class="card-title fw-bold">Smartphone Pro</h6>
-                        <span class="badge bg-success">In Stock</span>
-                    </div>
-                    <p class="card-text text-muted small mb-2">Tech Haven</p>
-                    <div class="d-flex align-items-center mb-2">
-                        <div class="text-warning me-2">
-                            <i class="bi bi-star-fill"></i>
-                            <i class="bi bi-star-fill"></i>
-                            <i class="bi bi-star-fill"></i>
-                            <i class="bi bi-star-fill"></i>
-                            <i class="bi bi-star-half"></i>
-                        </div>
-                        <small class="text-muted">4.5</small>
-                    </div>
-                    <h5 class="text-primary fw-bold mb-2">$299</h5>
-                    <p class="card-text small text-muted">Latest smartphone with amazing features and long battery life.</p>
-                    <div class="d-flex gap-2">
-                        <button class="btn btn-primary btn-sm flex-fill">Add to Cart</button>
-                        <button class="btn btn-outline-primary btn-sm">
-                            <i class="bi bi-heart"></i>
-                        </button>
-                    </div>
+    <div x-data="{ showExtraCriteria: false }" class="mb-4">
+        <div class="row g-3 align-items-center">
+            <div class="col-md-8">
+                <div class="input-group">
+                    <span class="input-group-text"><i class="bi bi-search"></i></span>
+                    <input
+                        type="text"
+                        class="form-control"
+                        name="search"
+                        placeholder="Search product or shop..."
+                        hx-get="{{ url_for('buyer_bp.browse_products') }}"
+                        hx-trigger="keyup changed delay:400ms"
+                        hx-target="#products-container"
+                        hx-include="[name='category_id'],[name='shop_id'],[name='sort_by'],[name='in_stock'],[name='min_price'],[name='max_price']"
+                        hx-swap="innerHTML"
+                    >
                 </div>
+            </div>
+            <div class="col-md-4 text-md-end">
+                <button
+                    type="button"
+                    class="btn btn-outline-secondary btn-sm"
+                    @click="showExtraCriteria = !showExtraCriteria"
+                    :aria-expanded="showExtraCriteria.toString()"
+                >
+                    Extra Search Criteria
+                    <i class="bi ms-1" :class="showExtraCriteria ? 'bi-caret-up-fill' : 'bi-caret-down-fill'"></i>
+                </button>
             </div>
         </div>
 
-        <div class="col-md-6 col-lg-4 col-xl-3">
-            <div class="card h-100 border-0 shadow-sm product-card">
-                <img src="{{ url_for('static', filename='images/mw_logo_trans.png') }}" class="card-img-top" alt="Product">
-                <div class="card-body">
-                    <div class="d-flex justify-content-between align-items-start mb-2">
-                        <h6 class="card-title fw-bold">Designer Jacket</h6>
-                        <span class="badge bg-success">In Stock</span>
-                    </div>
-                    <p class="card-text text-muted small mb-2">Fashion Forward</p>
-                    <div class="d-flex align-items-center mb-2">
-                        <div class="text-warning me-2">
-                            <i class="bi bi-star-fill"></i>
-                            <i class="bi bi-star-fill"></i>
-                            <i class="bi bi-star-fill"></i>
-                            <i class="bi bi-star-fill"></i>
-                            <i class="bi bi-star"></i>
-                        </div>
-                        <small class="text-muted">4.0</small>
-                    </div>
-                    <h5 class="text-primary fw-bold mb-2">$89</h5>
-                    <p class="card-text small text-muted">Stylish designer jacket perfect for any occasion.</p>
-                    <div class="d-flex gap-2">
-                        <button class="btn btn-primary btn-sm flex-fill">Add to Cart</button>
-                        <button class="btn btn-outline-primary btn-sm">
-                            <i class="bi bi-heart"></i>
-                        </button>
-                    </div>
+        <div class="row g-3 mt-1" x-show="showExtraCriteria" x-transition>
+            <div class="col-md-4">
+                <select
+                    class="form-select"
+                    name="category_id"
+                    hx-get="{{ url_for('buyer_bp.browse_products') }}"
+                    hx-trigger="change"
+                    hx-target="#products-container"
+                    hx-include="[name='search'],[name='shop_id'],[name='sort_by'],[name='in_stock'],[name='min_price'],[name='max_price']"
+                    hx-swap="innerHTML"
+                >
+                    <option value="">All Categories</option>
+                    {% for category in categories %}
+                    <option value="{{ category.id }}" {% if selected_category_id and selected_category_id|int == category.id %}selected{% endif %}>{{ category.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-3">
+                <input
+                    type="number"
+                    class="form-control"
+                    name="min_price"
+                    placeholder="Min price"
+                    min="0"
+                    step="0.01"
+                    hx-get="{{ url_for('buyer_bp.browse_products') }}"
+                    hx-trigger="change"
+                    hx-target="#products-container"
+                    hx-include="[name='search'],[name='category_id'],[name='shop_id'],[name='sort_by'],[name='in_stock'],[name='max_price']"
+                    hx-swap="innerHTML"
+                >
+            </div>
+            <div class="col-md-3">
+                <input
+                    type="number"
+                    class="form-control"
+                    name="max_price"
+                    placeholder="Max price"
+                    min="0"
+                    step="0.01"
+                    hx-get="{{ url_for('buyer_bp.browse_products') }}"
+                    hx-trigger="change"
+                    hx-target="#products-container"
+                    hx-include="[name='search'],[name='category_id'],[name='shop_id'],[name='sort_by'],[name='in_stock'],[name='min_price']"
+                    hx-swap="innerHTML"
+                >
+            </div>
+            <div class="col-md-2 d-flex align-items-center">
+                <div class="form-check mt-2">
+                    <input
+                        class="form-check-input"
+                        type="checkbox"
+                        name="in_stock"
+                        value="true"
+                        id="in-stock-only"
+                        hx-get="{{ url_for('buyer_bp.browse_products') }}"
+                        hx-trigger="change"
+                        hx-target="#products-container"
+                        hx-include="[name='search'],[name='category_id'],[name='shop_id'],[name='sort_by'],[name='min_price'],[name='max_price']"
+                        hx-swap="innerHTML"
+                    >
+                    <label class="form-check-label small" for="in-stock-only">Stock</label>
                 </div>
             </div>
-        </div>
-
-        <div class="col-md-6 col-lg-4 col-xl-3">
-            <div class="card h-100 border-0 shadow-sm product-card">
-                <img src="{{ url_for('static', filename='images/mw_logo_trans.png') }}" class="card-img-top" alt="Product">
-                <div class="card-body">
-                    <div class="d-flex justify-content-between align-items-start mb-2">
-                        <h6 class="card-title fw-bold">Coffee Maker</h6>
-                        <span class="badge bg-warning">Low Stock</span>
-                    </div>
-                    <p class="card-text text-muted small mb-2">Home Essentials</p>
-                    <div class="d-flex align-items-center mb-2">
-                        <div class="text-warning me-2">
-                            <i class="bi bi-star-fill"></i>
-                            <i class="bi bi-star-fill"></i>
-                            <i class="bi bi-star-fill"></i>
-                            <i class="bi bi-star-fill"></i>
-                            <i class="bi bi-star-fill"></i>
-                        </div>
-                        <small class="text-muted">5.0</small>
-                    </div>
-                    <h5 class="text-primary fw-bold mb-2">$149</h5>
-                    <p class="card-text small text-muted">Professional coffee maker for the perfect brew every time.</p>
-                    <div class="d-flex gap-2">
-                        <button class="btn btn-primary btn-sm flex-fill">Add to Cart</button>
-                        <button class="btn btn-outline-primary btn-sm">
-                            <i class="bi bi-heart"></i>
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="col-md-6 col-lg-4 col-xl-3">
-            <div class="card h-100 border-0 shadow-sm product-card">
-                <img src="{{ url_for('static', filename='images/mw_logo_trans.png') }}" class="card-img-top" alt="Product">
-                <div class="card-body">
-                    <div class="d-flex justify-content-between align-items-start mb-2">
-                        <h6 class="card-title fw-bold">Bestseller Novel</h6>
-                        <span class="badge bg-success">In Stock</span>
-                    </div>
-                    <p class="card-text text-muted small mb-2">Bookworm's Paradise</p>
-                    <div class="d-flex align-items-center mb-2">
-                        <div class="text-warning me-2">
-                            <i class="bi bi-star-fill"></i>
-                            <i class="bi bi-star-fill"></i>
-                            <i class="bi bi-star-fill"></i>
-                            <i class="bi bi-star-fill"></i>
-                            <i class="bi bi-star-half"></i>
-                        </div>
-                        <small class="text-muted">4.7</small>
-                    </div>
-                    <h5 class="text-primary fw-bold mb-2">$19</h5>
-                    <p class="card-text small text-muted">Captivating story that will keep you turning pages.</p>
-                    <div class="d-flex gap-2">
-                        <button class="btn btn-primary btn-sm flex-fill">Add to Cart</button>
-                        <button class="btn btn-outline-primary btn-sm">
-                            <i class="bi bi-heart"></i>
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="col-md-6 col-lg-4 col-xl-3">
-            <div class="card h-100 border-0 shadow-sm product-card">
-                <img src="{{ url_for('static', filename='images/mw_logo_trans.png') }}" class="card-img-top" alt="Product">
-                <div class="card-body">
-                    <div class="d-flex justify-content-between align-items-start mb-2">
-                        <h6 class="card-title fw-bold">Yoga Mat</h6>
-                        <span class="badge bg-success">In Stock</span>
-                    </div>
-                    <p class="card-text text-muted small mb-2">Sports Central</p>
-                    <div class="d-flex align-items-center mb-2">
-                        <div class="text-warning me-2">
-                            <i class="bi bi-star-fill"></i>
-                            <i class="bi bi-star-fill"></i>
-                            <i class="bi bi-star-fill"></i>
-                            <i class="bi bi-star"></i>
-                            <i class="bi bi-star"></i>
-                        </div>
-                        <small class="text-muted">3.8</small>
-                    </div>
-                    <h5 class="text-primary fw-bold mb-2">$29</h5>
-                    <p class="card-text small text-muted">High-quality yoga mat for comfortable workouts.</p>
-                    <div class="d-flex gap-2">
-                        <button class="btn btn-primary btn-sm flex-fill">Add to Cart</button>
-                        <button class="btn btn-outline-primary btn-sm">
-                            <i class="bi bi-heart"></i>
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="col-md-6 col-lg-4 col-xl-3">
-            <div class="card h-100 border-0 shadow-sm product-card">
-                <img src="{{ url_for('static', filename='images/mw_logo_trans.png') }}" class="card-img-top" alt="Product">
-                <div class="card-body">
-                    <div class="d-flex justify-content-between align-items-start mb-2">
-                        <h6 class="card-title fw-bold">Art Set</h6>
-                        <span class="badge bg-danger">Out of Stock</span>
-                    </div>
-                    <p class="card-text text-muted small mb-2">Artistic Touch</p>
-                    <div class="d-flex align-items-center mb-2">
-                        <div class="text-warning me-2">
-                            <i class="bi bi-star-fill"></i>
-                            <i class="bi bi-star-fill"></i>
-                            <i class="bi bi-star-fill"></i>
-                            <i class="bi bi-star-fill"></i>
-                            <i class="bi bi-star-fill"></i>
-                        </div>
-                        <small class="text-muted">4.9</small>
-                    </div>
-                    <h5 class="text-primary fw-bold mb-2">$39</h5>
-                    <p class="card-text small text-muted">Complete art set for creative expression.</p>
-                    <div class="d-flex gap-2">
-                        <button class="btn btn-secondary btn-sm flex-fill" disabled>Out of Stock</button>
-                        <button class="btn btn-outline-primary btn-sm">
-                            <i class="bi bi-heart"></i>
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="col-md-6 col-lg-4 col-xl-3">
-            <div class="card h-100 border-0 shadow-sm product-card">
-                <img src="{{ url_for('static', filename='images/mw_logo_trans.png') }}" class="card-img-top" alt="Product">
-                <div class="card-body">
-                    <div class="d-flex justify-content-between align-items-start mb-2">
-                        <h6 class="card-title fw-bold">Wireless Headphones</h6>
-                        <span class="badge bg-success">In Stock</span>
-                    </div>
-                    <p class="card-text text-muted small mb-2">Tech Haven</p>
-                    <div class="d-flex align-items-center mb-2">
-                        <div class="text-warning me-2">
-                            <i class="bi bi-star-fill"></i>
-                            <i class="bi bi-star-fill"></i>
-                            <i class="bi bi-star-fill"></i>
-                            <i class="bi bi-star-fill"></i>
-                            <i class="bi bi-star-half"></i>
-                        </div>
-                        <small class="text-muted">4.6</small>
-                    </div>
-                    <h5 class="text-primary fw-bold mb-2">$79</h5>
-                    <p class="card-text small text-muted">Premium wireless headphones with noise cancellation.</p>
-                    <div class="d-flex gap-2">
-                        <button class="btn btn-primary btn-sm flex-fill">Add to Cart</button>
-                        <button class="btn btn-outline-primary btn-sm">
-                            <i class="bi bi-heart"></i>
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="col-md-6 col-lg-4 col-xl-3">
-            <div class="card h-100 border-0 shadow-sm product-card">
-                <img src="{{ url_for('static', filename='images/mw_logo_trans.png') }}" class="card-img-top" alt="Product">
-                <div class="card-body">
-                    <div class="d-flex justify-content-between align-items-start mb-2">
-                        <h6 class="card-title fw-bold">Kitchen Knife Set</h6>
-                        <span class="badge bg-warning">Low Stock</span>
-                    </div>
-                    <p class="card-text text-muted small mb-2">Home Essentials</p>
-                    <div class="d-flex align-items-center mb-2">
-                        <div class="text-warning me-2">
-                            <i class="bi bi-star-fill"></i>
-                            <i class="bi bi-star-fill"></i>
-                            <i class="bi bi-star-fill"></i>
-                            <i class="bi bi-star-fill"></i>
-                            <i class="bi bi-star-fill"></i>
-                        </div>
-                        <small class="text-muted">5.0</small>
-                    </div>
-                    <h5 class="text-primary fw-bold mb-2">$59</h5>
-                    <p class="card-text small text-muted">Professional knife set for all your cooking needs.</p>
-                    <div class="d-flex gap-2">
-                        <button class="btn btn-primary btn-sm flex-fill">Add to Cart</button>
-                        <button class="btn btn-outline-primary btn-sm">
-                            <i class="bi bi-heart"></i>
-                        </button>
-                    </div>
-                </div>
+            <div class="col-md-12 col-lg-4">
+                <select
+                    class="form-select"
+                    name="sort_by"
+                    hx-get="{{ url_for('buyer_bp.browse_products') }}"
+                    hx-trigger="change"
+                    hx-target="#products-container"
+                    hx-include="[name='search'],[name='category_id'],[name='shop_id'],[name='in_stock'],[name='min_price'],[name='max_price']"
+                    hx-swap="innerHTML"
+                >
+                    <option value="name">Sort: Name</option>
+                    <option value="newest">Sort: Newest</option>
+                    <option value="price">Sort: Price Low-High</option>
+                    <option value="price_desc">Sort: Price High-Low</option>
+                    <option value="stock">Sort: Stock</option>
+                </select>
             </div>
         </div>
     </div>
 
-    <!-- Load More Button -->
-    <div class="text-center mt-4">
-        <button class="btn btn-primary" hx-get="/products?page=2" hx-target="#products-container" hx-swap="beforeend">
-            <i class="bi bi-arrow-down-circle me-2"></i>Load More Products
-        </button>
+    <input type="hidden" name="shop_id" value="{{ selected_shop_id }}">
+
+    <div
+        class="row g-4"
+        id="products-container"
+        hx-get="{{ url_for('buyer_bp.browse_products', category_id=selected_category_id, shop_id=selected_shop_id) if selected_category_id or selected_shop_id else url_for('buyer_bp.browse_products') }}"
+        hx-trigger="load"
+        hx-target="#products-container"
+        hx-swap="innerHTML"
+    >
+        <div class="col-12 text-center py-5">
+            <div class="spinner-border text-primary" role="status"></div>
+            <p class="mt-2 text-mw">Loading products...</p>
+        </div>
     </div>
+
+    <div class="text-center mt-4" id="product-load-more-container"></div>
 </div>
-{% endblock %}
-
-{% block styles %}
-<style>
-    .product-card {
-        transition: transform 0.2s ease;
-    }
-    
-    .product-card:hover {
-        transform: translateY(-4px);
-        box-shadow: 0 8px 16px rgba(107, 70, 193, 0.15);
-    }
-    
-    .product-card img {
-        height: 200px;
-        object-fit: cover;
-    }
-</style>
 {% endblock %}
