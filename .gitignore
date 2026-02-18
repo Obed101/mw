@@ -26,6 +26,7 @@ var/
 
 # Flask / config
 instance/
+flask_session/
 .env
 .env.*
 *.env
