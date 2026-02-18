@@ -256,6 +256,42 @@ Prepare the project for safe deployment and easy team handoff.
 
 ---
 
+## Task 11 — Subdomain Routing Foundation (Planned for Later Activation)
+### Objective
+Prepare a clean, low-cost architecture for splitting Market Window surfaces by subdomain (for example, `admin.marketwindowgh.com`) while keeping one Flask app, one Heroku dyno group, and one database.
+
+### Detailed actions
+1. Add Flask subdomain routing configuration:
+   - set `SERVER_NAME` to `marketwindowgh.com` (environment-aware for dev/staging/prod)
+   - verify host-header based routing works for root and subdomains
+2. Introduce subdomain-specific route organization using blueprints:
+   - keep main-site routes on the default host
+   - add an admin blueprint with `subdomain="admin"`
+   - migrate current admin endpoints into that blueprint without changing business logic
+3. Update environment and deployment setup for Heroku + DNS:
+   - add both domains in Heroku (`marketwindowgh.com`, `admin.marketwindowgh.com`)
+   - add DNS CNAME (`admin -> <heroku-app>.herokuapp.com`)
+   - confirm SSL/TLS coverage for apex and subdomain
+4. Define local development strategy for subdomains:
+   - document hosts-file or local DNS approach
+   - ensure test configuration can simulate subdomain requests reliably
+5. Add test coverage for host/subdomain route behavior:
+   - root domain renders main experience
+   - admin subdomain resolves admin dashboard/routes
+   - non-matching host/subdomain combinations fail safely
+
+### Deliverables
+- Subdomain routing implementation notes and config plan.
+- Blueprint structure proposal for admin isolation.
+- Deployment + DNS checklist specific to subdomain rollout.
+
+### Acceptance criteria
+- `marketwindowgh.com` and `admin.marketwindowgh.com` can be served by the same Flask app in a staging validation.
+- Admin functionality is reachable via subdomain routes and remains role-protected.
+- Deployment documentation is explicit enough for repeatable Heroku + DNS setup.
+
+---
+
 ## Suggested Execution Order and Ownership
 1. Task 1 (Setup)
 2. Task 2 (Model rules)
@@ -264,5 +300,6 @@ Prepare the project for safe deployment and easy team handoff.
 5. Task 7 + Task 8 (UI/UX and interaction polishing)
 6. Task 9 (Testing and QA)
 7. Task 10 (Release handoff)
+8. Task 11 (Subdomain routing activation when ready)
 
 For team execution, assign one owner per task and require sign-off against each task's acceptance criteria before moving to the next stage.
