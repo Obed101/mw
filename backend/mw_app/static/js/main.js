@@ -2,6 +2,32 @@
 document.addEventListener("DOMContentLoaded", () => {
     const overlay = document.getElementById("global-loading-overlay");
     const overlayText = document.getElementById("global-loading-text");
+    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute("content");
+    const popoverSelector = '[data-bs-toggle="popover"]';
+
+    if (window.htmx && csrfToken) {
+        document.body.addEventListener("htmx:configRequest", (event) => {
+            event.detail.headers["X-CSRFToken"] = csrfToken;
+        });
+    }
+
+    function initPopovers(root = document) {
+        if (!window.bootstrap || !window.bootstrap.Popover) return;
+
+        const nodes = [];
+        if (root.matches && root.matches(popoverSelector)) {
+            nodes.push(root);
+        }
+        if (root.querySelectorAll) {
+            nodes.push(...root.querySelectorAll(popoverSelector));
+        }
+
+        nodes.forEach((node) => {
+            if (!window.bootstrap.Popover.getInstance(node)) {
+                new window.bootstrap.Popover(node);
+            }
+        });
+    }
 
     function showOverlay(message) {
         if (!overlay) return;
@@ -40,4 +66,14 @@ document.addEventListener("DOMContentLoaded", () => {
             showOverlay(message);
         });
     });
+
+    initPopovers();
+
+    if (window.htmx) {
+        document.body.addEventListener("htmx:afterSwap", (event) => {
+            if (event.detail && event.detail.target) {
+                initPopovers(event.detail.target);
+            }
+        });
+    }
 });

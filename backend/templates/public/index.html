@@ -8,14 +8,19 @@
         <div class="row align-items-center min-vh-50 g-4">
             <div class="col-lg-7 hero-content">
                 <h1 class="display-5 fw-bold text-white mb-3">
-                    Find verified shops and real inventory.
+                    More Than Window Shopping
                 </h1>
                 <p class="lead text-white mb-4">
-                    Compare prices, browse categories, and discover products from trusted sellers.
+                    Compare prices, find shop directions and contact info, check which shops have what you're looking for.
                 </p>
                 <div class="d-flex flex-column flex-sm-row gap-3">
-                    <a href="{{ url_for('main_bp.products') }}" class="btn btn-warning btn-lg text-dark fw-bold">Browse Products</a>
+                    <a href="{{ url_for('main_bp.products') }}" class="btn btn-warning btn-lg text-dark fw-bold">
+                        <i class="bi bi-search me-2"></i>Start Searching
+                    </a>
                     <a href="{{ url_for('main_bp.shops') }}" class="btn btn-outline-light btn-lg">Find Shops</a>
+                    <a href="{{ url_for('main_bp.add_shop') if current_user.is_authenticated else url_for('main_bp.login', next=url_for('main_bp.add_shop')) }}" class="btn btn-light btn-lg fw-bold text-dark">
+                        <i class="bi bi-shop-window me-2"></i>ADD YOUR SHOP
+                    </a>
                 </div>
             </div>
             <div class="col-lg-5 d-none d-lg-block text-center">
@@ -26,26 +31,34 @@
 </section>
 
 <section class="py-5 bg-white">
-    <div class="container-fluid px-3 px-lg-4">
+    <div class="container-fluid px-3 px-lg-4 pb-3">
         <div class="d-flex justify-content-between align-items-center mb-3">
             <h3 class="fw-bold mb-0">Top Categories</h3>
-            <a href="{{ url_for('main_bp.categories') }}" class="btn btn-sm btn-outline-primary">View All</a>
         </div>
-        <div class="row g-3">
-            {% for category in top_categories %}
-            <div class="col-md-6 col-lg-3">
-                <a href="{{ url_for('main_bp.products', category_id=category.id) }}" class="text-decoration-none">
-                    <div class="card border-0 shadow-sm h-100">
-                        <div class="card-body">
-                            <h6 class="fw-bold text-dark mb-1">{{ category.name }}</h6>
-                            <small class="text-muted">{{ category.product_count }} products</small>
+        <div class="home-category-scroll">
+            <div class="home-category-scroll-inner">
+                {% for category in top_categories %}
+                <div class="home-category-item">
+                    <a href="{{ url_for('main_bp.products', category_id=category.id) }}" class="text-decoration-none d-block h-100">
+                        <div class="card border-0 shadow-sm h-100 home-category-card">
+                            <div class="card-body home-category-card-body">
+                                <div class="home-category-icon" aria-hidden="true">
+                                    <i class="bi bi-list-check"></i>
+                                </div>
+                                <div class="home-category-content">
+                                    <h6 class="fw-semibold text-dark mb-1 home-category-title">{{ category.name }}</h6>
+                                    <small class="text-muted home-category-meta">{{ category.product_count }} products</small>
+                                </div>
+                                <i class="bi bi-chevron-right home-category-chevron" aria-hidden="true"></i>
+                            </div>
                         </div>
-                    </div>
-                </a>
+                    </a>
+                </div>
+                {% endfor %}
             </div>
-            {% endfor %}
         </div>
     </div>
+    <a href="{{ url_for('main_bp.categories') }}" class="text-center d-block rounded-pill btn btn-sm btn-outline-primary">View All...</a>
 </section>
 
 <section class="py-5">
@@ -54,16 +67,16 @@
             <h3 class="fw-bold mb-0">Latest Products</h3>
             <a href="{{ url_for('main_bp.products') }}" class="btn btn-sm btn-outline-primary">Browse More</a>
         </div>
-        <div class="row g-4">
+        <div class="market-grid market-grid-products">
             {% for product in featured_products %}
-            <div class="col-md-6 col-lg-4 col-xl-3">
-                <div class="card h-100 border-0 shadow-sm product-card">
-                    <img src="{{ url_for('static', filename='images/mw_logo_trans.png') }}" class="card-img-top" alt="{{ product.name }}">
-                    <div class="card-body">
-                        <h6 class="card-title fw-bold mb-1">{{ product.name }}</h6>
+            <div class="market-grid-item">
+                <div class="card h-100 border-0 shadow-sm product-card product-card-compact">
+                    <img src="{{ product.primary_image_url or url_for('static', filename='images/mw_logo_trans.png') }}" class="card-img-top market-card-image" alt="{{ product.name }}">
+                    <div class="card-body product-card-body-compact">
+                        <h6 class="card-title fw-bold mb-1 product-card-title-compact">{{ product.name }}</h6>
                         <p class="text-muted small mb-1">{{ product.shop.name if product.shop else "Unknown Shop" }}</p>
-                        <p class="text-muted small mb-2">{{ product.category.name if product.category else "Uncategorized" }}</p>
-                        <h5 class="text-primary fw-bold mb-0">₵{{ '%.2f'|format(product.price) }}</h5>
+                        <p class="text-muted small mb-1">{{ product.category.name if product.category else "Uncategorized" }}</p>
+                        <h6 class="text-gradient fw-bold mb-0">&#8373;{{ '%.2f'|format(product.price) }}</h6>
                     </div>
                 </div>
             </div>
@@ -78,19 +91,19 @@
             <h3 class="fw-bold mb-0">Recommended Shops</h3>
             <a href="{{ url_for('main_bp.shops') }}" class="btn btn-sm btn-outline-primary">More...</a>
         </div>
-        <div class="row g-4">
+        <div class="market-grid market-grid-shops">
             {% for shop in featured_shops %}
-            <div class="col-md-6 col-lg-4">
-                <div class="card h-100 border-0 shadow-sm">
-                    <img src="{{ url_for('static', filename='images/mw_logo_trans.png') }}" class="card-img-top" alt="{{ shop.name }}">
-                    <div class="card-body">
+            <div class="market-grid-item">
+                <div class="card h-100 border-0 shadow-sm shop-card shop-card-compact">
+                    <img src="{{ shop.primary_image_url or url_for('static', filename='images/mw_logo_trans.png') }}" class="card-img-top market-card-image" alt="{{ shop.name }}">
+                    <div class="card-body shop-card-body-compact">
                         <div class="d-flex justify-content-between align-items-start mb-2">
-                            <h5 class="fw-bold mb-0">{{ shop.name }}
+                            <h6 class="fw-bold mb-0 shop-card-title">{{ shop.name }}
                                 <span class="bi bi-patch-check text-mw"></span>
-                            </h5>
+                            </h6>
                         </div>
-                        <p class="text-muted small mb-1"><i class="bi bi-geo-alt me-1"></i>{{ shop.town or shop.region or "Location unavailable" }}</p>
-                        <p class="small mb-0 line-clamp-2">{{ shop.description or "Trusted marketplace seller." }}</p>
+                        <p class="text-muted small mb-1 shop-card-location"><i class="bi bi-geo-alt me-1"></i>{{ shop.town or shop.region or "Location unavailable" }}</p>
+                        <p class="text-muted mb-0 line-clamp-2 shop-card-description">{{ shop.description or "Trusted marketplace seller." }}</p>
                     </div>
                 </div>
             </div>

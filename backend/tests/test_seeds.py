@@ -23,12 +23,14 @@ from mw_app import create_app
 from mw_app.models import (
     AuthToken,
     Category,
+    Notification,
     Product,
     Shop,
     StockUpdate,
     Subscription,
     User,
     UserBrowsingHistory,
+    UserFavoriteProduct,
     UserFollowShop,
     VerificationOTP,
 )
@@ -46,6 +48,8 @@ MODEL_CLASSES = [
     Product,
     StockUpdate,
     Subscription,
+    UserFavoriteProduct,
+    Notification,
 ]
 
 

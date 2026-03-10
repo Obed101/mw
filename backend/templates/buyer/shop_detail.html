@@ -1,0 +1,140 @@
+{% extends "base.html" %}
+
+{% block title %}{{ shop.name }} - Market Window{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <section class="card border-0 shadow-sm mb-4 overflow-hidden">
+        <div class="row g-0">
+            <div class="col-md-4">
+                <img src="{{ shop.primary_image_url or url_for('static', filename='images/mw_logo_trans.png') }}" alt="{{ shop.name }}" class="w-100 h-100 object-fit-cover shop-hero-image">
+            </div>
+            <div class="col-md-8">
+                <div class="p-3 p-md-4">
+                    <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-2">
+                        <h1 class="h3 fw-bold mb-0">
+                            {{ shop.name }}
+                            <span class="bi bi-patch-check text-mw" aria-label="Verified shop"></span>
+                        </h1>
+                        <div class="d-flex align-items-center gap-2">
+                            {% if current_user.is_authenticated and current_user.role == 'buyer' %}
+                                {% set shop_id = shop.id %}
+                                {% set is_favorited = shop_is_favorited %}
+                                {% include 'buyer/partials/shop_favorite_button.html' %}
+                            {% endif %}
+                            {% if shop.promoted %}
+                            <span class="badge rounded-pill text-bg-warning-subtle text-warning-emphasis border">Promoted</span>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <p class="text-muted mb-3">{{ shop.description or "Verified shop with listed products." }}</p>
+
+                    <div class="d-flex flex-wrap gap-2 mb-3">
+                        {% if shop.town %}<span class="badge rounded-pill text-bg-light border"><i class="bi bi-geo-alt me-1"></i>{{ shop.town }}</span>{% endif %}
+                        {% if shop.region %}<span class="badge rounded-pill text-bg-light border">{{ shop.region }}</span>{% endif %}
+                        {% if shop.phone %}<a href="tel:{{ shop.phone }}" class="badge rounded-pill text-bg-light border text-decoration-none"><i class="bi bi-telephone me-1"></i>{{ shop.phone }}</a>{% endif %}
+                        {% if shop.email %}<a href="mailto:{{ shop.email }}" class="badge rounded-pill text-bg-light border text-decoration-none"><i class="bi bi-envelope me-1"></i>{{ shop.email }}</a>{% endif %}
+                    </div>
+
+                    {% if shop_categories %}
+                    <div class="shop-category-scroll">
+                        {% for category in shop_categories %}
+                        <a href="{{ url_for('main_bp.categories', category_id=category.id) }}" class="badge rounded-pill text-bg-primary-subtle text-primary-emphasis border text-decoration-none shop-category-chip">
+                            {{ category.name }}
+                        </a>
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="card border-0 shadow-sm mb-4">
+        <div class="card-body p-3 p-md-4">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h2 class="h5 fw-bold mb-0">GPS Location</h2>
+                {% if shop.gps %}
+                <span class="badge text-bg-light border">{{ shop.gps }}</span>
+                {% endif %}
+            </div>
+
+            {% if map_embed_url %}
+            <div class="shop-map-frame-wrap">
+                <iframe
+                    src="{{ map_embed_url }}"
+                    class="shop-map-frame"
+                    loading="lazy"
+                    referrerpolicy="no-referrer-when-downgrade"
+                    allowfullscreen
+                    title="{{ shop.name }} location map"
+                ></iframe>
+            </div>
+            {% else %}
+            <div class="alert alert-light border mb-0">
+                This shop has no valid GPS location yet.
+            </div>
+            {% endif %}
+        </div>
+    </section>
+
+    <section>
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h2 class="h5 fw-bold mb-0">Products</h2>
+            <a href="{{ url_for('main_bp.products', shop_id=shop.id) }}" class="btn btn-sm btn-outline-primary">Open Full Product Browser</a>
+        </div>
+
+        <div
+            class="market-grid market-grid-products"
+            id="shop-products-container"
+            hx-get="{{ url_for('buyer_bp.browse_products', shop_id=shop.id) }}"
+            hx-trigger="load"
+            hx-target="#shop-products-container"
+            hx-swap="innerHTML"
+        >
+            <div class="market-grid-full text-center py-4">
+                <div class="spinner-border text-primary" role="status"></div>
+                <p class="mt-2 text-mw">Loading products...</p>
+            </div>
+        </div>
+
+        <div class="text-center mt-4" id="product-load-more-container"></div>
+    </section>
+</div>
+{% endblock %}
+
+{% block styles %}
+<style>
+    .shop-hero-image {
+        min-height: 180px;
+        max-height: 280px;
+    }
+
+    .shop-map-frame-wrap {
+        border-radius: 12px;
+        overflow: hidden;
+        border: 1px solid var(--border-light);
+        box-shadow: 0 10px 24px rgba(17, 24, 39, 0.08);
+    }
+
+    .shop-map-frame {
+        width: 100%;
+        min-height: 360px;
+        border: 0;
+    }
+
+    .shop-category-scroll {
+        display: flex;
+        gap: 0.5rem;
+        overflow-x: auto;
+        white-space: nowrap;
+        padding-bottom: 0.25rem;
+    }
+
+    .shop-category-chip {
+        font-size: 0.78rem;
+        font-weight: 600;
+    }
+</style>
+{% endblock %}

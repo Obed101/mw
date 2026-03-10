@@ -7,12 +7,69 @@
     <div class="row mb-4">
         <div class="col-12">
             <h1 class="fw-bold">Browse Categories</h1>
-            <p class="text-muted">Various categories of products found on Market Window</p>
+            <p class="text-muted mb-0">Explore product categories to quickly find what you need.</p>
         </div>
     </div>
 
-    <form method="get" class="mb-4" x-data="{ showExtraCriteria: false }">
-        <div class="row g-3 align-items-center">
+    {% if selected_category %}
+    <section class="card border-0 shadow-sm mb-4 overflow-hidden">
+        <div class="row g-0">
+            <div class="col-md-3">
+                <img src="{{ url_for('static', filename='images/mw_logo_trans.png') }}" alt="{{ selected_category.name }}" class="w-100 h-100 object-fit-cover category-focus-image">
+            </div>
+            <div class="col-md-9">
+                <div class="p-3 p-md-4">
+                    <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-2">
+                        <h2 class="h4 text-mw fw-bold mb-0 text-uppercase">{{ selected_category.name }}</h2>
+                        {% if selected_category.parent %}
+                        <a href="{{ url_for('main_bp.categories', category_id=selected_category.parent.id) }}" class="badge rounded-pill text-bg-light border text-decoration-none">
+                            Parent: {{ selected_category.parent.name }}
+                        </a>
+                        {% endif %}
+                    </div>
+
+                    <p class="text-muted mb-3">{{ selected_category.description or "Category products from verified shops." }}</p>
+
+                    {% if selected_children %}
+                    <div class="category-chip-scroll">
+                        {% for child in selected_children %}
+                        <a href="{{ url_for('main_bp.categories', category_id=child.id) }}" class="badge rounded-pill text-bg-primary-subtle text-primary-emphasis border text-decoration-none category-chip-link">
+                            {{ child.name }}
+                        </a>
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="mb-5">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h3 class="h5 fw-bold mb-0">Products in {{ selected_category.name }}</h3>
+            <a href="{{ url_for('main_bp.products', category_id=selected_category.id) }}" class="btn btn-sm btn-outline-primary">Open Full Products Page</a>
+        </div>
+
+        <div
+            class="market-grid market-grid-products"
+            id="category-products-container"
+            hx-get="{{ url_for('buyer_bp.browse_products', category_id=selected_category.id) }}"
+            hx-trigger="load"
+            hx-target="#category-products-container"
+            hx-swap="innerHTML"
+        >
+            <div class="market-grid-full text-center py-4">
+                <div class="spinner-border text-primary" role="status"></div>
+                <p class="mt-2 text-mw">Loading products...</p>
+            </div>
+        </div>
+
+        <div class="text-center mt-4" id="product-load-more-container"></div>
+    </section>
+    {% endif %}
+
+    <section x-data="{ showExtraCriteria: false }">
+        <div class="row g-3 align-items-center mb-3">
             <div class="col-md-8">
                 <div class="input-group">
                     <span class="input-group-text"><i class="bi bi-search"></i></span>
@@ -21,9 +78,13 @@
                         class="form-control"
                         name="search"
                         value="{{ search_term or '' }}"
-                        placeholder="Search categories..."
+                        placeholder="Search categories or parent category..."
+                        hx-get="{{ url_for('main_bp.categories') }}"
+                        hx-trigger="keyup changed delay:350ms"
+                        hx-target="#categories-container"
+                        hx-include="[name='sort_by'], [name='with_products'], [name='category_id']"
+                        hx-swap="innerHTML"
                     >
-                    <button type="submit" class="btn btn-primary">Search</button>
                 </div>
             </div>
             <div class="col-md-4 text-md-end">
@@ -39,47 +100,79 @@
             </div>
         </div>
 
-        <div class="row g-3 mt-1" x-show="showExtraCriteria" x-transition>
+        <div class="row g-3 mb-4" x-show="showExtraCriteria" x-transition>
             <div class="col-md-6">
-                <select class="form-select" name="sort_by">
+                <select
+                    class="form-select"
+                    name="sort_by"
+                    hx-get="{{ url_for('main_bp.categories') }}"
+                    hx-trigger="change"
+                    hx-target="#categories-container"
+                    hx-include="[name='search'], [name='with_products'], [name='category_id']"
+                    hx-swap="innerHTML"
+                >
                     <option value="name" {% if sort_by == 'name' %}selected{% endif %}>Sort: Name</option>
                     <option value="product_count_desc" {% if sort_by == 'product_count_desc' %}selected{% endif %}>Sort: Most Products</option>
                     <option value="product_count_asc" {% if sort_by == 'product_count_asc' %}selected{% endif %}>Sort: Least Products</option>
                 </select>
             </div>
-            <div class="col-md-4 d-flex align-items-center">
+            <div class="col-md-6 d-flex align-items-center">
                 <div class="form-check mt-1">
-                    <input class="form-check-input" type="checkbox" id="with-products" name="with_products" value="true" {% if with_products %}checked{% endif %}>
+                    <input
+                        class="form-check-input"
+                        type="checkbox"
+                        id="with-products"
+                        name="with_products"
+                        value="true"
+                        {% if with_products %}checked{% endif %}
+                        hx-get="{{ url_for('main_bp.categories') }}"
+                        hx-trigger="change"
+                        hx-target="#categories-container"
+                        hx-include="[name='search'], [name='sort_by'], [name='category_id']"
+                        hx-swap="innerHTML"
+                    >
                     <label class="form-check-label" for="with-products">Only categories with products</label>
                 </div>
             </div>
-            <div class="col-md-2 text-md-end">
-                <button type="submit" class="btn btn-primary w-100">Apply</button>
-            </div>
         </div>
-    </form>
 
-    <div class="row g-4">
-        {% for category in categories %}
-        <div class="col-md-6 col-lg-4">
-            <div class="card h-100 border-0 shadow-sm feature-card">
-                <div class="card-body p-4">
-                    <div class="d-flex justify-content-between align-items-start mb-3">
-                        <h5 class="fw-bold mb-0">{{ category.name }}</h5>
-                        <span class="badge bg-light text-dark">{{ category.product_count }} products</span>
-                    </div>
-                    <p class="text-muted small mb-4">{{ category.description or "Product category available in the marketplace." }}</p>
-                    <a href="{{ url_for('main_bp.products', category_id=category.id) }}" class="btn btn-primary btn-sm">Browse Products</a>
-                </div>
-            </div>
-        </div>
-        {% endfor %}
+        <input type="hidden" name="category_id" value="{{ selected_category.id if selected_category else '' }}">
 
-        {% if not categories %}
-        <div class="col-12">
-            <div class="alert alert-light border text-center mb-0">No categories matched your filters.</div>
+        <div class="row g-3" id="categories-container">
+            {% include 'public/partials/category_cards.html' %}
         </div>
-        {% endif %}
-    </div>
+    </section>
 </div>
+{% endblock %}
+
+{% block styles %}
+<style>
+    .category-focus-image {
+        min-height: 180px;
+        max-height: 240px;
+        object-fit: cover;
+    }
+
+    .category-chip-scroll {
+        display: flex;
+        gap: 0.5rem;
+        overflow-x: auto;
+        white-space: nowrap;
+        padding-bottom: 0.25rem;
+    }
+
+    .category-chip-link {
+        font-size: 0.78rem;
+        font-weight: 600;
+    }
+
+    .category-mini-card {
+        border-radius: 0.8rem;
+    }
+
+    .category-mini-card .btn {
+        padding-top: 0.3rem;
+        padding-bottom: 0.3rem;
+    }
+</style>
 {% endblock %}

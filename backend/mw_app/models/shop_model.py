@@ -2,6 +2,7 @@ from ..extensions import db
 from datetime import datetime, timedelta, timezone
 import secrets
 from werkzeug.security import generate_password_hash, check_password_hash
+from sqlalchemy.orm import validates
 
 # Shop verification status constants
 VERIFICATION_STATUS_PENDING = 'pending'
@@ -16,6 +17,21 @@ VALID_VERIFICATION_STATUSES = {
     VERIFICATION_STATUS_REJECTED,
     VERIFICATION_STATUS_SUSPENDED
 }
+MAX_SHOP_IMAGES = 3
+
+
+def _normalize_image_keys(image_keys):
+    normalized = []
+    seen = set()
+    for image_key in image_keys or []:
+        if image_key is None:
+            continue
+        cleaned = str(image_key).strip()
+        if not cleaned or cleaned in seen:
+            continue
+        seen.add(cleaned)
+        normalized.append(cleaned)
+    return normalized
 
 class Shop(db.Model):
     __searchable__ = ['name', 'description', 'address', 'region', 'district', 'town']
@@ -28,6 +44,7 @@ class Shop(db.Model):
     region = db.Column(db.String(100))
     district = db.Column(db.String(100))
     town = db.Column(db.String(100))
+    gps = db.Column(db.String(64))  # Expected format: "lat,long"
     phone = db.Column(db.String(20))
     email = db.Column(db.String(120))
     is_active = db.Column(db.Boolean, default=True)
@@ -59,6 +76,42 @@ class Shop(db.Model):
         foreign_keys=[verified_by],
         back_populates="verified_shops"
     )
+    image_records = db.relationship(
+        "ShopImage",
+        back_populates="shop",
+        cascade="all, delete-orphan",
+        order_by="ShopImage.sort_order.asc(), ShopImage.id.asc()",
+    )
+
+    @validates("image_records")
+    def _validate_image_records(self, key, image_record):
+        if image_record not in self.image_records and len(self.image_records) >= MAX_SHOP_IMAGES:
+            raise ValueError(f"A shop can have at most {MAX_SHOP_IMAGES} images")
+        return image_record
+
+    @property
+    def image_urls(self):
+        return [item.storage_key for item in self.image_records]
+
+    @property
+    def primary_image_url(self):
+        urls = self.image_urls
+        return urls[0] if urls else None
+
+    def replace_image_urls(self, image_keys):
+        normalized = _normalize_image_keys(image_keys)
+        if len(normalized) > MAX_SHOP_IMAGES:
+            raise ValueError(f"A shop can have at most {MAX_SHOP_IMAGES} images")
+
+        self.image_records.clear()
+        for idx, image_key in enumerate(normalized):
+            self.image_records.append(
+                ShopImage(
+                    storage_key=image_key,
+                    sort_order=idx,
+                    is_primary=(idx == 0),
+                )
+            )
     
     def __repr__(self):
         return f'<Shop {self.name}>'
@@ -70,6 +123,26 @@ class Shop(db.Model):
     def can_request_verification(self):
         """Check if shop can request verification (phone and email must be verified)"""
         return self.phone_verified and self.email_verified and self.verification_status == VERIFICATION_STATUS_PENDING
+
+
+class ShopImage(db.Model):
+    __tablename__ = "shop_image"
+
+    id = db.Column(db.Integer, primary_key=True)
+    shop_id = db.Column(db.Integer, db.ForeignKey("shop.id", ondelete="CASCADE"), nullable=False, index=True)
+    storage_key = db.Column(db.String(512), nullable=False)
+    sort_order = db.Column(db.Integer, nullable=False, default=0, index=True)
+    is_primary = db.Column(db.Boolean, nullable=False, default=False, index=True)
+    created_at = db.Column(db.DateTime, default=datetime.now(timezone.utc), nullable=False)
+
+    shop = db.relationship("Shop", back_populates="image_records")
+
+    __table_args__ = (
+        db.UniqueConstraint("shop_id", "storage_key", name="uq_shop_image_shop_storage"),
+    )
+
+    def __repr__(self):
+        return f"<ShopImage shop:{self.shop_id} order:{self.sort_order}>"
 
 
 class UserFollowShop(db.Model):

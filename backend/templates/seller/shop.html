@@ -1,0 +1,468 @@
+{% extends "base.html" %}
+
+{% block title %}{{ 'Add Your Shop' if onboarding_mode else 'Shop Settings' }} - Market Window{% endblock %}
+
+{% block styles %}
+<style>
+    .seller-shop-shell {
+        --surface: #ffffff;
+        --line: #e2e8f0;
+        --muted: #64748b;
+        --ink: #0f172a;
+    }
+
+    .seller-shop-shell .page-hero {
+        background: linear-gradient(140deg, #fff7ed 0%, #fffbeb 35%, #ffffff 100%);
+        border: 1px solid var(--line);
+        border-radius: 1rem;
+        padding: 1.25rem;
+    }
+
+    .seller-shop-shell .surface-card {
+        background: var(--surface);
+        border: 1px solid var(--line);
+        border-radius: 1rem;
+        box-shadow: 0 14px 28px rgba(15, 23, 42, 0.06);
+    }
+
+    .seller-shop-shell .surface-card .card-head {
+        padding: 1rem 1rem 0.25rem;
+    }
+
+    .seller-shop-shell .surface-card .card-body {
+        padding: 1rem;
+    }
+
+    .seller-shop-shell .form-label {
+        color: var(--muted);
+        font-size: 0.8rem;
+        font-weight: 700;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+    }
+
+    .seller-shop-shell .form-control,
+    .seller-shop-shell .form-select {
+        border-radius: 0.75rem;
+        border-color: #cbd5e1;
+        min-height: 46px;
+    }
+
+    .seller-shop-shell .form-control:focus,
+    .seller-shop-shell .form-select:focus {
+        border-color: #f59e0b;
+        box-shadow: 0 0 0 0.2rem rgba(245, 158, 11, 0.15);
+    }
+
+    .seller-shop-shell .gps-actions .btn {
+        min-width: 44px;
+    }
+
+    .seller-shop-shell .status-chip {
+        border-radius: 999px;
+        font-size: 0.72rem;
+        font-weight: 700;
+        padding: 0.25rem 0.55rem;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+    }
+
+    .seller-shop-shell .status-chip.ok {
+        background: #dcfce7;
+        color: #166534;
+    }
+
+    .seller-shop-shell .status-chip.warn {
+        background: #fef3c7;
+        color: #92400e;
+    }
+
+    .seller-shop-shell .status-chip.neutral {
+        background: #e2e8f0;
+        color: #334155;
+    }
+
+    .seller-shop-shell .map-frame {
+        border: 1px solid var(--line);
+        border-radius: 0.9rem;
+        width: 100%;
+        min-height: 280px;
+        background: #f8fafc;
+    }
+
+    .seller-shop-shell .sticky-mobile-actions {
+        position: sticky;
+        bottom: 0;
+        z-index: 1000;
+        background: rgba(255, 255, 255, 0.92);
+        border-top: 1px solid var(--line);
+        backdrop-filter: blur(8px);
+        padding: 0.75rem;
+        margin: 0 -1rem -1rem;
+    }
+
+    @media (min-width: 992px) {
+        .seller-shop-shell .sticky-mobile-actions {
+            position: static;
+            backdrop-filter: none;
+            border-top: 0;
+            background: transparent;
+            margin: 0;
+            padding: 0;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-3 px-lg-4 py-4 seller-shop-shell">
+    <div class="page-hero mb-4">
+        <div class="d-flex flex-column flex-lg-row align-items-lg-center justify-content-between gap-3">
+            <div>
+                <h1 class="h3 fw-bold mb-1">{{ 'Add Your Shop' if onboarding_mode else 'Shop Settings' }}</h1>
+                <p class="mb-0 text-muted">
+                    {{ 'Launch your storefront with a quick profile setup.' if onboarding_mode else 'Keep your public shop details complete, accurate, and mobile-ready.' }}
+                </p>
+            </div>
+            <div class="d-flex gap-2 flex-wrap">
+                <span class="badge text-bg-light border">User ID: {{ seller_id }}</span>
+                {% if shop %}
+                <span class="badge text-bg-light border">{{ shop.name }}</span>
+                {% else %}
+                <span class="badge text-bg-warning text-dark">No shop found</span>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div id="shop-feedback"></div>
+
+    <div class="row g-4">
+        <div class="col-12 col-xl-8">
+            <section class="surface-card h-100">
+                <div class="card-head">
+                    <h2 class="h5 fw-bold mb-1">{{ 'Create Business Profile' if not shop else 'Business Profile' }}</h2>
+                    <p class="small text-muted mb-0">These details show up for buyers in search and shop pages.</p>
+                </div>
+                <div class="card-body">
+                    <form id="shop-form" novalidate>
+                        <div class="row g-3">
+                            <div class="col-12">
+                                <label class="form-label" for="shop-name">Shop Name</label>
+                                <input id="shop-name" class="form-control" maxlength="150" required value="{{ shop.name if shop else '' }}">
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label" for="shop-description">Description</label>
+                                <textarea id="shop-description" class="form-control" rows="4" maxlength="1000" placeholder="Describe what you offer">{{ shop.description if shop else '' }}</textarea>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label" for="shop-email">Business Email</label>
+                                <input id="shop-email" type="email" class="form-control" value="{{ shop.email if shop else '' }}">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label" for="shop-phone">Phone</label>
+                                <input id="shop-phone" type="tel" inputmode="tel" class="form-control" value="{{ shop.phone if shop else '' }}">
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label" for="shop-address">Address</label>
+                                <textarea id="shop-address" class="form-control" rows="2">{{ shop.address if shop else '' }}</textarea>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label" for="shop-region">Region</label>
+                                <input id="shop-region" class="form-control" value="{{ shop.region if shop else '' }}">
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label" for="shop-district">District</label>
+                                <input id="shop-district" class="form-control" value="{{ shop.district if shop else '' }}">
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label" for="shop-town">Town</label>
+                                <input id="shop-town" class="form-control" value="{{ shop.town if shop else '' }}">
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label" for="shop-gps">GPS Coordinates</label>
+                                <div class="input-group gps-actions">
+                                    <input id="shop-gps" class="form-control" placeholder="5.603700,-0.187000" value="{{ shop.gps if shop else '' }}">
+                                    <button class="btn btn-outline-secondary" type="button" id="open-google-maps-btn" title="Open Google Maps picker">
+                                        <i class="bi bi-map"></i>
+                                        <span class="d-none d-md-inline ms-1">Pick on Google Maps</span>
+                                    </button>
+                                    <button class="btn btn-outline-primary" type="button" id="use-my-location-btn" title="Use current location">
+                                        <i class="bi bi-crosshair"></i>
+                                        <span class="d-none d-md-inline ms-1">Use My Location</span>
+                                    </button>
+                                </div>
+                                <div class="form-text">Use lat,lng format. You can open Google Maps to pick a point or auto-fill using your current location.</div>
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label" for="shop-image-urls">Image URLs (up to 3)</label>
+                                <textarea id="shop-image-urls" class="form-control" rows="3" placeholder="One URL per line">{% if shop %}{% for image in shop.image_urls %}{{ image }}{% if not loop.last %}&#10;{% endif %}{% endfor %}{% endif %}</textarea>
+                                <div class="form-text">Leave blank in dev to use the default placeholder image.</div>
+                            </div>
+                            <div class="col-12 form-check form-switch ms-1">
+                                <input class="form-check-input" type="checkbox" role="switch" id="shop-active" {% if (shop and shop.is_active) or not shop %}checked{% endif %}>
+                                <label class="form-check-label" for="shop-active">Shop is active</label>
+                            </div>
+                        </div>
+
+                        <div class="sticky-mobile-actions mt-3">
+                            <button class="btn btn-primary w-100" id="shop-save-btn" type="submit">
+                                <i class="bi bi-floppy me-2"></i>{{ 'Create Shop' if not shop else 'Save Shop Settings' }}
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </section>
+        </div>
+
+        <div class="col-12 col-xl-4">
+            <section class="surface-card mb-4">
+                <div class="card-head">
+                    <h2 class="h6 fw-bold mb-1">Verification</h2>
+                    <p class="small text-muted mb-0">Current account readiness.</p>
+                </div>
+                <div class="card-body">
+                    <div class="d-flex flex-column gap-2">
+                        <span class="status-chip {{ 'ok' if shop and shop.phone_verified else 'warn' }}">
+                            <i class="bi {{ 'bi-check-circle-fill' if shop and shop.phone_verified else 'bi-exclamation-circle-fill' }}"></i>
+                            Phone {{ 'Verified' if shop and shop.phone_verified else 'Not Verified' }}
+                        </span>
+                        <span class="status-chip {{ 'ok' if shop and shop.email_verified else 'warn' }}">
+                            <i class="bi {{ 'bi-check-circle-fill' if shop and shop.email_verified else 'bi-exclamation-circle-fill' }}"></i>
+                            Email {{ 'Verified' if shop and shop.email_verified else 'Not Verified' }}
+                        </span>
+                        <span class="status-chip neutral">
+                            <i class="bi bi-shield-check"></i>
+                            Status: {{ shop.verification_status if shop else 'not_created' }}
+                        </span>
+                    </div>
+
+                    <button id="request-verification-btn" class="btn btn-outline-primary mt-3 w-100" {% if not shop or not shop.can_request_verification %}disabled{% endif %}>
+                        Request Verification Review
+                    </button>
+                </div>
+            </section>
+
+            <section class="surface-card">
+                <div class="card-head">
+                    <h2 class="h6 fw-bold mb-1">Location Preview</h2>
+                    <p class="small text-muted mb-0">How map details resolve for buyers.</p>
+                </div>
+                <div class="card-body">
+                    {% if map_embed_url %}
+                    <iframe class="map-frame" src="{{ map_embed_url }}" loading="lazy"></iframe>
+                    {% else %}
+                    <div class="map-frame d-flex flex-column align-items-center justify-content-center text-muted p-3 text-center">
+                        <i class="bi bi-geo-alt fs-3 mb-2"></i>
+                        <div class="small">Add GPS coordinates or full address to preview your map.</div>
+                    </div>
+                    {% endif %}
+                </div>
+            </section>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    (function () {
+        const sellerId = {{ seller_id|tojson }};
+        const hasShopOnLoad = {{ (shop is not none)|tojson }};
+        let hasExistingShop = hasShopOnLoad;
+        const createShopUrl = "{{ url_for('seller_bp.create_shop') }}";
+        const updateShopUrl = "{{ url_for('seller_bp.update_shop') }}";
+        const verificationUrl = "{{ url_for('seller_bp.request_verification') }}";
+        const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+
+        const form = document.getElementById('shop-form');
+        const feedbackNode = document.getElementById('shop-feedback');
+        const saveButton = document.getElementById('shop-save-btn');
+        const verificationButton = document.getElementById('request-verification-btn');
+        const openGoogleMapsButton = document.getElementById('open-google-maps-btn');
+        const useMyLocationButton = document.getElementById('use-my-location-btn');
+        const gpsInput = document.getElementById('shop-gps');
+
+        function showFeedback(kind, message) {
+            const tone = kind === 'success' ? 'success' : 'danger';
+            feedbackNode.innerHTML = '<div class="alert alert-' + tone + ' alert-dismissible fade show" role="alert">' +
+                message +
+                '<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>';
+        }
+
+        function toImageList(rawText) {
+            if (!rawText) return [];
+            const values = [];
+            rawText.replace(/\r/g, '\n').split('\n').forEach((line) => {
+                line.split(',').forEach((part) => {
+                    const cleaned = part.trim();
+                    if (cleaned) values.push(cleaned);
+                });
+            });
+            return [...new Set(values)];
+        }
+
+        function parseGpsText(rawText) {
+            if (!rawText) return null;
+            const text = String(rawText).trim();
+            if (!text) return null;
+
+            const simple = text.match(/^\s*(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)\s*$/);
+            if (simple) return [Number(simple[1]), Number(simple[2])];
+
+            const mapAt = text.match(/@(-?\d+(?:\.\d+)?),(-?\d+(?:\.\d+)?)/);
+            if (mapAt) return [Number(mapAt[1]), Number(mapAt[2])];
+
+            const mapQ = text.match(/[?&]q=(-?\d+(?:\.\d+)?),(-?\d+(?:\.\d+)?)/);
+            if (mapQ) return [Number(mapQ[1]), Number(mapQ[2])];
+
+            return null;
+        }
+
+        function buildGoogleMapsQuery() {
+            const gpsValue = gpsInput?.value?.trim();
+            const gpsParsed = parseGpsText(gpsValue);
+            if (gpsParsed) {
+                return gpsParsed[0].toFixed(6) + ',' + gpsParsed[1].toFixed(6);
+            }
+
+            const parts = [
+                document.getElementById('shop-address')?.value?.trim(),
+                document.getElementById('shop-town')?.value?.trim(),
+                document.getElementById('shop-region')?.value?.trim(),
+            ].filter(Boolean);
+
+            if (parts.length) {
+                return parts.join(', ');
+            }
+
+            return 'Ghana';
+        }
+
+        function normalizeGpsFieldValue() {
+            const parsed = parseGpsText(gpsInput?.value);
+            if (!parsed) return;
+
+            const lat = parsed[0];
+            const lng = parsed[1];
+            if (lat < -90 || lat > 90 || lng < -180 || lng > 180) return;
+            gpsInput.value = lat.toFixed(6) + ',' + lng.toFixed(6);
+        }
+
+        async function apiRequest(url, method, payload) {
+            const response = await fetch(url, {
+                method,
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrfToken || '',
+                },
+                body: JSON.stringify(payload || {}),
+            });
+            const data = await response.json();
+            if (!response.ok || !data.success) {
+                throw new Error(data.message || 'Request failed');
+            }
+            return data;
+        }
+
+        if (openGoogleMapsButton) {
+            openGoogleMapsButton.addEventListener('click', () => {
+                const query = encodeURIComponent(buildGoogleMapsQuery());
+                const mapsUrl = 'https://www.google.com/maps/search/?api=1&query=' + query;
+                window.open(mapsUrl, '_blank', 'noopener');
+                showFeedback('success', 'Google Maps opened. Drop a pin, then paste coordinates or the map link into the GPS field.');
+            });
+        }
+
+        if (useMyLocationButton) {
+            useMyLocationButton.addEventListener('click', () => {
+                if (!navigator.geolocation) {
+                    showFeedback('error', 'Geolocation is not supported in this browser.');
+                    return;
+                }
+
+                useMyLocationButton.disabled = true;
+                navigator.geolocation.getCurrentPosition(
+                    (position) => {
+                        const lat = position.coords.latitude;
+                        const lng = position.coords.longitude;
+                        if (gpsInput) {
+                            gpsInput.value = lat.toFixed(6) + ',' + lng.toFixed(6);
+                        }
+                        showFeedback('success', 'Location captured and filled in GPS field.');
+                        useMyLocationButton.disabled = false;
+                    },
+                    (error) => {
+                        const reason = error && error.message ? error.message : 'Unable to get location.';
+                        showFeedback('error', reason);
+                        useMyLocationButton.disabled = false;
+                    },
+                    {
+                        enableHighAccuracy: true,
+                        timeout: 12000,
+                        maximumAge: 30000,
+                    }
+                );
+            });
+        }
+
+        if (form) {
+            form.addEventListener('submit', async (event) => {
+                event.preventDefault();
+                saveButton.disabled = true;
+                saveButton.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Saving...';
+                try {
+                    normalizeGpsFieldValue();
+                    const payload = {
+                        seller_id: sellerId,
+                        name: document.getElementById('shop-name')?.value?.trim(),
+                        description: document.getElementById('shop-description')?.value?.trim(),
+                        email: document.getElementById('shop-email')?.value?.trim(),
+                        phone: document.getElementById('shop-phone')?.value?.trim(),
+                        address: document.getElementById('shop-address')?.value?.trim(),
+                        region: document.getElementById('shop-region')?.value?.trim(),
+                        district: document.getElementById('shop-district')?.value?.trim(),
+                        town: document.getElementById('shop-town')?.value?.trim(),
+                        gps: document.getElementById('shop-gps')?.value?.trim(),
+                        image_urls: toImageList(document.getElementById('shop-image-urls')?.value || ''),
+                        is_active: !!document.getElementById('shop-active')?.checked,
+                    };
+
+                    const requestUrl = hasExistingShop ? updateShopUrl : createShopUrl;
+                    const requestMethod = hasExistingShop ? 'PUT' : 'POST';
+                    const result = await apiRequest(requestUrl, requestMethod, payload);
+                    if (!hasExistingShop) {
+                        hasExistingShop = true;
+                        showFeedback('success', (result.message || 'Shop created successfully.') + ' You can now request verification.');
+                        window.setTimeout(() => window.location.reload(), 700);
+                        return;
+                    }
+                    showFeedback('success', result.message || 'Shop updated successfully.');
+                } catch (error) {
+                    showFeedback('error', error.message || 'Failed to save shop.');
+                } finally {
+                    saveButton.disabled = false;
+                    saveButton.innerHTML = hasExistingShop
+                        ? '<i class="bi bi-floppy me-2"></i>Save Shop Settings'
+                        : '<i class="bi bi-floppy me-2"></i>Create Shop';
+                }
+            });
+        }
+
+        if (verificationButton) {
+            verificationButton.addEventListener('click', async () => {
+                verificationButton.disabled = true;
+                try {
+                    const result = await apiRequest(verificationUrl, 'POST', { seller_id: sellerId });
+                    showFeedback('success', result.message || 'Verification request submitted.');
+                } catch (error) {
+                    showFeedback('error', error.message || 'Failed to request verification.');
+                } finally {
+                    verificationButton.disabled = false;
+                }
+            });
+        }
+    })();
+</script>
+{% endblock %}

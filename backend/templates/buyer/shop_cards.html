@@ -1,32 +1,52 @@
+{% set favorite_shop_ids = followed_shop_ids if followed_shop_ids is defined else [] %}
 {% if shops %}
     {% for shop in shops %}
-    <div class="col-md-6 col-lg-4">
-        <div class="card h-100 border-0 shadow-sm">
-            <img src="{{ url_for('static', filename='images/mw_logo_trans.png') }}" class="card-img-top" alt="{{ shop.name }}">
-            <div class="card-body">
+    <div class="market-grid-item">
+        <div class="card h-100 border-0 shadow-sm shop-card shop-card-compact">
+            <img src="{{ shop.primary_image_url or url_for('static', filename='images/mw_logo_trans.png') }}" class="card-img-top market-card-image" alt="{{ shop.name }}">
+            <div class="card-body shop-card-body-compact">
                 <div class="d-flex justify-content-between align-items-start mb-2">
-                    <h5 class="fw-bold mb-0">{{ shop.name }}
+                    <h6 class="fw-bold mb-0 shop-card-title">
+                        {{ shop.name }}
+                        {% if shop.verification_status == 'verified' %}
                         <span class="bi bi-patch-check text-mw" aria-label="Verified shop"></span>
-                    </h5>
+                        {% endif %}
+                    </h6>
+                    <span class="badge {{ 'bg-success' if shop.verification_status == 'verified' else 'bg-secondary' }}">
+                        {{ shop.verification_status|default('unknown')|replace('_', ' ')|title }}
+                    </span>
                 </div>
-                <p class="card-text text-muted small mb-2">
+                <p class="card-text text-muted small mb-1 shop-card-location">
                     <i class="bi bi-geo-alt me-1"></i>{{ shop.town or shop.region or "Location unavailable" }}
                 </p>
-                <p class="card-text small mb-3 line-clamp-2">{{ shop.description or 'Quality products and service' }}</p>
-                <div class="d-flex justify-content-between align-items-center">
-                    <small class="text-muted">
+                <p class="card-text text-muted mb-2 line-clamp-2 shop-card-description">{{ shop.description or 'Quality products and service' }}</p>
+                <div class="d-flex flex-column gap-2 mt-auto">
+                    <small class="text-muted shop-card-stock">
                         <i class="bi bi-box-seam me-1"></i>{{ shop.products | selectattr('is_active') | list | length }} active products
                     </small>
-                    <a href="{{ url_for('main_bp.products', shop_id=shop.id) }}" class="btn btn-primary btn-sm">Visit Shop</a>
+                    <div class="shop-card-actions">
+                        {% if current_user.is_authenticated and current_user.role == 'buyer' %}
+                        <div class="shop-favorite-slot">
+                            {% set shop_id = shop.id %}
+                            {% set is_favorited = shop.id in favorite_shop_ids %}
+                            {% include 'buyer/partials/shop_favorite_button.html' %}
+                        </div>
+                        {% endif %}
+                        {% if shop.verification_status == 'verified' %}
+                        <a href="{{ url_for('main_bp.shop_detail', shop_id=shop.id) }}" class="btn btn-primary btn-sm">Visit</a>
+                        {% else %}
+                        <button class="btn btn-outline-secondary btn-sm" type="button" disabled>Not Yet Public</button>
+                        {% endif %}
+                    </div>
                 </div>
             </div>
         </div>
     </div>
     {% endfor %}
 {% elif not next_page %}
-<div class="col-12">
+<div class="market-grid-full">
     <div class="alert alert-light border text-center mb-0">
-        No shops matched your current filters.
+        No shops matched your current search criteria.
     </div>
 </div>
 {% endif %}
@@ -35,7 +55,7 @@
     {% if has_next %}
     <button
         class="btn btn-primary"
-        hx-get="{{ url_for('buyer_bp.browse_shops', page=next_page, search=search_term, sort_by=sort_by, category_id=category_id, user_id=user_id) }}"
+        hx-get="{{ url_for('buyer_bp.browse_shops', page=next_page, search=search_term, sort_by=sort_by, category_id=category_id, verified_only='true' if verified_only else 'false', user_id=user_id) }}"
         hx-target="#shops-container"
         hx-swap="beforeend"
     >

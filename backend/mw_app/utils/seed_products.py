@@ -124,11 +124,11 @@ def seed_products(products_per_shop=15):
                 description=f"High-quality {template['name'].lower()} from {shop.name}. Perfect for everyday use.",
                 price=final_price,
                 stock=random.randint(0, 100),
-                images=f"https://example.com/images/{code}.jpg",  # Placeholder image URL
                 shop_id=shop.id,
                 category_id=category.id,
                 is_active=random.choice([True, False])  # Some products might be inactive
             )
+            product.replace_image_urls([f"https://example.com/images/{code}.jpg"])
             
             db.session.add(product)
             product_count += 1

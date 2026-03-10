@@ -1,25 +1,118 @@
 # Template routes for HTMX frontend
 from flask import Blueprint, render_template, request, redirect, url_for, flash, session, current_app
 from sqlalchemy import func, or_
-from flask_login import login_user, current_user, logout_user, login_required
+from sqlalchemy.orm import aliased
+from flask_login import login_user, current_user, logout_user
+from urllib.parse import quote_plus
 from ..forms import LoginForm, RegistrationForm
-from ..utils.helpers import seller_required, admin_required
+from ..utils.helpers import admin_required
 from ..models import (
     Category,
     Product,
     Shop,
+    UserFollowShop,
     User,
     USER_ROLE_BUYER,
+    USER_ROLE_SELLER,
+    CATEGORY_LEVEL_LEAF,
     VERIFICATION_STATUS_VERIFIED,
 )
 from ..extensions import oauth, db
 import secrets
+from functools import wraps
 
 main_bp = Blueprint('main_bp', __name__)
 auth_bp = Blueprint('auth_template_bp', __name__, url_prefix='/auth')
 seller_bp = Blueprint('seller_template_bp', __name__, url_prefix='/seller')
 buyer_bp = Blueprint('buyer_template_bp', __name__, url_prefix='/buyer')
 admin_bp = Blueprint('admin_template_bp', __name__, url_prefix='/admin')
+
+
+
+def login_required(func):
+    """Overwrites the flask_login's login_required"""
+    @wraps(func)
+    def decorated_view(*args, **kwargs):
+        if not current_user.is_authenticated:
+            next_link = request.url
+            flash('A quick login is required first.', 'info')
+            return redirect(url_for('login', next=next_link))
+        return func(*args, **kwargs)
+    return decorated_view
+
+
+def _normalize_gps(gps_value):
+    """Validate and normalize GPS coordinate string in 'lat,lng' format."""
+    if not gps_value:
+        return None
+
+    parts = [part.strip() for part in str(gps_value).split(',')]
+    if len(parts) != 2:
+        return None
+
+    try:
+        lat = float(parts[0])
+        lng = float(parts[1])
+    except ValueError:
+        return None
+
+    if not (-90 <= lat <= 90 and -180 <= lng <= 180):
+        return None
+
+    return f"{lat:.6f},{lng:.6f}"
+
+
+def _build_shop_map_embed_url(shop):
+    gps = _normalize_gps(shop.gps)
+    if gps:
+        return f"https://maps.google.com/maps?q={quote_plus(gps)}&z=15&output=embed"
+
+    fallback_query = ", ".join(
+        [item for item in [shop.address, shop.town, shop.region, "Ghana"] if item]
+    ).strip(", ")
+    if fallback_query:
+        return f"https://maps.google.com/maps?q={quote_plus(fallback_query)}&z=14&output=embed"
+
+    return None
+
+
+def _resolve_user_shop(user):
+    if not user:
+        return None
+
+    shop = getattr(user, 'owned_shops', None) or getattr(user, 'shop', None)
+    if isinstance(shop, list):
+        return shop[0] if shop else None
+    return shop
+
+
+def _seller_guard_redirect():
+    if not current_user.is_authenticated:
+        flash('Please sign in to manage your seller account.', 'warning')
+        return redirect(url_for('main_bp.login'))
+    if current_user.role != USER_ROLE_SELLER:
+        flash('Seller access is required for that page.', 'error')
+        return redirect(url_for('main_bp.index'))
+    return None
+
+
+def _serialize_template_product(product):
+    return {
+        'id': product.id,
+        'name': product.name,
+        'code': product.code,
+        'type_': product.type_,
+        'description': product.description,
+        'tags': product.tags,
+        'price': float(product.price or 0),
+        'stock': product.stock,
+        'category_id': product.category_id,
+        'category_name': product.category.name if product.category else None,
+        'is_active': product.is_active,
+        'image_urls': product.image_urls,
+        'primary_image_url': product.primary_image_url,
+        'updated_at': product.updated_at.isoformat() if product.updated_at else None,
+    }
 
 # Public pages
 @main_bp.route('/')
@@ -80,6 +173,59 @@ def shops():
     categories = Category.query.filter_by(is_active=True).order_by(Category.name.asc()).all()
     return render_template('buyer/shops.html', categories=categories)
 
+
+@main_bp.route('/shops/add')
+@login_required
+def add_shop():
+    """Public shop onboarding page for any authenticated user."""
+    shop = _resolve_user_shop(current_user)
+    map_embed_url = _build_shop_map_embed_url(shop) if shop else None
+
+    return render_template(
+        'seller/shop.html',
+        seller_id=current_user.id,
+        shop=shop,
+        map_embed_url=map_embed_url,
+        onboarding_mode=True,
+    )
+
+
+@main_bp.route('/shops/<int:shop_id>')
+def shop_detail(shop_id):
+    """Public shop detail page with location and product listing."""
+    shop = Shop.query.filter(
+        Shop.id == shop_id,
+        Shop.is_active.is_(True),
+        Shop.verification_status == VERIFICATION_STATUS_VERIFIED,
+    ).first_or_404()
+
+    map_embed_url = _build_shop_map_embed_url(shop)
+    child_categories = (
+        db.session.query(Category)
+        .join(Product, Product.category_id == Category.id)
+        .filter(
+            Product.shop_id == shop.id,
+            Product.is_active.is_(True),
+        )
+        .distinct()
+        .order_by(Category.name.asc())
+        .all()
+    )
+    shop_is_favorited = False
+    if current_user.is_authenticated and current_user.role == USER_ROLE_BUYER:
+        shop_is_favorited = UserFollowShop.query.filter_by(
+            user_id=current_user.id,
+            shop_id=shop.id,
+        ).first() is not None
+
+    return render_template(
+        'buyer/shop_detail.html',
+        shop=shop,
+        map_embed_url=map_embed_url,
+        shop_categories=child_categories,
+        shop_is_favorited=shop_is_favorited,
+    )
+
 @main_bp.route('/products')
 def products():
     """Browse products page"""
@@ -92,16 +238,24 @@ def categories():
     search_term = request.args.get('search', '').strip()
     sort_by = request.args.get('sort_by', 'name')
     with_products = request.args.get('with_products', '').lower() in ('1', 'true', 'yes', 'on')
+    selected_category_id = request.args.get('category_id', type=int)
+
+    parent_category = aliased(Category)
 
     categories_data = db.session.query(
         Category.id,
         Category.name,
         Category.description,
+        Category.level,
+        Category.parent_id,
+        parent_category.name.label("parent_name"),
         func.count(Product.id).label("product_count"),
     ).outerjoin(
         Product, Product.category_id == Category.id
+    ).outerjoin(
+        parent_category, Category.parent_id == parent_category.id
     ).group_by(
-        Category.id, Category.name, Category.description
+        Category.id, Category.name, Category.description, Category.level, Category.parent_id, parent_category.name
     )
 
     if search_term:
@@ -109,6 +263,7 @@ def categories():
             or_(
                 Category.name.ilike(f'%{search_term}%'),
                 Category.description.ilike(f'%{search_term}%'),
+                parent_category.name.ilike(f'%{search_term}%'),
             )
         )
 
@@ -122,12 +277,30 @@ def categories():
     else:
         categories_data = categories_data.order_by(Category.name.asc())
 
+    selected_category = None
+    selected_children = []
+    if selected_category_id:
+        selected_category = Category.query.filter_by(id=selected_category_id, is_active=True).first()
+        if selected_category:
+            selected_children = Category.query.filter_by(
+                parent_id=selected_category.id,
+                is_active=True
+            ).order_by(Category.name.asc()).all()
+
+    if request.headers.get('HX-Request') == 'true':
+        return render_template(
+            'public/partials/category_cards.html',
+            categories=categories_data.all(),
+        )
+
     return render_template(
         'public/categories.html',
         categories=categories_data.all(),
         search_term=search_term,
         sort_by=sort_by,
         with_products=with_products,
+        selected_category=selected_category,
+        selected_children=selected_children,
     )
 
 @main_bp.route('/profile', methods=['GET', 'POST'])
@@ -326,33 +499,101 @@ def oauth_authorize():
 
 # Seller template routes
 @seller_bp.route('/dashboard')
-# @seller_required
 def seller_dashboard():
     """Seller dashboard - main overview"""
     return render_template('seller/seller_dashboard.html')
 
 @seller_bp.route('/shop')
-@seller_required
+@seller_bp.route('/shop/edit')
+@login_required
 def seller_shop():
     """Shop management page"""
-    return render_template('seller/shop.html')
+    redirect_response = _seller_guard_redirect()
+    if redirect_response:
+        return redirect_response
+
+    shop = _resolve_user_shop(current_user)
+    map_embed_url = _build_shop_map_embed_url(shop) if shop else None
+    shop_payload = None
+    if shop:
+        shop_payload = {
+            'id': shop.id,
+            'name': shop.name,
+            'description': shop.description,
+            'phone': shop.phone,
+            'email': shop.email,
+            'address': shop.address,
+            'region': shop.region,
+            'district': shop.district,
+            'town': shop.town,
+            'gps': shop.gps,
+            'is_active': bool(shop.is_active),
+            'image_urls': shop.image_urls,
+            'verification_status': shop.verification_status,
+            'phone_verified': bool(shop.phone_verified),
+            'email_verified': bool(shop.email_verified),
+            'can_request_verification': bool(shop.can_request_verification()),
+        }
+
+    return render_template(
+        'seller/shop.html',
+        seller_id=current_user.id,
+        shop=shop,
+        shop_payload=shop_payload,
+        map_embed_url=map_embed_url,
+        onboarding_mode=False,
+    )
 
 @seller_bp.route('/products')
-@seller_required
+@seller_bp.route('/products/new')
+@login_required
 def seller_products():
     """Products management page"""
-    return render_template('seller/products.html')
+    redirect_response = _seller_guard_redirect()
+    if redirect_response:
+        return redirect_response
+
+    shop = _resolve_user_shop(current_user)
+    categories = Category.query.filter(
+        Category.is_active.is_(True),
+        Category.level == CATEGORY_LEVEL_LEAF,
+    ).order_by(Category.name.asc()).all()
+
+    products = []
+    if shop:
+        products = Product.query.filter_by(shop_id=shop.id).order_by(Product.updated_at.desc()).all()
+
+    category_payload = [
+        {'id': category.id, 'name': category.name}
+        for category in categories
+    ]
+    product_payload = [_serialize_template_product(product) for product in products]
+
+    return render_template(
+        'seller/products.html',
+        seller_id=current_user.id,
+        shop=shop,
+        category_payload=category_payload,
+        product_payload=product_payload,
+        open_create=request.path.endswith('/new'),
+    )
 
 @seller_bp.route('/analytics')
-@seller_required
+@login_required
 def seller_analytics_page():
     """Analytics dashboard page"""
+    redirect_response = _seller_guard_redirect()
+    if redirect_response:
+        return redirect_response
     return render_template('seller/analytics.html')
 
 @seller_bp.route('/verification')
-@seller_required
+@login_required
 def seller_verification():
     """Shop verification page"""
+    redirect_response = _seller_guard_redirect()
+    if redirect_response:
+        return redirect_response
     return render_template('seller/verification.html')
 
 # Buyer template routes
@@ -376,7 +617,7 @@ def buyer_products():
 @buyer_bp.route('/shop/<int:shop_id>')
 def buyer_shop_detail(shop_id):
     """Shop detail page"""
-    return render_template('buyer/shop_detail.html', shop_id=shop_id)
+    return redirect(url_for('main_bp.shop_detail', shop_id=shop_id))
 
 # Admin template routes
 @admin_bp.route('/dashboard')
@@ -423,15 +664,21 @@ def admin_bulk_operations():
 
 # HTMX partial endpoints (for dynamic updates)
 @seller_bp.route('/partials/products/list')
-@seller_required
+@login_required
 def products_list_partial():
     """Partial template for products list (HTMX updates)"""
+    redirect_response = _seller_guard_redirect()
+    if redirect_response:
+        return redirect_response
     return render_template('seller/partials/products_list.html')
 
 @seller_bp.route('/partials/analytics/data')
-@seller_required
+@login_required
 def analytics_data_partial():
     """Partial template for analytics data (HTMX updates)"""
+    redirect_response = _seller_guard_redirect()
+    if redirect_response:
+        return redirect_response
     return render_template('seller/partials/analytics_data.html')
 
 @buyer_bp.route('/partials/shops/list')

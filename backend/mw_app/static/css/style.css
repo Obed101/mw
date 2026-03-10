@@ -356,6 +356,120 @@ body {
     background: var(--secondary-mauve);
 }
 
+/* ===== HOME CATEGORY CARDS ===== */
+.home-category-scroll {
+    max-height: min(62vh, 300px);
+    position: relative;
+}
+
+.home-category-scroll-inner {
+    overflow-x: hidden;
+    overflow-y: auto;
+    max-height: inherit;
+    padding-right: 0.2rem;
+    padding-bottom: 0.9rem;
+    scrollbar-width: thin;
+    scrollbar-color: var(--primary-purple) #f3f4f6;
+}
+
+.home-category-scroll-inner::after {
+    content: '';
+    display: block;
+    height: 0.9rem;
+}
+
+/* Subtle end fade to indicate scrollable content */
+.home-category-scroll::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 22px;
+    background: linear-gradient(to top, rgba(255, 255, 255, 0.95), rgba(255, 255, 255, 0));
+    pointer-events: none;
+    z-index: 5;
+}
+
+.home-category-scroll-inner::-webkit-scrollbar {
+    width: 6px;
+}
+
+.home-category-scroll-inner::-webkit-scrollbar-track {
+    background: #f3f4f6;
+    border-radius: 999px;
+}
+
+.home-category-scroll-inner::-webkit-scrollbar-thumb {
+    background: var(--primary-purple);
+    border-radius: 999px;
+}
+
+.home-category-grid {
+    margin: 0;
+}
+
+.home-category-card {
+    border: 1px solid rgba(107, 70, 193, 0.16);
+    border-radius: 14px;
+    background: linear-gradient(145deg, #ffffff 0%, #f9f7ff 100%);
+    transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
+}
+
+.home-category-card:hover {
+    transform: translateY(-4px);
+    border-color: rgba(107, 70, 193, 0.4);
+    box-shadow: 0 12px 24px rgba(76, 29, 149, 0.16);
+}
+
+.home-category-card-body {
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+    padding: 0.75rem;
+}
+
+.home-category-icon {
+    width: 2rem;
+    height: 2rem;
+    border-radius: 10px;
+    background: var(--gradient-primary);
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.95rem;
+    flex-shrink: 0;
+    box-shadow: 0 6px 14px rgba(107, 70, 193, 0.3);
+}
+
+.home-category-content {
+    flex: 1;
+    min-width: 0;
+}
+
+.home-category-title {
+    font-size: 0.9rem;
+    line-height: 1.2;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.home-category-meta {
+    font-size: 0.72rem;
+    font-weight: 500;
+}
+
+.home-category-card-more {
+    background: linear-gradient(145deg, #f8faff 0%, #eef2ff 100%);
+}
+
+.home-category-chevron {
+    color: #9ca3af;
+    font-size: 0.78rem;
+}
+
 /* ===== PRODUCT CARDS ===== */
 .product-card {
     transition: all 0.3s ease;
@@ -420,6 +534,144 @@ body {
     padding: 0.5rem;
     font-size: 0.875rem;
     font-weight: 600;
+}
+
+/* ===== MARKET LIST GRIDS ===== */
+.market-grid {
+    display: grid;
+    gap: 0.8rem;
+    align-items: stretch;
+}
+
+.market-grid-item {
+    min-width: 0;
+}
+
+.market-grid-full {
+    grid-column: 1 / -1;
+}
+
+.market-grid-products {
+    grid-template-columns: repeat(auto-fill, minmax(145px, 1fr));
+}
+
+.market-grid-shops {
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+}
+
+/* ===== COMPACT CARD LAYOUT ===== */
+.market-card-image {
+    width: 100%;
+    height: 118px;
+    object-fit: cover;
+    background: #f3f4f6;
+}
+
+.market-card-media {
+    position: relative;
+}
+
+.product-card-compact,
+.shop-card-compact {
+    border: 1px solid var(--border-light);
+    border-radius: 10px;
+    overflow: hidden;
+    transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+.product-card-compact:hover,
+.shop-card-compact:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 10px 20px rgba(107, 70, 193, 0.14);
+    border-color: rgba(107, 70, 193, 0.45);
+}
+
+.product-card-body-compact,
+.shop-card-body-compact {
+    padding: 0.65rem;
+    display: flex;
+    flex-direction: column;
+}
+
+.product-card-title-compact {
+    font-size: 0.82rem;
+    line-height: 1.25;
+}
+
+.product-qty-badge {
+    position: absolute;
+    left: 0.45rem;
+    bottom: 0.45rem;
+    background: rgba(17, 24, 39, 0.82);
+    color: #fff;
+    font-size: 0.62rem;
+    font-weight: 600;
+    padding: 0.2rem 0.42rem;
+    border-radius: 999px;
+    white-space: nowrap;
+}
+
+.product-category-badge {
+    background: #eef2ff;
+    color: #4338ca;
+    border: 1px solid #c7d2fe;
+    font-size: 0.62rem;
+    font-weight: 600;
+    padding: 0.18rem 0.42rem;
+    max-width: 50%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    cursor: pointer;
+}
+
+.product-category-badge:focus-visible {
+    outline: 2px solid #6366f1;
+    outline-offset: 1px;
+}
+
+.product-card-description {
+    font-size: 0.74rem;
+    line-height: 1.25;
+}
+
+.shop-card-title {
+    font-size: 0.9rem;
+    line-height: 1.2;
+}
+
+.shop-card-location,
+.shop-card-stock {
+    font-size: 0.72rem;
+}
+
+.shop-card-description {
+    font-size: 0.74rem;
+    line-height: 1.3;
+}
+
+.shop-card-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.4rem;
+    align-items: center;
+}
+
+.shop-favorite-slot,
+.shop-favorite-slot .favorite-shop-wrapper {
+    width: 100%;
+}
+
+.shop-card-actions .favorite-toggle-btn,
+.shop-card-actions .btn {
+    width: 100%;
+    font-size: 0.72rem;
+    padding: 0.32rem 0.35rem;
+    white-space: nowrap;
+}
+
+.shop-card-actions > .btn:last-child:nth-child(1) {
+    grid-column: 1 / -1;
 }
 
 /* ===== FEATURE CARDS ===== */
@@ -530,6 +782,23 @@ body {
     .navbar-collapse {
         padding-top: 1rem;
     }
+
+    .market-grid-products {
+        grid-template-columns: repeat(auto-fill, minmax(118px, 1fr));
+    }
+
+    .market-grid-shops {
+        grid-template-columns: repeat(auto-fill, minmax(118px, 1fr));
+    }
+
+    .market-card-image {
+        height: 104px;
+    }
+
+    .shop-card-actions .favorite-btn-label {
+        display: none;
+    }
+
 }
 
 @media (min-width: 769px) {
@@ -548,6 +817,14 @@ body {
 
     .main-content.with-bottom-nav {
         padding-bottom: 0;
+    }
+
+    .market-grid-products {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+
+    .market-grid-shops {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
     }
 }
 

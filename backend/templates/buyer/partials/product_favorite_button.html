@@ -1,0 +1,23 @@
+<div class="favorite-product-wrapper">
+    {% if is_favorited %}
+    <button
+        type="button"
+        class="btn btn-sm btn-outline-danger favorite-toggle-btn"
+        hx-delete="{{ url_for('buyer_bp.unfavorite_product', product_id=product_id) }}"
+        hx-target="closest .favorite-product-wrapper"
+        hx-swap="outerHTML"
+    >
+        <i class="bi bi-heart-fill"></i>
+    </button>
+    {% else %}
+    <button
+        type="button"
+        class="btn btn-sm btn-outline-primary favorite-toggle-btn"
+        hx-post="{{ url_for('buyer_bp.favorite_product', product_id=product_id) }}"
+        hx-target="closest .favorite-product-wrapper"
+        hx-swap="outerHTML"
+    >
+        <i class="bi bi-heart"></i>
+    </button>
+    {% endif %}
+</div>

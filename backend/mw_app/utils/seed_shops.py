@@ -13,14 +13,14 @@ def seed_shops():
         return
     
     shops_data = [
-        {"name": "Craft Corner", "description": "Handmade crafts and artisanal goods", "region": "Central", "district": "Downtown", "town": "Craftville"},
-        {"name": "Tech Haven", "description": "Latest electronics and gadgets", "region": "North", "district": "Tech Park", "town": "Electronica"},
-        {"name": "Fashion Forward", "description": "Trendy clothing and accessories", "region": "East", "district": "Fashion District", "town": "Style City"},
-        {"name": "Green Grocer", "description": "Fresh produce and organic foods", "region": "South", "district": "Market Quarter", "town": "Farmington"},
-        {"name": "Handmade Boutique", "description": "Unique handmade items and gifts", "region": "West", "district": "Artisan Alley", "town": "Craftsbury"},
-        {"name": "Import Emporium", "description": "Exotic imports from around the world", "region": "Central", "district": "International Plaza", "town": "Global Town"},
-        {"name": "Jewelry Box", "description": "Fine jewelry and accessories", "region": "North", "district": "Luxury Lane", "town": "Gem City"},
-        {"name": "Sports Central", "description": "Sports equipment and athletic gear", "region": "East", "district": "Athletic Zone", "town": "Sportstown"},
+        {"name": "Craft Corner", "description": "Handmade crafts and artisanal goods", "region": "Central", "district": "Downtown", "town": "Craftville", "gps": "5.5600,-0.2057"},
+        {"name": "Tech Haven", "description": "Latest electronics and gadgets", "region": "North", "district": "Tech Park", "town": "Electronica", "gps": "5.6037,-0.1870"},
+        {"name": "Fashion Forward", "description": "Trendy clothing and accessories", "region": "East", "district": "Fashion District", "town": "Style City", "gps": "6.6885,-1.6244"},
+        {"name": "Green Grocer", "description": "Fresh produce and organic foods", "region": "South", "district": "Market Quarter", "town": "Farmington", "gps": "4.9340,-1.7137"},
+        {"name": "Handmade Boutique", "description": "Unique handmade items and gifts", "region": "West", "district": "Artisan Alley", "town": "Craftsbury", "gps": "9.4034,-0.8424"},
+        {"name": "Import Emporium", "description": "Exotic imports from around the world", "region": "Central", "district": "International Plaza", "town": "Global Town", "gps": "7.9465,-1.0232"},
+        {"name": "Jewelry Box", "description": "Fine jewelry and accessories", "region": "North", "district": "Luxury Lane", "town": "Gem City", "gps": "5.1053,-1.2466"},
+        {"name": "Sports Central", "description": "Sports equipment and athletic gear", "region": "East", "district": "Athletic Zone", "town": "Sportstown", "gps": "6.0900,-0.2600"},
     ]
     
     # Create shops for each seller (cycle through shop data if needed)
@@ -37,6 +37,7 @@ def seed_shops():
                 region=shop_data['region'],
                 district=shop_data['district'],
                 town=shop_data['town'],
+                gps=shop_data.get('gps'),
                 phone=f"+123456789{random.randint(10, 99)}",
                 email=f"contact{seller.username}@shop.com",
                 owner_id=seller.id,
@@ -49,6 +50,7 @@ def seed_shops():
                 email_verified=random.choice([True, False]),
                 promoted=random.choice([True, False])
             )
+            shop.replace_image_urls([f"https://example.com/images/shops/{seller.username}-cover.jpg"])
             
             # Set verification timestamps if verified
             if shop.verification_status == VERIFICATION_STATUS_VERIFIED:

@@ -1,18 +1,195 @@
 from flask import Blueprint, jsonify, request
 from ..extensions import db
-from ..models import Category, Shop, User, Subscription, \
+from ..models import Category, Shop, User, Subscription, Notification, \
     VERIFICATION_STATUS_VERIFIED, VERIFICATION_STATUS_PENDING, VERIFICATION_STATUS_UNDER_REVIEW, \
     VERIFICATION_STATUS_REJECTED, VERIFICATION_STATUS_SUSPENDED, \
     SUBSCRIPTION_TYPE_USER, SUBSCRIPTION_TYPE_PRODUCT, SUBSCRIPTION_TYPE_SHOP, \
+    USER_ROLE_SELLER, \
     CATEGORY_LEVEL_TRUNK, CATEGORY_LEVEL_BRANCH, CATEGORY_LEVEL_LEAF
-from datetime import datetime
+from datetime import datetime, timezone
 
 admin_bp = Blueprint('admin_bp', __name__, url_prefix='/admin')
+
+
+def _request_json():
+    return request.get_json(silent=True) or {}
+
+
+def _resolve_admin_id(raw_admin_id=None, body=None):
+    if raw_admin_id:
+        return raw_admin_id
+    if body and body.get('admin_id'):
+        return body.get('admin_id')
+    return None
+
+
+def _load_admin(admin_id):
+    admin = User.query.get(admin_id)
+    if not admin or admin.role != 'admin':
+        return None, (
+            jsonify({
+                'success': False,
+                'message': 'Admin not found or unauthorized'
+            }),
+            403,
+        )
+    return admin, None
+
+
+def _queue_shop_status_notification(shop, admin_id, notification_type, title, message, payload=None):
+    if not shop or not shop.owner_id:
+        return
+    Notification.create_for_users(
+        user_ids=[shop.owner_id],
+        notification_type=notification_type,
+        title=title,
+        message=message,
+        actor_user_id=admin_id,
+        related_shop_id=shop.id,
+        payload=payload,
+    )
+
+
+def _promote_shop_owner_to_seller(shop):
+    if not shop or not shop.owner_id:
+        return False
+    owner = User.query.get(shop.owner_id)
+    if not owner:
+        return False
+    if owner.role != USER_ROLE_SELLER:
+        owner.role = USER_ROLE_SELLER
+        return True
+    return False
 
 @admin_bp.route("/")
 def admin_dashboard():
     """Admin dashboard with marketplace overview"""
     return jsonify({"message": "Admin dashboard"})
+
+
+@admin_bp.route("/notifications")
+def get_admin_notifications():
+    """Get notifications for an admin user."""
+    try:
+        admin_id = _resolve_admin_id(request.args.get('admin_id', type=int), _request_json())
+        if not admin_id:
+            return jsonify({
+                'success': False,
+                'message': 'Admin ID is required'
+            }), 400
+
+        admin, error_response = _load_admin(admin_id)
+        if error_response:
+            return error_response
+
+        unread_only = request.args.get('unread_only', '').lower() in ('1', 'true', 'yes')
+        limit = min(max(request.args.get('limit', 20, type=int), 1), 100)
+
+        query = Notification.query.filter_by(recipient_user_id=admin.id)
+        if unread_only:
+            query = query.filter_by(is_read=False)
+
+        notifications = query.order_by(Notification.created_at.desc()).limit(limit).all()
+        unread_count = Notification.query.filter_by(
+            recipient_user_id=admin.id,
+            is_read=False,
+        ).count()
+
+        return jsonify({
+            'success': True,
+            'admin_id': admin.id,
+            'count': len(notifications),
+            'unread_count': unread_count,
+            'notifications': [notification.to_dict() for notification in notifications],
+        }), 200
+
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'message': 'Error fetching admin notifications',
+            'error': str(e)
+        }), 500
+
+
+@admin_bp.route("/notifications/<int:notification_id>/read", methods=["PATCH"])
+def mark_admin_notification_read(notification_id):
+    """Mark one admin notification as read."""
+    try:
+        admin_id = _resolve_admin_id(request.args.get('admin_id', type=int), _request_json())
+        if not admin_id:
+            return jsonify({
+                'success': False,
+                'message': 'Admin ID is required'
+            }), 400
+
+        admin, error_response = _load_admin(admin_id)
+        if error_response:
+            return error_response
+
+        notification = Notification.query.filter_by(
+            id=notification_id,
+            recipient_user_id=admin.id,
+        ).first()
+        if not notification:
+            return jsonify({
+                'success': False,
+                'message': 'Notification not found'
+            }), 404
+
+        if not notification.is_read:
+            notification.mark_read()
+            db.session.commit()
+
+        return jsonify({
+            'success': True,
+            'notification': notification.to_dict(),
+        }), 200
+
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({
+            'success': False,
+            'message': 'Error marking notification as read',
+            'error': str(e)
+        }), 500
+
+
+@admin_bp.route("/notifications/read-all", methods=["POST"])
+def mark_all_admin_notifications_read():
+    """Mark all admin notifications as read."""
+    try:
+        admin_id = _resolve_admin_id(request.args.get('admin_id', type=int), _request_json())
+        if not admin_id:
+            return jsonify({
+                'success': False,
+                'message': 'Admin ID is required'
+            }), 400
+
+        admin, error_response = _load_admin(admin_id)
+        if error_response:
+            return error_response
+
+        notifications = Notification.query.filter_by(
+            recipient_user_id=admin.id,
+            is_read=False,
+        ).all()
+
+        for notification in notifications:
+            notification.mark_read()
+
+        db.session.commit()
+        return jsonify({
+            'success': True,
+            'updated': len(notifications),
+        }), 200
+
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({
+            'success': False,
+            'message': 'Error marking notifications as read',
+            'error': str(e)
+        }), 500
 
 # User Management
 @admin_bp.route("/users")
@@ -329,9 +506,8 @@ def verify_shop(shop_id):
     """Approve shop verification"""
     try:
         # Get admin user_id from request
-        admin_id = request.args.get('admin_id', type=int)
-        data = request.get_json() or {}
-        admin_id = data.get('admin_id') or admin_id
+        data = _request_json()
+        admin_id = _resolve_admin_id(request.args.get('admin_id', type=int), data)
         
         if not admin_id:
             return jsonify({
@@ -339,13 +515,9 @@ def verify_shop(shop_id):
                 'message': 'Admin ID is required'
             }), 400
         
-        # Verify admin
-        admin = User.query.get(admin_id)
-        if not admin or admin.role != 'admin':
-            return jsonify({
-                'success': False,
-                'message': 'Admin not found or unauthorized'
-            }), 403
+        admin, error_response = _load_admin(admin_id)
+        if error_response:
+            return error_response
         
         # Get shop
         shop = Shop.query.get(shop_id)
@@ -357,9 +529,21 @@ def verify_shop(shop_id):
         
         # Verify shop
         shop.verification_status = VERIFICATION_STATUS_VERIFIED
-        shop.verified_at = datetime.now(datetime.timezone.utc)
+        shop.verified_at = datetime.now(timezone.utc)
         shop.verified_by = admin_id
         shop.rejection_reason = None  # Clear rejection reason if any
+        _promote_shop_owner_to_seller(shop)
+        _queue_shop_status_notification(
+            shop=shop,
+            admin_id=admin_id,
+            notification_type='shop_verified',
+            title='Shop Verified',
+            message=f'Your shop "{shop.name}" has been verified.',
+            payload={
+                'shop_id': shop.id,
+                'status': shop.verification_status,
+            },
+        )
         db.session.commit()
         
         return jsonify({
@@ -387,9 +571,8 @@ def reject_shop(shop_id):
     """Reject shop verification"""
     try:
         # Get admin user_id from request
-        admin_id = request.args.get('admin_id', type=int)
-        data = request.get_json() or {}
-        admin_id = data.get('admin_id') or admin_id
+        data = _request_json()
+        admin_id = _resolve_admin_id(request.args.get('admin_id', type=int), data)
         rejection_reason = data.get('rejection_reason', '').strip()
         
         if not admin_id:
@@ -404,13 +587,9 @@ def reject_shop(shop_id):
                 'message': 'Rejection reason is required'
             }), 400
         
-        # Verify admin
-        admin = User.query.get(admin_id)
-        if not admin or admin.role != 'admin':
-            return jsonify({
-                'success': False,
-                'message': 'Admin not found or unauthorized'
-            }), 403
+        admin, error_response = _load_admin(admin_id)
+        if error_response:
+            return error_response
         
         # Get shop
         shop = Shop.query.get(shop_id)
@@ -425,6 +604,18 @@ def reject_shop(shop_id):
         shop.rejection_reason = rejection_reason
         shop.verified_by = None
         shop.verified_at = None
+        _queue_shop_status_notification(
+            shop=shop,
+            admin_id=admin_id,
+            notification_type='shop_rejected',
+            title='Shop Verification Rejected',
+            message=f'Your shop "{shop.name}" verification was rejected.',
+            payload={
+                'shop_id': shop.id,
+                'status': shop.verification_status,
+                'rejection_reason': rejection_reason,
+            },
+        )
         db.session.commit()
         
         return jsonify({
@@ -451,9 +642,8 @@ def suspend_shop(shop_id):
     """Suspend a verified shop"""
     try:
         # Get admin user_id from request
-        admin_id = request.args.get('admin_id', type=int)
-        data = request.get_json() or {}
-        admin_id = data.get('admin_id') or admin_id
+        data = _request_json()
+        admin_id = _resolve_admin_id(request.args.get('admin_id', type=int), data)
         
         if not admin_id:
             return jsonify({
@@ -461,13 +651,9 @@ def suspend_shop(shop_id):
                 'message': 'Admin ID is required'
             }), 400
         
-        # Verify admin
-        admin = User.query.get(admin_id)
-        if not admin or admin.role != 'admin':
-            return jsonify({
-                'success': False,
-                'message': 'Admin not found or unauthorized'
-            }), 403
+        admin, error_response = _load_admin(admin_id)
+        if error_response:
+            return error_response
         
         # Get shop
         shop = Shop.query.get(shop_id)
@@ -479,6 +665,17 @@ def suspend_shop(shop_id):
         
         # Suspend shop
         shop.verification_status = VERIFICATION_STATUS_SUSPENDED
+        _queue_shop_status_notification(
+            shop=shop,
+            admin_id=admin_id,
+            notification_type='shop_suspended',
+            title='Shop Suspended',
+            message=f'Your shop "{shop.name}" has been suspended.',
+            payload={
+                'shop_id': shop.id,
+                'status': shop.verification_status,
+            },
+        )
         db.session.commit()
         
         return jsonify({
@@ -504,9 +701,8 @@ def put_shop_under_review(shop_id):
     """Put shop verification under review"""
     try:
         # Get admin user_id from request
-        admin_id = request.args.get('admin_id', type=int)
-        data = request.get_json() or {}
-        admin_id = data.get('admin_id') or admin_id
+        data = _request_json()
+        admin_id = _resolve_admin_id(request.args.get('admin_id', type=int), data)
         
         if not admin_id:
             return jsonify({
@@ -514,13 +710,9 @@ def put_shop_under_review(shop_id):
                 'message': 'Admin ID is required'
             }), 400
         
-        # Verify admin
-        admin = User.query.get(admin_id)
-        if not admin or admin.role != 'admin':
-            return jsonify({
-                'success': False,
-                'message': 'Admin not found or unauthorized'
-            }), 403
+        admin, error_response = _load_admin(admin_id)
+        if error_response:
+            return error_response
         
         # Get shop
         shop = Shop.query.get(shop_id)
@@ -532,6 +724,17 @@ def put_shop_under_review(shop_id):
         
         # Put under review
         shop.verification_status = VERIFICATION_STATUS_UNDER_REVIEW
+        _queue_shop_status_notification(
+            shop=shop,
+            admin_id=admin_id,
+            notification_type='shop_under_review',
+            title='Shop Under Review',
+            message=f'Your shop "{shop.name}" is now under review.',
+            payload={
+                'shop_id': shop.id,
+                'status': shop.verification_status,
+            },
+        )
         db.session.commit()
         
         return jsonify({
@@ -802,11 +1005,11 @@ def bulk_update_categories():
 def bulk_verify_shops():
     """Bulk verify shops (approve, reject, under_review)"""
     try:
-        data = request.get_json()
+        data = _request_json()
         action = data.get("action")  # "verify", "reject", "under_review"
         shop_ids = data.get("shop_ids", [])
         rejection_reason = data.get("rejection_reason", "")
-        admin_id = data.get("admin_id")
+        admin_id = _resolve_admin_id(request.args.get('admin_id', type=int), data)
         
         if not action or not shop_ids:
             return jsonify({
@@ -825,6 +1028,16 @@ def bulk_verify_shops():
                 'success': False,
                 'message': 'rejection_reason is required for reject action'
             }), 400
+
+        if not admin_id:
+            return jsonify({
+                'success': False,
+                'message': 'Admin ID is required'
+            }), 400
+
+        _, error_response = _load_admin(admin_id)
+        if error_response:
+            return error_response
         
         results = []
         errors = []
@@ -838,9 +1051,21 @@ def bulk_verify_shops():
                 
                 if action == "verify":
                     shop.verification_status = VERIFICATION_STATUS_VERIFIED
-                    shop.verified_at = datetime.now(datetime.timezone.utc)
+                    shop.verified_at = datetime.now(timezone.utc)
                     shop.verified_by = admin_id
                     shop.rejection_reason = None
+                    _promote_shop_owner_to_seller(shop)
+                    _queue_shop_status_notification(
+                        shop=shop,
+                        admin_id=admin_id,
+                        notification_type='shop_verified',
+                        title='Shop Verified',
+                        message=f'Your shop "{shop.name}" has been verified.',
+                        payload={
+                            'shop_id': shop.id,
+                            'status': shop.verification_status,
+                        },
+                    )
                     results.append({'shop_id': shop_id, 'action': 'verified'})
                 
                 elif action == "reject":
@@ -848,11 +1073,34 @@ def bulk_verify_shops():
                     shop.rejection_reason = rejection_reason
                     shop.verified_at = None
                     shop.verified_by = None
+                    _queue_shop_status_notification(
+                        shop=shop,
+                        admin_id=admin_id,
+                        notification_type='shop_rejected',
+                        title='Shop Verification Rejected',
+                        message=f'Your shop "{shop.name}" verification was rejected.',
+                        payload={
+                            'shop_id': shop.id,
+                            'status': shop.verification_status,
+                            'rejection_reason': rejection_reason,
+                        },
+                    )
                     results.append({'shop_id': shop_id, 'action': 'rejected', 'reason': rejection_reason})
                 
                 elif action == "under_review":
                     shop.verification_status = VERIFICATION_STATUS_UNDER_REVIEW
                     shop.rejection_reason = None
+                    _queue_shop_status_notification(
+                        shop=shop,
+                        admin_id=admin_id,
+                        notification_type='shop_under_review',
+                        title='Shop Under Review',
+                        message=f'Your shop "{shop.name}" is now under review.',
+                        payload={
+                            'shop_id': shop.id,
+                            'status': shop.verification_status,
+                        },
+                    )
                     results.append({'shop_id': shop_id, 'action': 'under_review'})
                 
             except Exception as e:
@@ -1139,7 +1387,7 @@ def export_data():
                 'report_type': report_type,
                 'format': export_format,
                 'count': len(export_data),
-                'generated_at': datetime.now(datetime.timezone.utc).isoformat(),
+                'generated_at': datetime.now(timezone.utc).isoformat(),
                 'data': export_data
             }), 200
         
@@ -1160,7 +1408,7 @@ def export_data():
                 'report_type': report_type,
                 'format': export_format,
                 'count': len(export_data),
-                'generated_at': datetime.now(datetime.timezone.utc).isoformat(),
+                'generated_at': datetime.now(timezone.utc).isoformat(),
                 'csv_content': csv_content
             }), 200
         
@@ -1207,7 +1455,7 @@ def compliance_report():
         return jsonify({
             'success': True,
             'report_type': 'compliance',
-            'generated_at': datetime.now(datetime.timezone.utc).isoformat(),
+            'generated_at': datetime.now(timezone.utc).isoformat(),
             'verification_compliance': {
                 'total_shops': total_shops,
                 'verified_shops': verified_shops,
@@ -1244,4 +1492,5 @@ def compliance_report():
             'message': 'Error generating compliance report',
             'error': str(e)
         }), 500
+
 

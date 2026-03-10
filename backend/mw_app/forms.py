@@ -1,6 +1,22 @@
 from flask_wtf import FlaskForm
-from wtforms import StringField, PasswordField, SelectField, TextAreaField, BooleanField
-from wtforms.validators import DataRequired, Email, EqualTo, Length, ValidationError
+from wtforms import (
+    StringField,
+    PasswordField,
+    SelectField,
+    TextAreaField,
+    BooleanField,
+    DecimalField,
+    IntegerField,
+)
+from wtforms.validators import (
+    DataRequired,
+    Email,
+    EqualTo,
+    Length,
+    ValidationError,
+    NumberRange,
+    Optional,
+)
 
 # Import User model to avoid circular imports
 from mw_app.models.user_model import User
@@ -37,14 +53,20 @@ class RegistrationForm(FlaskForm):
 
 class ShopForm(FlaskForm):
     name = StringField('Shop Name', validators=[DataRequired(), Length(min=3, max=100)])
-    description = TextAreaField('Description', validators=[DataRequired(), Length(min=10, max=500)])
-    phone = StringField('Phone Number', validators=[DataRequired(), Length(min=10, max=20)])
-    email = StringField('Shop Email', validators=[DataRequired(), Email()])
-    address = TextAreaField('Address', validators=[DataRequired(), Length(min=10, max=300)])
+    description = TextAreaField('Description', validators=[Optional(), Length(max=1000)])
+    phone = StringField('Phone Number', validators=[Optional(), Length(min=10, max=20)])
+    email = StringField('Shop Email', validators=[Optional(), Email()])
+    address = TextAreaField('Address', validators=[Optional(), Length(max=300)])
+    region = StringField('Region', validators=[Optional(), Length(max=100)])
+    district = StringField('District', validators=[Optional(), Length(max=100)])
+    town = StringField('Town', validators=[Optional(), Length(max=100)])
+    gps = StringField('GPS Coordinates', validators=[Optional(), Length(max=64)])
 
 class ProductForm(FlaskForm):
     name = StringField('Product Name', validators=[DataRequired(), Length(min=3, max=100)])
-    description = TextAreaField('Description', validators=[DataRequired(), Length(min=10, max=1000)])
-    price = StringField('Price', validators=[DataRequired()])
-    stock = StringField('Stock Quantity', validators=[DataRequired()])
+    description = TextAreaField('Description', validators=[Optional(), Length(max=2000)])
+    type_ = SelectField('Type', choices=[('product', 'Product'), ('service', 'Service')], validators=[DataRequired()])
+    price = DecimalField('Price', places=2, validators=[DataRequired(), NumberRange(min=0)])
+    stock = IntegerField('Stock Quantity', validators=[DataRequired(), NumberRange(min=0)])
     category_id = SelectField('Category', coerce=int, validators=[DataRequired()])
+    is_active = BooleanField('Active', default=True)
