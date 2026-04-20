@@ -1,402 +1,1167 @@
 {% extends "base.html" %}
 
-{% block title %}{{ 'Add Your Shop' if onboarding_mode else 'Shop Settings' }} - Market Window{% endblock %}
+{% block title %}{{ 'Add Your Shop' if onboarding_mode else 'Shop Setup' }} - Market Window{% endblock %}
 
 {% block styles %}
+<link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+    crossorigin=""
+>
 <style>
-    .seller-shop-shell {
-        --surface: #ffffff;
-        --line: #e2e8f0;
-        --muted: #64748b;
-        --ink: #0f172a;
+    [x-cloak] {
+        display: none !important;
     }
 
-    .seller-shop-shell .page-hero {
-        background: linear-gradient(140deg, #fff7ed 0%, #fffbeb 35%, #ffffff 100%);
-        border: 1px solid var(--line);
-        border-radius: 1rem;
+    .seller-setup-shell {
+        --setup-ink: #172033;
+        --setup-muted: #667085;
+        --setup-line: #dde3f2;
+        --setup-surface: #ffffff;
+        --setup-surface-soft: #f7f8ff;
+        --setup-accent: #4f7cff;
+        --setup-accent-deep: #7b61d9;
+        --setup-accent-soft: #eef1ff;
+        --setup-mint: #635bca;
+        max-width: 980px;
+    }
+
+    .seller-setup-shell .setup-hero {
+        background:
+            radial-gradient(circle at top left, rgba(79, 124, 255, 0.18), transparent 42%),
+            radial-gradient(circle at right center, rgba(123, 97, 217, 0.14), transparent 36%),
+            linear-gradient(145deg, #f6f8ff 0%, #ffffff 55%, #f8f3ff 100%);
+        border: 1px solid rgba(92, 103, 222, 0.14);
+        border-radius: 1.5rem;
+        padding: 1.5rem;
+        box-shadow: 0 18px 40px rgba(15, 23, 42, 0.06);
+    }
+
+    .seller-setup-shell .hero-badge,
+    .seller-setup-shell .mini-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.45rem;
+        border-radius: 999px;
+        font-size: 0.78rem;
+        font-weight: 700;
+        letter-spacing: 0.03em;
+    }
+
+    .seller-setup-shell .hero-badge {
+        background: rgba(255, 255, 255, 0.88);
+        color: var(--setup-accent-deep);
+        padding: 0.45rem 0.85rem;
+        border: 1px solid rgba(92, 103, 222, 0.14);
+    }
+
+    .seller-setup-shell .mini-badge {
+        background: var(--setup-surface-soft);
+        color: var(--setup-muted);
+        padding: 0.4rem 0.7rem;
+        border: 1px solid var(--setup-line);
+    }
+
+    .seller-setup-shell .setup-progress-card,
+    .seller-setup-shell .setup-card,
+    .seller-setup-shell .setup-summary-card {
+        background: var(--setup-surface);
+        border: 1px solid var(--setup-line);
+        border-radius: 1.35rem;
+        box-shadow: 0 14px 32px rgba(15, 23, 42, 0.05);
+    }
+
+    .seller-setup-shell .setup-progress-card {
         padding: 1.25rem;
     }
 
-    .seller-shop-shell .surface-card {
-        background: var(--surface);
-        border: 1px solid var(--line);
+    .seller-setup-shell .setup-progress {
+        height: 0.7rem;
+        border-radius: 999px;
+        background: #f2f4f7;
+        overflow: hidden;
+    }
+
+    .seller-setup-shell .setup-progress > span {
+        display: block;
+        height: 100%;
+        border-radius: inherit;
+        background: linear-gradient(90deg, #4f7cff 0%, #8b6ef8 100%);
+        transition: width 0.25s ease;
+    }
+
+    .seller-setup-shell .step-chip-list {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 0.75rem;
+    }
+
+    .seller-setup-shell .step-chip {
+        width: 100%;
+        text-align: left;
         border-radius: 1rem;
-        box-shadow: 0 14px 28px rgba(15, 23, 42, 0.06);
+        border: 1px solid var(--setup-line);
+        background: var(--setup-surface-soft);
+        padding: 0.8rem 0.9rem;
+        transition: transform 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
     }
 
-    .seller-shop-shell .surface-card .card-head {
-        padding: 1rem 1rem 0.25rem;
+    .seller-setup-shell .step-chip.is-active {
+        border-color: rgba(92, 103, 222, 0.38);
+        background: var(--setup-accent-soft);
+        box-shadow: 0 12px 24px rgba(92, 103, 222, 0.14);
+        transform: translateY(-1px);
     }
 
-    .seller-shop-shell .surface-card .card-body {
-        padding: 1rem;
+    .seller-setup-shell .step-chip.is-complete {
+        border-color: rgba(123, 97, 217, 0.22);
+        background: rgba(247, 242, 255, 0.95);
     }
 
-    .seller-shop-shell .form-label {
-        color: var(--muted);
-        font-size: 0.8rem;
+    .seller-setup-shell .step-chip.is-locked {
+        opacity: 0.52;
+        cursor: not-allowed;
+    }
+
+    .seller-setup-shell .step-chip__count {
+        width: 1.9rem;
+        height: 1.9rem;
+        border-radius: 999px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        background: #fff;
+        border: 1px solid rgba(15, 23, 42, 0.08);
+        font-size: 0.82rem;
         font-weight: 700;
-        letter-spacing: 0.06em;
+        margin-bottom: 0.55rem;
+    }
+
+    .seller-setup-shell .step-chip__title {
+        display: block;
+        color: var(--setup-ink);
+        font-weight: 700;
+        font-size: 0.95rem;
+    }
+
+    .seller-setup-shell .step-chip__hint {
+        display: block;
+        color: var(--setup-muted);
+        font-size: 0.77rem;
+        margin-top: 0.18rem;
+    }
+
+    .seller-setup-shell .setup-card {
+        padding: 1.6rem;
+    }
+
+    .seller-setup-shell .step-kicker {
+        color: var(--setup-accent-deep);
+        font-size: 0.78rem;
+        font-weight: 800;
+        letter-spacing: 0.08em;
         text-transform: uppercase;
     }
 
-    .seller-shop-shell .form-control,
-    .seller-shop-shell .form-select {
-        border-radius: 0.75rem;
-        border-color: #cbd5e1;
-        min-height: 46px;
+    .seller-setup-shell .step-title {
+        color: var(--setup-ink);
+        font-size: clamp(1.45rem, 2vw, 1.8rem);
+        font-weight: 800;
+        margin-top: 0.5rem;
+        margin-bottom: 0.4rem;
     }
 
-    .seller-shop-shell .form-control:focus,
-    .seller-shop-shell .form-select:focus {
-        border-color: #f59e0b;
-        box-shadow: 0 0 0 0.2rem rgba(245, 158, 11, 0.15);
+    .seller-setup-shell .step-copy {
+        color: var(--setup-muted);
+        font-size: 1rem;
+        max-width: 40rem;
+        margin-bottom: 0;
     }
 
-    .seller-shop-shell .gps-actions .btn {
-        min-width: 44px;
-    }
-
-    .seller-shop-shell .status-chip {
-        border-radius: 999px;
-        font-size: 0.72rem;
+    .seller-setup-shell .form-label {
+        color: var(--setup-ink);
+        font-size: 0.88rem;
         font-weight: 700;
-        padding: 0.25rem 0.55rem;
+        margin-bottom: 0.45rem;
+    }
+
+    .seller-setup-shell .form-control {
+        min-height: 3.2rem;
+        border-radius: 1rem;
+        border-color: #d6dae3;
+        padding: 0.85rem 1rem;
+        font-size: 1rem;
+    }
+
+    .seller-setup-shell textarea.form-control {
+        min-height: auto;
+        padding-top: 0.95rem;
+        padding-bottom: 0.95rem;
+    }
+
+    .seller-setup-shell .form-control:focus {
+        border-color: rgba(79, 124, 255, 0.45);
+        box-shadow: 0 0 0 0.2rem rgba(92, 103, 222, 0.12);
+    }
+
+    .seller-setup-shell .map-picker {
+        min-height: 320px;
+        border-radius: 1.15rem;
+        border: 1px solid var(--setup-line);
+        overflow: hidden;
+        background: #eef4fb;
+    }
+
+    .seller-setup-shell .location-pill {
         display: inline-flex;
         align-items: center;
-        gap: 0.35rem;
-    }
-
-    .seller-shop-shell .status-chip.ok {
-        background: #dcfce7;
-        color: #166534;
-    }
-
-    .seller-shop-shell .status-chip.warn {
-        background: #fef3c7;
-        color: #92400e;
-    }
-
-    .seller-shop-shell .status-chip.neutral {
-        background: #e2e8f0;
-        color: #334155;
-    }
-
-    .seller-shop-shell .map-frame {
-        border: 1px solid var(--line);
-        border-radius: 0.9rem;
-        width: 100%;
-        min-height: 280px;
+        gap: 0.5rem;
+        border-radius: 999px;
+        padding: 0.6rem 0.95rem;
         background: #f8fafc;
+        border: 1px solid var(--setup-line);
+        color: var(--setup-muted);
+        font-size: 0.92rem;
     }
 
-    .seller-shop-shell .sticky-mobile-actions {
-        position: sticky;
-        bottom: 0;
-        z-index: 1000;
-        background: rgba(255, 255, 255, 0.92);
-        border-top: 1px solid var(--line);
-        backdrop-filter: blur(8px);
-        padding: 0.75rem;
-        margin: 0 -1rem -1rem;
+    .seller-setup-shell .location-pill.is-set {
+        background: rgba(241, 243, 255, 0.98);
+        color: var(--setup-mint);
+        border-color: rgba(99, 91, 202, 0.22);
     }
 
-    @media (min-width: 992px) {
-        .seller-shop-shell .sticky-mobile-actions {
-            position: static;
-            backdrop-filter: none;
-            border-top: 0;
-            background: transparent;
-            margin: 0;
-            padding: 0;
+    .seller-setup-shell .map-action-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.75rem;
+    }
+
+    .seller-setup-shell .btn-pill {
+        border-radius: 999px;
+        padding-left: 1.15rem;
+        padding-right: 1.15rem;
+        min-height: 3.1rem;
+        font-weight: 700;
+    }
+
+    .seller-setup-shell .btn-primary.btn-pill {
+        box-shadow: 0 16px 30px rgba(92, 103, 222, 0.22);
+    }
+
+    .seller-setup-shell .btn-primary.btn-pill:hover {
+        box-shadow: 0 18px 34px rgba(92, 103, 222, 0.26);
+    }
+
+    .seller-setup-shell .btn-visitor {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.6rem;
+        box-shadow: 0 14px 28px rgba(92, 103, 222, 0.12);
+        transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+    }
+
+    .seller-setup-shell .btn-visitor:hover {
+        box-shadow: 0 18px 32px rgba(92, 103, 222, 0.16);
+        transform: translateY(-1px);
+    }
+
+    .seller-setup-shell .upload-shell {
+        display: grid;
+        grid-template-columns: minmax(0, 1.2fr) minmax(260px, 0.8fr);
+        gap: 1rem;
+        align-items: stretch;
+    }
+
+    .seller-setup-shell .upload-dropzone,
+    .seller-setup-shell .upload-preview {
+        border-radius: 1.2rem;
+        border: 1px solid var(--setup-line);
+        background: var(--setup-surface-soft);
+        padding: 1.2rem;
+    }
+
+    .seller-setup-shell .upload-preview {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 280px;
+        overflow: hidden;
+    }
+
+    .seller-setup-shell .upload-preview img {
+        width: 100%;
+        height: 100%;
+        min-height: 250px;
+        object-fit: cover;
+        border-radius: 1rem;
+    }
+
+    .seller-setup-shell .preview-placeholder {
+        text-align: center;
+        color: var(--setup-muted);
+    }
+
+    .seller-setup-shell .preview-placeholder i {
+        font-size: 2rem;
+        color: rgba(123, 97, 217, 0.78);
+    }
+
+    .seller-setup-shell .direction-card {
+        border: 1px solid var(--setup-line);
+        border-radius: 1.15rem;
+        background: linear-gradient(180deg, #fcfdff 0%, #f6f7ff 100%);
+        padding: 1rem;
+    }
+
+    .seller-setup-shell .same-toggle {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.6rem;
+        padding: 0.35rem 0.75rem;
+        border-radius: 999px;
+        background: #f8fafc;
+        border: 1px solid var(--setup-line);
+        color: var(--setup-muted);
+        font-size: 0.8rem;
+        font-weight: 600;
+    }
+
+    .seller-setup-shell .same-toggle input {
+        margin: 0;
+    }
+
+    .seller-setup-shell .setup-summary-card {
+        padding: 1.1rem 1.2rem;
+    }
+
+    .seller-setup-shell .summary-grid {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 0.75rem;
+    }
+
+    .seller-setup-shell .summary-tile {
+        border-radius: 1rem;
+        background: var(--setup-surface-soft);
+        border: 1px solid var(--setup-line);
+        padding: 0.9rem;
+    }
+
+    .seller-setup-shell .summary-tile__label {
+        color: var(--setup-muted);
+        font-size: 0.74rem;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        font-weight: 700;
+    }
+
+    .seller-setup-shell .summary-tile__value {
+        color: var(--setup-ink);
+        font-weight: 700;
+        margin-top: 0.35rem;
+    }
+
+    .seller-setup-shell .completion-card {
+        text-align: center;
+        padding: 1.6rem 0.5rem 0.3rem;
+    }
+
+    .seller-setup-shell .completion-icon {
+        width: 4.25rem;
+        height: 4.25rem;
+        margin: 0 auto 1rem;
+        border-radius: 999px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        background: rgba(99, 91, 202, 0.12);
+        color: var(--setup-mint);
+        font-size: 1.8rem;
+    }
+
+    .seller-setup-shell .status-line {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.6rem;
+    }
+
+    .seller-setup-shell .status-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.45rem;
+        border-radius: 999px;
+        padding: 0.45rem 0.8rem;
+        font-size: 0.82rem;
+        font-weight: 700;
+    }
+
+    .seller-setup-shell .status-pill.ok {
+        background: rgba(99, 91, 202, 0.12);
+        color: var(--setup-mint);
+    }
+
+    .seller-setup-shell .status-pill.warn {
+        background: rgba(79, 124, 255, 0.12);
+        color: var(--setup-accent-deep);
+    }
+
+    .seller-setup-shell .ghost-link {
+        color: var(--setup-muted);
+        font-weight: 700;
+        text-decoration: none;
+    }
+
+    .seller-setup-shell .ghost-link:hover {
+        color: var(--setup-ink);
+    }
+
+    @media (max-width: 991.98px) {
+        .seller-setup-shell .step-chip-list,
+        .seller-setup-shell .summary-grid,
+        .seller-setup-shell .upload-shell {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+    }
+
+    @media (max-width: 767.98px) {
+        .seller-setup-shell .setup-card,
+        .seller-setup-shell .setup-progress-card {
+            padding: 1rem;
+        }
+
+        .seller-setup-shell .step-chip-list,
+        .seller-setup-shell .summary-grid,
+        .seller-setup-shell .upload-shell {
+            grid-template-columns: minmax(0, 1fr);
+        }
+
+        .seller-setup-shell .map-picker {
+            min-height: 280px;
         }
     }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="container-fluid px-3 px-lg-4 py-4 seller-shop-shell">
-    <div class="page-hero mb-4">
-        <div class="d-flex flex-column flex-lg-row align-items-lg-center justify-content-between gap-3">
+<div
+    class="container py-4 seller-setup-shell"
+    x-data='sellerShopSetup({
+        activeStep: {{ setup_state.active_step|tojson }},
+        setupState: {{ setup_state|tojson }},
+        shop: {{ shop_payload|default(None)|tojson }},
+        personal: {{ {
+            "email": current_user.email,
+            "phone": current_user.phone,
+            "address": current_user.address
+        }|tojson }},
+        onboardingMode: {{ onboarding_mode|tojson }},
+        previewUrl: {{ url_for("seller_template_bp.seller_shop_preview")|tojson }},
+        verificationUrl: {{ url_for("seller_bp.request_verification")|tojson }},
+        sellerId: {{ seller_id|tojson }},
+        csrfToken: {{ csrf_token()|tojson }},
+        placeholderImage: {{ url_for("static", filename="images/mw_logo_trans.png")|tojson }}
+    })'
+    x-on:shop-step-saved.window="handleStepSaved($event.detail)"
+    hx-headers='{"X-CSRFToken": "{{ csrf_token() }}"}'
+>
+    <section class="setup-hero">
+        <div class="d-flex flex-column flex-lg-row gap-3 justify-content-between align-items-lg-center">
             <div>
-                <h1 class="h3 fw-bold mb-1">{{ 'Add Your Shop' if onboarding_mode else 'Shop Settings' }}</h1>
-                <p class="mb-0 text-muted">
-                    {{ 'Launch your storefront with a quick profile setup.' if onboarding_mode else 'Keep your public shop details complete, accurate, and mobile-ready.' }}
+                <span class="hero-badge">
+                    <i class="bi bi-stars"></i>
+                    <span x-text="activeStep === 'complete' ? 'Setup complete' : currentStepLabel()"></span>
+                </span>
+                <h1 class="h3 fw-bold mt-3 mb-2">{{ 'Create your shop in a few quick steps' if onboarding_mode else 'Keep your shop profile simple and polished' }}</h1>
+                <p class="text-muted mb-0">
+                    One small section at a time. Save a step, move on, and come back whenever you need.
                 </p>
             </div>
-            <div class="d-flex gap-2 flex-wrap">
-                <span class="badge text-bg-light border">User ID: {{ seller_id }}</span>
-                {% if shop %}
-                <span class="badge text-bg-light border">{{ shop.name }}</span>
-                {% else %}
-                <span class="badge text-bg-warning text-dark">No shop found</span>
-                {% endif %}
+            <div class="d-flex flex-wrap gap-2">
+                <a class="btn btn-primary btn-pill btn-visitor" :href="previewHref()" x-show="currentShopId" x-cloak>
+                    <i class="bi bi-eye-fill"></i>
+                    <span>View Shop Like a Visitor</span>
+                </a>
+                <span class="mini-badge">
+                    <i class="bi bi-lightning-charge"></i>
+                    <span x-text="completedCount() + ' of 4 saved'"></span>
+                </span>
+                <span class="mini-badge" x-show="shop && shop.name" x-cloak>
+                    <i class="bi bi-shop"></i>
+                    <span x-text="shop?.name || 'Your shop'"></span>
+                </span>
             </div>
         </div>
-    </div>
+    </section>
 
-    <div id="shop-feedback"></div>
-
-    <div class="row g-4">
-        <div class="col-12 col-xl-8">
-            <section class="surface-card h-100">
-                <div class="card-head">
-                    <h2 class="h5 fw-bold mb-1">{{ 'Create Business Profile' if not shop else 'Business Profile' }}</h2>
-                    <p class="small text-muted mb-0">These details show up for buyers in search and shop pages.</p>
-                </div>
-                <div class="card-body">
-                    <form id="shop-form" novalidate>
-                        <div class="row g-3">
-                            <div class="col-12">
-                                <label class="form-label" for="shop-name">Shop Name</label>
-                                <input id="shop-name" class="form-control" maxlength="150" required value="{{ shop.name if shop else '' }}">
-                            </div>
-                            <div class="col-12">
-                                <label class="form-label" for="shop-description">Description</label>
-                                <textarea id="shop-description" class="form-control" rows="4" maxlength="1000" placeholder="Describe what you offer">{{ shop.description if shop else '' }}</textarea>
-                            </div>
-                            <div class="col-md-6">
-                                <label class="form-label" for="shop-email">Business Email</label>
-                                <input id="shop-email" type="email" class="form-control" value="{{ shop.email if shop else '' }}">
-                            </div>
-                            <div class="col-md-6">
-                                <label class="form-label" for="shop-phone">Phone</label>
-                                <input id="shop-phone" type="tel" inputmode="tel" class="form-control" value="{{ shop.phone if shop else '' }}">
-                            </div>
-                            <div class="col-12">
-                                <label class="form-label" for="shop-address">Address</label>
-                                <textarea id="shop-address" class="form-control" rows="2">{{ shop.address if shop else '' }}</textarea>
-                            </div>
-                            <div class="col-md-4">
-                                <label class="form-label" for="shop-region">Region</label>
-                                <input id="shop-region" class="form-control" value="{{ shop.region if shop else '' }}">
-                            </div>
-                            <div class="col-md-4">
-                                <label class="form-label" for="shop-district">District</label>
-                                <input id="shop-district" class="form-control" value="{{ shop.district if shop else '' }}">
-                            </div>
-                            <div class="col-md-4">
-                                <label class="form-label" for="shop-town">Town</label>
-                                <input id="shop-town" class="form-control" value="{{ shop.town if shop else '' }}">
-                            </div>
-                            <div class="col-12">
-                                <label class="form-label" for="shop-gps">GPS Coordinates</label>
-                                <div class="input-group gps-actions">
-                                    <input id="shop-gps" class="form-control" placeholder="5.603700,-0.187000" value="{{ shop.gps if shop else '' }}">
-                                    <button class="btn btn-outline-secondary" type="button" id="open-google-maps-btn" title="Open Google Maps picker">
-                                        <i class="bi bi-map"></i>
-                                        <span class="d-none d-md-inline ms-1">Pick on Google Maps</span>
-                                    </button>
-                                    <button class="btn btn-outline-primary" type="button" id="use-my-location-btn" title="Use current location">
-                                        <i class="bi bi-crosshair"></i>
-                                        <span class="d-none d-md-inline ms-1">Use My Location</span>
-                                    </button>
-                                </div>
-                                <div class="form-text">Use lat,lng format. You can open Google Maps to pick a point or auto-fill using your current location.</div>
-                            </div>
-                            <div class="col-12">
-                                <label class="form-label" for="shop-image-urls">Image URLs (up to 3)</label>
-                                <textarea id="shop-image-urls" class="form-control" rows="3" placeholder="One URL per line">{% if shop %}{% for image in shop.image_urls %}{{ image }}{% if not loop.last %}&#10;{% endif %}{% endfor %}{% endif %}</textarea>
-                                <div class="form-text">Leave blank in dev to use the default placeholder image.</div>
-                            </div>
-                            <div class="col-12 form-check form-switch ms-1">
-                                <input class="form-check-input" type="checkbox" role="switch" id="shop-active" {% if (shop and shop.is_active) or not shop %}checked{% endif %}>
-                                <label class="form-check-label" for="shop-active">Shop is active</label>
-                            </div>
-                        </div>
-
-                        <div class="sticky-mobile-actions mt-3">
-                            <button class="btn btn-primary w-100" id="shop-save-btn" type="submit">
-                                <i class="bi bi-floppy me-2"></i>{{ 'Create Shop' if not shop else 'Save Shop Settings' }}
-                            </button>
-                        </div>
-                    </form>
-                </div>
-            </section>
+    <section class="setup-progress-card mt-4">
+        <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
+            <div>
+                <div class="step-kicker mb-2">Progress</div>
+                <div class="fw-bold fs-5 text-dark">Keep going, you are doing well.</div>
+                <div class="text-muted small">Completed steps stay editable, so nothing here is locked in.</div>
+            </div>
+            <span class="mini-badge">
+                <i class="bi bi-check2-circle"></i>
+                <span x-text="Math.round(progressPercent()) + '% done'"></span>
+            </span>
         </div>
 
-        <div class="col-12 col-xl-4">
-            <section class="surface-card mb-4">
-                <div class="card-head">
-                    <h2 class="h6 fw-bold mb-1">Verification</h2>
-                    <p class="small text-muted mb-0">Current account readiness.</p>
-                </div>
-                <div class="card-body">
-                    <div class="d-flex flex-column gap-2">
-                        <span class="status-chip {{ 'ok' if shop and shop.phone_verified else 'warn' }}">
-                            <i class="bi {{ 'bi-check-circle-fill' if shop and shop.phone_verified else 'bi-exclamation-circle-fill' }}"></i>
-                            Phone {{ 'Verified' if shop and shop.phone_verified else 'Not Verified' }}
-                        </span>
-                        <span class="status-chip {{ 'ok' if shop and shop.email_verified else 'warn' }}">
-                            <i class="bi {{ 'bi-check-circle-fill' if shop and shop.email_verified else 'bi-exclamation-circle-fill' }}"></i>
-                            Email {{ 'Verified' if shop and shop.email_verified else 'Not Verified' }}
-                        </span>
-                        <span class="status-chip neutral">
-                            <i class="bi bi-shield-check"></i>
-                            Status: {{ shop.verification_status if shop else 'not_created' }}
-                        </span>
-                    </div>
+        <div class="setup-progress mt-3">
+            <span :style="'width:' + progressPercent() + '%'"></span>
+        </div>
 
-                    <button id="request-verification-btn" class="btn btn-outline-primary mt-3 w-100" {% if not shop or not shop.can_request_verification %}disabled{% endif %}>
-                        Request Verification Review
+        <div class="step-chip-list mt-3">
+            <template x-for="step in stepOrder" :key="step">
+                <button
+                    type="button"
+                    class="step-chip"
+                    :class="{
+                        'is-active': activeStep === step,
+                        'is-complete': isComplete(step),
+                        'is-locked': !canOpenStep(step) && activeStep !== step
+                    }"
+                    :disabled="!canOpenStep(step) && activeStep !== step"
+                    @click="goToStep(step)"
+                >
+                    <span class="step-chip__count">
+                        <template x-if="isComplete(step)">
+                            <i class="bi bi-check-lg"></i>
+                        </template>
+                        <template x-if="!isComplete(step)">
+                            <span x-text="stepIndex(step) + 1"></span>
+                        </template>
+                    </span>
+                    <span class="step-chip__title" x-text="stepTitles[step]"></span>
+                    <span class="step-chip__hint" x-text="stepHints[step]"></span>
+                </button>
+            </template>
+        </div>
+    </section>
+
+    <div id="shop-feedback" class="mt-4"></div>
+
+    <section class="setup-card mt-4">
+        <template x-if="activeStep === 'basic'">
+            <form
+                hx-post="{{ url_for('seller_template_bp.save_shop_basic_step') }}"
+                hx-target="#shop-feedback"
+                hx-swap="innerHTML"
+            >
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" name="shop_id" :value="currentShopId || ''">
+                <input type="hidden" name="gps" x-model="form.basic.gps">
+
+                <div class="d-flex flex-column flex-md-row justify-content-between gap-3 align-items-md-start">
+                    <div>
+                        <div class="step-kicker">Step 1 of 4</div>
+                        <h2 class="step-title">Shop basic info</h2>
+                        <p class="step-copy">Give your shop a clear name, drop a pin, and add a short direction that helps people arrive easily.</p>
+                    </div>
+                    <span class="mini-badge" x-show="isComplete('basic')" x-cloak>
+                        <i class="bi bi-check2-circle"></i>
+                        Saved
+                    </span>
+                </div>
+
+                <div class="mt-4">
+                    <label class="form-label" for="shop-name">Shop Name</label>
+                    <input
+                        id="shop-name"
+                        name="name"
+                        class="form-control"
+                        maxlength="150"
+                        placeholder="What should buyers call your shop?"
+                        x-model="form.basic.name"
+                        required
+                    >
+                </div>
+
+                <div class="d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3 mt-4">
+                    <div class="location-pill" :class="{ 'is-set': !!form.basic.gps }">
+                        <i class="bi" :class="form.basic.gps ? 'bi-geo-alt-fill' : 'bi-crosshair'"></i>
+                        <span x-text="form.basic.gps || 'Tap the map to pick your location'"></span>
+                    </div>
+                    <div class="map-action-row">
+                        <button type="button" class="btn btn-outline-primary btn-pill" @click="useCurrentLocation()" :disabled="locating">
+                            <i class="bi" :class="locating ? 'bi-arrow-repeat' : 'bi-crosshair'"></i>
+                            <span x-text="locating ? 'Finding you...' : 'Use Current Location'"></span>
+                        </button>
+                        <button type="button" class="btn btn-outline-primary btn-pill" @click="clearLocation()" x-show="form.basic.gps" x-cloak>
+                            Clear Pin
+                        </button>
+                    </div>
+                </div>
+
+                <div class="map-picker mt-3" x-ref="locationMap"></div>
+                <p class="text-muted small mt-3 mb-0">Tap anywhere on the map to place your shop pin.</p>
+
+                <div class="direction-card mt-4">
+                    <label class="form-label" for="shop-address">Direct people to your shop</label>
+                    <textarea
+                        id="shop-address"
+                        name="address"
+                        rows="3"
+                        class="form-control"
+                        x-model="form.basic.address"
+                        placeholder="Example: Opposite the main lorry station, next to the blue pharmacy."
+                    ></textarea>
+                    <div class="text-muted small mt-2">Use a nearby landmark or a short direction that makes arrival easy.</div>
+                </div>
+
+                <div class="d-flex flex-column flex-sm-row gap-3 mt-4">
+                    <button type="submit" class="btn btn-primary btn-pill px-4">
+                        Continue
                     </button>
                 </div>
-            </section>
+            </form>
+        </template>
 
-            <section class="surface-card">
-                <div class="card-head">
-                    <h2 class="h6 fw-bold mb-1">Location Preview</h2>
-                    <p class="small text-muted mb-0">How map details resolve for buyers.</p>
-                </div>
-                <div class="card-body">
-                    {% if map_embed_url %}
-                    <iframe class="map-frame" src="{{ map_embed_url }}" loading="lazy"></iframe>
-                    {% else %}
-                    <div class="map-frame d-flex flex-column align-items-center justify-content-center text-muted p-3 text-center">
-                        <i class="bi bi-geo-alt fs-3 mb-2"></i>
-                        <div class="small">Add GPS coordinates or full address to preview your map.</div>
+        <template x-if="activeStep === 'image'">
+            <form
+                hx-post="{{ url_for('seller_template_bp.save_shop_image_step') }}"
+                hx-target="#shop-feedback"
+                hx-swap="innerHTML"
+                hx-encoding="multipart/form-data"
+            >
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" name="shop_id" :value="currentShopId || ''">
+                <input
+                    type="file"
+                    name="front_image"
+                    accept="image/*"
+                    class="d-none"
+                    x-ref="frontImageInput"
+                    @change="handleImageSelection($event)"
+                >
+
+                <div class="d-flex flex-column flex-md-row justify-content-between gap-3 align-items-md-start">
+                    <div>
+                        <div class="step-kicker">Step 2 of 4</div>
+                        <h2 class="step-title">Shop front image</h2>
+                        <p class="step-copy">A simple front image makes your shop feel real right away.</p>
                     </div>
-                    {% endif %}
+                    <span class="mini-badge" x-show="isComplete('image')" x-cloak>
+                        <i class="bi bi-check2-circle"></i>
+                        Saved
+                    </span>
                 </div>
-            </section>
+
+                <div class="upload-shell mt-4">
+                    <div class="upload-dropzone">
+                        <div class="fw-bold text-dark mb-2">Choose a photo</div>
+                        <p class="text-muted small mb-4">Use your camera for a quick shot or upload one you already have.</p>
+
+                        <div class="d-flex flex-column flex-sm-row gap-3">
+                            <button type="button" class="btn btn-primary btn-pill" @click="openImagePicker(true)">
+                                <i class="bi bi-camera-fill me-2"></i>Take Photo
+                            </button>
+                            <button type="button" class="btn btn-outline-primary btn-pill" @click="openImagePicker(false)">
+                                <i class="bi bi-upload me-2"></i>Upload Image
+                            </button>
+                        </div>
+
+                        <div class="location-pill mt-4" :class="{ 'is-set': !!selectedImageName }">
+                            <i class="bi" :class="selectedImageName ? 'bi-image-fill' : 'bi-images'"></i>
+                            <span x-text="selectedImageName || (imagePreviewUrl ? 'Current front image ready' : 'No image selected yet')"></span>
+                        </div>
+                    </div>
+
+                    <div class="upload-preview">
+                        <template x-if="imagePreviewUrl">
+                            <img :src="imagePreviewUrl" alt="Shop front preview">
+                        </template>
+                        <template x-if="!imagePreviewUrl">
+                            <div class="preview-placeholder">
+                                <i class="bi bi-image"></i>
+                                <div class="fw-bold mt-3">Image preview</div>
+                                <div class="small mt-1">Your selected photo will appear here.</div>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+
+                <div class="d-flex flex-column flex-sm-row gap-3 mt-4">
+                    <button type="submit" class="btn btn-primary btn-pill px-4" :disabled="!selectedImageName">
+                        Save &amp; Continue
+                    </button>
+                    <button type="button" class="btn btn-outline-primary btn-pill" @click="goToStep('basic')">
+                        Back
+                    </button>
+                    <button
+                        type="button"
+                        class="btn btn-link ghost-link"
+                        x-show="isComplete('image')"
+                        x-cloak
+                        @click="goToStep('contact')"
+                    >
+                        Continue without changing it
+                    </button>
+                </div>
+            </form>
+        </template>
+
+        <template x-if="activeStep === 'contact'">
+            <form
+                hx-post="{{ url_for('seller_template_bp.save_shop_contact_step') }}"
+                hx-target="#shop-feedback"
+                hx-swap="innerHTML"
+            >
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" name="shop_id" :value="currentShopId || ''">
+
+                <div class="d-flex flex-column flex-md-row justify-content-between gap-3 align-items-md-start">
+                    <div>
+                        <div class="step-kicker">Step 3 of 4</div>
+                        <h2 class="step-title">Business contact info</h2>
+                        <p class="step-copy">Keep this simple. Add the best ways buyers can reach or locate you.</p>
+                    </div>
+                    <span class="mini-badge" x-show="isComplete('contact')" x-cloak>
+                        <i class="bi bi-check2-circle"></i>
+                        Saved
+                    </span>
+                </div>
+
+                <div class="row g-4 mt-1">
+                    <div class="col-12">
+                        <div class="d-flex flex-column flex-sm-row justify-content-between gap-2 mb-2">
+                            <label class="form-label mb-0" for="shop-email">Business Email</label>
+                            <label class="same-toggle">
+                                <input type="checkbox" @change="fillFromPersonal('email', $event.target.checked)">
+                                <span>Same as my personal email</span>
+                            </label>
+                        </div>
+                        <input id="shop-email" name="email" type="email" class="form-control" x-model="form.contact.email" placeholder="shop@example.com">
+                    </div>
+
+                    <div class="col-12">
+                        <div class="d-flex flex-column flex-sm-row justify-content-between gap-2 mb-2">
+                            <label class="form-label mb-0" for="shop-phone">Phone Number</label>
+                            <label class="same-toggle">
+                                <input type="checkbox" @change="fillFromPersonal('phone', $event.target.checked)">
+                                <span>Same as my personal phone</span>
+                            </label>
+                        </div>
+                        <input id="shop-phone" name="phone" type="tel" inputmode="tel" class="form-control" x-model="form.contact.phone" placeholder="+233...">
+                    </div>
+                </div>
+
+                <div class="d-flex flex-column flex-sm-row gap-3 mt-4">
+                    <button type="submit" class="btn btn-primary btn-pill px-4">
+                        Save &amp; Continue
+                    </button>
+                    <button type="button" class="btn btn-outline-primary btn-pill" @click="goToStep('image')">
+                        Back
+                    </button>
+                </div>
+            </form>
+        </template>
+
+        <template x-if="activeStep === 'description'">
+            <form
+                hx-post="{{ url_for('seller_template_bp.save_shop_description_step') }}"
+                hx-target="#shop-feedback"
+                hx-swap="innerHTML"
+            >
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" name="shop_id" :value="currentShopId || ''">
+
+                <div class="d-flex flex-column flex-md-row justify-content-between gap-3 align-items-md-start">
+                    <div>
+                        <div class="step-kicker">Step 4 of 4</div>
+                        <h2 class="step-title">Shop description</h2>
+                        <p class="step-copy">Clearly describe what you sell. Shops with better descriptions appear more in search.</p>
+                    </div>
+                    <span class="mini-badge" x-show="isComplete('description')" x-cloak>
+                        <i class="bi bi-check2-circle"></i>
+                        Saved
+                    </span>
+                </div>
+
+                <div class="mt-4">
+                    <label class="form-label" for="shop-description">Tell buyers what your shop offers</label>
+                    <textarea
+                        id="shop-description"
+                        name="description"
+                        rows="6"
+                        class="form-control"
+                        x-model="form.description"
+                        placeholder="Example: We sell fresh produce, pantry staples, and quick household essentials."
+                    ></textarea>
+                    <div class="text-muted small mt-2">Aim for clear and helpful, not long.</div>
+                </div>
+
+                <div class="d-flex flex-column flex-sm-row gap-3 mt-4">
+                    <button type="submit" class="btn btn-primary btn-pill px-4">
+                        Finish Setup
+                    </button>
+                    <button type="button" class="btn btn-outline-primary btn-pill" @click="goToStep('contact')">
+                        Back
+                    </button>
+                </div>
+            </form>
+        </template>
+
+        <template x-if="activeStep === 'complete'">
+            <div class="completion-card">
+                <div class="completion-icon">
+                    <i class="bi bi-check2-circle"></i>
+                </div>
+                <div class="step-kicker">All steps saved</div>
+                <h2 class="step-title mb-2">Your shop setup is looking good.</h2>
+                <p class="step-copy mx-auto">You can reopen any step to edit details, or move on to the next readiness checks below.</p>
+
+                <div class="summary-grid mt-4 text-start">
+                    <button type="button" class="summary-tile text-start" @click="goToStep('basic')">
+                        <div class="summary-tile__label">Basic Info</div>
+                        <div class="summary-tile__value">Edit name or pin</div>
+                    </button>
+                    <button type="button" class="summary-tile text-start" @click="goToStep('image')">
+                        <div class="summary-tile__label">Front Image</div>
+                        <div class="summary-tile__value">Change photo</div>
+                    </button>
+                    <button type="button" class="summary-tile text-start" @click="goToStep('contact')">
+                        <div class="summary-tile__label">Contact</div>
+                        <div class="summary-tile__value">Update reachability</div>
+                    </button>
+                    <button type="button" class="summary-tile text-start" @click="goToStep('description')">
+                        <div class="summary-tile__label">Description</div>
+                        <div class="summary-tile__value">Refine your pitch</div>
+                    </button>
+                </div>
+
+                <div class="setup-summary-card mt-4 text-start">
+                    <div class="d-flex flex-column flex-md-row justify-content-between gap-3">
+                        <div>
+                            <div class="fw-bold text-dark">Readiness</div>
+                            <div class="text-muted small">Phone and email verification still control review eligibility.</div>
+                        </div>
+                        <div class="status-line">
+                            <span class="status-pill" :class="shop?.phone_verified ? 'ok' : 'warn'">
+                                <i class="bi" :class="shop?.phone_verified ? 'bi-check-circle-fill' : 'bi-exclamation-circle-fill'"></i>
+                                <span x-text="shop?.phone_verified ? 'Phone verified' : 'Phone not verified'"></span>
+                            </span>
+                            <span class="status-pill" :class="shop?.email_verified ? 'ok' : 'warn'">
+                                <i class="bi" :class="shop?.email_verified ? 'bi-check-circle-fill' : 'bi-exclamation-circle-fill'"></i>
+                                <span x-text="shop?.email_verified ? 'Email verified' : 'Email not verified'"></span>
+                            </span>
+                        </div>
+                    </div>
+
+                    <div class="d-flex flex-column flex-sm-row gap-3 mt-4">
+                        <button
+                            type="button"
+                            class="btn btn-primary btn-pill"
+                            @click="requestVerification()"
+                            :disabled="!shop?.can_request_verification || requestingVerification"
+                        >
+                            <i class="bi bi-shield-check me-2"></i>
+                            <span x-text="requestingVerification ? 'Sending...' : 'Request Verification Review'"></span>
+                        </button>
+                        <button type="button" class="btn btn-outline-primary btn-pill" @click="goToStep('basic')">
+                            Edit Setup Again
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </template>
+    </section>
+
+    <section class="setup-summary-card mt-4" x-show="shop" x-cloak>
+        <div class="d-flex flex-column flex-md-row justify-content-between gap-3 align-items-md-center">
+            <div>
+                <div class="fw-bold text-dark">Current shop snapshot</div>
+                <div class="text-muted small">A quick view of what buyers will notice first.</div>
+            </div>
+            <div class="d-flex flex-wrap gap-2">
+                <span class="mini-badge" x-show="shop?.gps" x-cloak>
+                    <i class="bi bi-geo-alt"></i>
+                    Location saved
+                </span>
+                <span class="mini-badge" x-show="imagePreviewUrl" x-cloak>
+                    <i class="bi bi-image"></i>
+                    Front image saved
+                </span>
+            </div>
         </div>
-    </div>
+
+        <div class="summary-grid mt-3">
+            <div class="summary-tile">
+                <div class="summary-tile__label">Shop</div>
+                <div class="summary-tile__value" x-text="shop?.name || 'Not set yet'"></div>
+            </div>
+            <div class="summary-tile">
+                <div class="summary-tile__label">Phone</div>
+                <div class="summary-tile__value" x-text="shop?.phone || 'Add in contact step'"></div>
+            </div>
+            <div class="summary-tile">
+                <div class="summary-tile__label">Email</div>
+                <div class="summary-tile__value" x-text="shop?.email || 'Add in contact step'"></div>
+            </div>
+            <div class="summary-tile">
+                <div class="summary-tile__label">Description</div>
+                <div class="summary-tile__value" x-text="shop?.description ? 'Saved' : 'Add in final step'"></div>
+            </div>
+        </div>
+    </section>
 </div>
 {% endblock %}
 
 {% block scripts %}
+<script
+    src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+    integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+    crossorigin=""
+></script>
 <script>
-    (function () {
-        const sellerId = {{ seller_id|tojson }};
-        const hasShopOnLoad = {{ (shop is not none)|tojson }};
-        let hasExistingShop = hasShopOnLoad;
-        const createShopUrl = "{{ url_for('seller_bp.create_shop') }}";
-        const updateShopUrl = "{{ url_for('seller_bp.update_shop') }}";
-        const verificationUrl = "{{ url_for('seller_bp.request_verification') }}";
-        const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
-
-        const form = document.getElementById('shop-form');
-        const feedbackNode = document.getElementById('shop-feedback');
-        const saveButton = document.getElementById('shop-save-btn');
-        const verificationButton = document.getElementById('request-verification-btn');
-        const openGoogleMapsButton = document.getElementById('open-google-maps-btn');
-        const useMyLocationButton = document.getElementById('use-my-location-btn');
-        const gpsInput = document.getElementById('shop-gps');
-
-        function showFeedback(kind, message) {
-            const tone = kind === 'success' ? 'success' : 'danger';
-            feedbackNode.innerHTML = '<div class="alert alert-' + tone + ' alert-dismissible fade show" role="alert">' +
-                message +
-                '<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>';
-        }
-
-        function toImageList(rawText) {
-            if (!rawText) return [];
-            const values = [];
-            rawText.replace(/\r/g, '\n').split('\n').forEach((line) => {
-                line.split(',').forEach((part) => {
-                    const cleaned = part.trim();
-                    if (cleaned) values.push(cleaned);
-                });
-            });
-            return [...new Set(values)];
-        }
-
-        function parseGpsText(rawText) {
-            if (!rawText) return null;
-            const text = String(rawText).trim();
-            if (!text) return null;
-
-            const simple = text.match(/^\s*(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)\s*$/);
-            if (simple) return [Number(simple[1]), Number(simple[2])];
-
-            const mapAt = text.match(/@(-?\d+(?:\.\d+)?),(-?\d+(?:\.\d+)?)/);
-            if (mapAt) return [Number(mapAt[1]), Number(mapAt[2])];
-
-            const mapQ = text.match(/[?&]q=(-?\d+(?:\.\d+)?),(-?\d+(?:\.\d+)?)/);
-            if (mapQ) return [Number(mapQ[1]), Number(mapQ[2])];
-
-            return null;
-        }
-
-        function buildGoogleMapsQuery() {
-            const gpsValue = gpsInput?.value?.trim();
-            const gpsParsed = parseGpsText(gpsValue);
-            if (gpsParsed) {
-                return gpsParsed[0].toFixed(6) + ',' + gpsParsed[1].toFixed(6);
-            }
-
-            const parts = [
-                document.getElementById('shop-address')?.value?.trim(),
-                document.getElementById('shop-town')?.value?.trim(),
-                document.getElementById('shop-region')?.value?.trim(),
-            ].filter(Boolean);
-
-            if (parts.length) {
-                return parts.join(', ');
-            }
-
-            return 'Ghana';
-        }
-
-        function normalizeGpsFieldValue() {
-            const parsed = parseGpsText(gpsInput?.value);
-            if (!parsed) return;
-
-            const lat = parsed[0];
-            const lng = parsed[1];
-            if (lat < -90 || lat > 90 || lng < -180 || lng > 180) return;
-            gpsInput.value = lat.toFixed(6) + ',' + lng.toFixed(6);
-        }
-
-        async function apiRequest(url, method, payload) {
-            const response = await fetch(url, {
-                method,
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': csrfToken || '',
+    function sellerShopSetup(config) {
+        return {
+            stepOrder: ['basic', 'image', 'contact', 'description'],
+            stepTitles: {
+                basic: 'Basic Info',
+                image: 'Front Image',
+                contact: 'Contact Info',
+                description: 'Description',
+            },
+            stepHints: {
+                basic: 'Name, pin, and directions',
+                image: 'A quick photo',
+                contact: 'How buyers reach you',
+                description: 'What you sell',
+            },
+            activeStep: config.activeStep || 'basic',
+            stepState: config.setupState || {},
+            onboardingMode: !!config.onboardingMode,
+            previewUrl: config.previewUrl,
+            verificationUrl: config.verificationUrl,
+            sellerId: config.sellerId,
+            csrfToken: config.csrfToken,
+            placeholderImage: config.placeholderImage,
+            personal: config.personal || {},
+            shop: config.shop || null,
+            currentShopId: config.shop?.id || null,
+            locating: false,
+            requestingVerification: false,
+            selectedImageName: '',
+            imagePreviewUrl: '',
+            map: null,
+            marker: null,
+            form: {
+                basic: {
+                    name: config.shop?.name || '',
+                    gps: config.shop?.gps || '',
+                    address: config.shop?.address || '',
                 },
-                body: JSON.stringify(payload || {}),
-            });
-            const data = await response.json();
-            if (!response.ok || !data.success) {
-                throw new Error(data.message || 'Request failed');
-            }
-            return data;
-        }
+                contact: {
+                    email: config.shop?.email || '',
+                    phone: config.shop?.phone || '',
+                },
+                description: config.shop?.description || '',
+            },
 
-        if (openGoogleMapsButton) {
-            openGoogleMapsButton.addEventListener('click', () => {
-                const query = encodeURIComponent(buildGoogleMapsQuery());
-                const mapsUrl = 'https://www.google.com/maps/search/?api=1&query=' + query;
-                window.open(mapsUrl, '_blank', 'noopener');
-                showFeedback('success', 'Google Maps opened. Drop a pin, then paste coordinates or the map link into the GPS field.');
-            });
-        }
+            init() {
+                const initialPreview = config.shop?.primary_image_url || '';
+                this.imagePreviewUrl = initialPreview && initialPreview !== this.placeholderImage ? initialPreview : '';
 
-        if (useMyLocationButton) {
-            useMyLocationButton.addEventListener('click', () => {
-                if (!navigator.geolocation) {
-                    showFeedback('error', 'Geolocation is not supported in this browser.');
+                this.$nextTick(() => {
+                    this.initMap();
+                    if (this.form.basic.gps) {
+                        this.placeMarkerFromValue(this.form.basic.gps);
+                    } else {
+                        this.refreshMap();
+                    }
+                });
+            },
+
+            completedCount() {
+                return this.stepOrder.filter((step) => this.isComplete(step)).length;
+            },
+
+            progressPercent() {
+                return (this.completedCount() / this.stepOrder.length) * 100;
+            },
+
+            currentStepLabel() {
+                if (this.activeStep === 'complete') {
+                    return 'All 4 steps saved';
+                }
+                return 'Step ' + (this.stepIndex(this.activeStep) + 1) + ' of 4';
+            },
+
+            stepIndex(step) {
+                return this.stepOrder.indexOf(step);
+            },
+
+            isComplete(step) {
+                return !!this.stepState[step + '_complete'];
+            },
+
+            canOpenStep(step) {
+                const stepIdx = this.stepIndex(step);
+                if (stepIdx <= 0) {
+                    return true;
+                }
+                return this.isComplete(step) || this.isComplete(this.stepOrder[stepIdx - 1]);
+            },
+
+            goToStep(step) {
+                if (step === 'complete' || this.canOpenStep(step) || this.isComplete(step)) {
+                    this.activeStep = step;
+                    if (step === 'basic') {
+                        this.$nextTick(() => this.refreshMap());
+                    }
+                }
+            },
+
+            previewHref() {
+                if (!this.currentShopId) {
+                    return this.previewUrl;
+                }
+                return this.previewUrl + '?shop_id=' + encodeURIComponent(this.currentShopId);
+            },
+
+            handleStepSaved(detail) {
+                detail = detail && detail.value ? detail.value : (detail || {});
+                if (detail.setupState) {
+                    this.stepState = detail.setupState;
+                }
+
+                if (detail.shop) {
+                    this.shop = detail.shop;
+                    this.currentShopId = detail.shop.id || null;
+                    this.form.basic.name = detail.shop.name || '';
+                    this.form.basic.gps = detail.shop.gps || '';
+                    this.form.basic.address = detail.shop.address || '';
+                    this.form.contact.email = detail.shop.email || '';
+                    this.form.contact.phone = detail.shop.phone || '';
+                    this.form.description = detail.shop.description || '';
+
+                    const nextPreview = detail.shop.primary_image_url || '';
+                    this.imagePreviewUrl = nextPreview && nextPreview !== this.placeholderImage ? nextPreview : '';
+                }
+
+                this.selectedImageName = '';
+                this.resetImageInput();
+
+                const nextStep = detail.nextStep || this.stepState.active_step || this.activeStep;
+                this.activeStep = nextStep;
+
+                if (this.form.basic.gps) {
+                    this.$nextTick(() => this.placeMarkerFromValue(this.form.basic.gps));
+                }
+                if (this.activeStep === 'basic') {
+                    this.$nextTick(() => this.refreshMap());
+                }
+            },
+
+            initMap() {
+                if (!window.L || !this.$refs.locationMap || this.map) {
                     return;
                 }
 
-                useMyLocationButton.disabled = true;
+                const fallback = this.parseGps(this.form.basic.gps) || [5.603717, -0.186964];
+                this.map = L.map(this.$refs.locationMap, {
+                    zoomControl: true,
+                    scrollWheelZoom: false,
+                }).setView(fallback, this.form.basic.gps ? 15 : 11);
+
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                    attribution: '&copy; OpenStreetMap contributors',
+                }).addTo(this.map);
+
+                this.map.on('click', (event) => {
+                    this.placeMarker(event.latlng.lat, event.latlng.lng, true);
+                });
+
+                this.refreshMap();
+            },
+
+            refreshMap() {
+                if (!this.map) {
+                    return;
+                }
+                window.setTimeout(() => this.map.invalidateSize(), 120);
+            },
+
+            parseGps(rawValue) {
+                const rawText = String(rawValue || '').trim();
+                const match = rawText.match(/^\s*(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)\s*$/);
+                if (!match) {
+                    return null;
+                }
+
+                const lat = Number(match[1]);
+                const lng = Number(match[2]);
+                if (Number.isNaN(lat) || Number.isNaN(lng)) {
+                    return null;
+                }
+                if (lat < -90 || lat > 90 || lng < -180 || lng > 180) {
+                    return null;
+                }
+                return [lat, lng];
+            },
+
+            placeMarkerFromValue(rawValue) {
+                const parsed = this.parseGps(rawValue);
+                if (!parsed || !this.map) {
+                    return;
+                }
+                this.placeMarker(parsed[0], parsed[1], false);
+            },
+
+            placeMarker(lat, lng, centerMap) {
+                if (!this.map) {
+                    return;
+                }
+
+                const normalizedLat = Number(lat);
+                const normalizedLng = Number(lng);
+                if (!this.marker) {
+                    this.marker = L.marker([normalizedLat, normalizedLng], {
+                        draggable: true,
+                    }).addTo(this.map);
+                    this.marker.on('dragend', () => {
+                        const point = this.marker.getLatLng();
+                        this.setGps(point.lat, point.lng, false);
+                    });
+                } else {
+                    this.marker.setLatLng([normalizedLat, normalizedLng]);
+                }
+
+                this.setGps(normalizedLat, normalizedLng, centerMap);
+            },
+
+            setGps(lat, lng, centerMap) {
+                this.form.basic.gps = Number(lat).toFixed(6) + ',' + Number(lng).toFixed(6);
+                if (this.map && centerMap) {
+                    this.map.setView([Number(lat), Number(lng)], 15);
+                }
+            },
+
+            clearLocation() {
+                this.form.basic.gps = '';
+                if (this.map && this.marker) {
+                    this.map.removeLayer(this.marker);
+                    this.marker = null;
+                }
+            },
+
+            useCurrentLocation() {
+                if (!navigator.geolocation) {
+                    this.pushFeedback('danger', 'Location access is not available in this browser.');
+                    return;
+                }
+
+                this.locating = true;
                 navigator.geolocation.getCurrentPosition(
                     (position) => {
-                        const lat = position.coords.latitude;
-                        const lng = position.coords.longitude;
-                        if (gpsInput) {
-                            gpsInput.value = lat.toFixed(6) + ',' + lng.toFixed(6);
-                        }
-                        showFeedback('success', 'Location captured and filled in GPS field.');
-                        useMyLocationButton.disabled = false;
+                        this.locating = false;
+                        this.placeMarker(position.coords.latitude, position.coords.longitude, true);
                     },
                     (error) => {
-                        const reason = error && error.message ? error.message : 'Unable to get location.';
-                        showFeedback('error', reason);
-                        useMyLocationButton.disabled = false;
+                        this.locating = false;
+                        this.pushFeedback('danger', error?.message || 'We could not get your current location.');
                     },
                     {
                         enableHighAccuracy: true,
@@ -404,65 +1169,90 @@
                         maximumAge: 30000,
                     }
                 );
-            });
-        }
+            },
 
-        if (form) {
-            form.addEventListener('submit', async (event) => {
-                event.preventDefault();
-                saveButton.disabled = true;
-                saveButton.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Saving...';
+            openImagePicker(useCamera) {
+                if (!this.$refs.frontImageInput) {
+                    return;
+                }
+                if (useCamera) {
+                    this.$refs.frontImageInput.setAttribute('capture', 'environment');
+                } else {
+                    this.$refs.frontImageInput.removeAttribute('capture');
+                }
+                this.$refs.frontImageInput.click();
+            },
+
+            handleImageSelection(event) {
+                const file = event.target.files?.[0];
+                if (!file) {
+                    return;
+                }
+
+                this.selectedImageName = file.name;
+                const reader = new FileReader();
+                reader.onload = (loadEvent) => {
+                    this.imagePreviewUrl = loadEvent.target?.result || '';
+                };
+                reader.readAsDataURL(file);
+            },
+
+            resetImageInput() {
+                if (this.$refs.frontImageInput) {
+                    this.$refs.frontImageInput.value = '';
+                }
+            },
+
+            fillFromPersonal(field, enabled) {
+                if (!enabled) {
+                    return;
+                }
+                this.form.contact[field] = this.personal[field] || '';
+            },
+
+            async requestVerification() {
+                if (!this.shop?.can_request_verification || this.requestingVerification) {
+                    return;
+                }
+
+                this.requestingVerification = true;
                 try {
-                    normalizeGpsFieldValue();
-                    const payload = {
-                        seller_id: sellerId,
-                        name: document.getElementById('shop-name')?.value?.trim(),
-                        description: document.getElementById('shop-description')?.value?.trim(),
-                        email: document.getElementById('shop-email')?.value?.trim(),
-                        phone: document.getElementById('shop-phone')?.value?.trim(),
-                        address: document.getElementById('shop-address')?.value?.trim(),
-                        region: document.getElementById('shop-region')?.value?.trim(),
-                        district: document.getElementById('shop-district')?.value?.trim(),
-                        town: document.getElementById('shop-town')?.value?.trim(),
-                        gps: document.getElementById('shop-gps')?.value?.trim(),
-                        image_urls: toImageList(document.getElementById('shop-image-urls')?.value || ''),
-                        is_active: !!document.getElementById('shop-active')?.checked,
-                    };
+                    const response = await fetch(this.verificationUrl, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRFToken': this.csrfToken || '',
+                        },
+                        body: JSON.stringify({ seller_id: this.sellerId }),
+                    });
 
-                    const requestUrl = hasExistingShop ? updateShopUrl : createShopUrl;
-                    const requestMethod = hasExistingShop ? 'PUT' : 'POST';
-                    const result = await apiRequest(requestUrl, requestMethod, payload);
-                    if (!hasExistingShop) {
-                        hasExistingShop = true;
-                        showFeedback('success', (result.message || 'Shop created successfully.') + ' You can now request verification.');
-                        window.setTimeout(() => window.location.reload(), 700);
-                        return;
+                    const data = await response.json();
+                    if (!response.ok || !data.success) {
+                        throw new Error(data.message || 'Unable to request verification.');
                     }
-                    showFeedback('success', result.message || 'Shop updated successfully.');
-                } catch (error) {
-                    showFeedback('error', error.message || 'Failed to save shop.');
-                } finally {
-                    saveButton.disabled = false;
-                    saveButton.innerHTML = hasExistingShop
-                        ? '<i class="bi bi-floppy me-2"></i>Save Shop Settings'
-                        : '<i class="bi bi-floppy me-2"></i>Create Shop';
-                }
-            });
-        }
 
-        if (verificationButton) {
-            verificationButton.addEventListener('click', async () => {
-                verificationButton.disabled = true;
-                try {
-                    const result = await apiRequest(verificationUrl, 'POST', { seller_id: sellerId });
-                    showFeedback('success', result.message || 'Verification request submitted.');
+                    this.pushFeedback('success', data.message || 'Verification request submitted.');
                 } catch (error) {
-                    showFeedback('error', error.message || 'Failed to request verification.');
+                    this.pushFeedback('danger', error.message || 'Unable to request verification.');
                 } finally {
-                    verificationButton.disabled = false;
+                    this.requestingVerification = false;
                 }
-            });
-        }
-    })();
+            },
+
+            pushFeedback(tone, message) {
+                const feedbackNode = document.getElementById('shop-feedback');
+                if (!feedbackNode) {
+                    return;
+                }
+
+                feedbackNode.innerHTML =
+                    '<div class="alert alert-' + (tone === 'success' ? 'success' : 'danger') + ' border-0 shadow-sm mb-0" role="alert">' +
+                    '<div class="d-flex align-items-center gap-2">' +
+                    '<i class="bi ' + (tone === 'success' ? 'bi-check-circle-fill' : 'bi-exclamation-triangle-fill') + '"></i>' +
+                    '<span>' + message + '</span>' +
+                    '</div></div>';
+            },
+        };
+    }
 </script>
 {% endblock %}

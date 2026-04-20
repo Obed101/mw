@@ -171,6 +171,36 @@
     margin-right: 1rem;
 }
 
+.owned-shop-item {
+    border: 1px solid rgba(102, 126, 234, 0.14);
+    border-radius: 16px;
+    padding: 1rem;
+    background: linear-gradient(135deg, #f8faff 0%, #f6f2ff 100%);
+    margin-bottom: 0.9rem;
+}
+
+.owned-shop-item:last-child {
+    margin-bottom: 0;
+}
+
+.owned-shop-name {
+    font-weight: 700;
+    color: #1f2937;
+}
+
+.owned-shop-meta {
+    font-size: 0.9rem;
+    color: #6b7280;
+}
+
+.owned-shop-empty {
+    border: 1px dashed rgba(102, 126, 234, 0.24);
+    border-radius: 16px;
+    padding: 1.1rem;
+    background: #fafaff;
+    color: #6b7280;
+}
+
 @media (max-width: 768px) {
     .profile-header {
         padding: 1.5rem;
@@ -269,7 +299,8 @@
                     </h5>
                 </div>
                 <div class="card-body p-4">
-                    <form>
+                    <form method="post" action="{{ url_for('main_bp.profile') }}">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                         <div class="row">
                             <div class="col-md-6 mb-3">
                                 <label class="form-label-modern">First Name</label>
@@ -344,6 +375,53 @@
         
         <!-- Recent Activity -->
         <div class="col-lg-4 mb-4">
+            <div class="modern-card mb-4">
+                <div class="card-header-modern">
+                    <div class="d-flex justify-content-between align-items-center gap-2 flex-wrap">
+                        <h5 class="mb-0 fw-bold">
+                            <i class="bi bi-shop-window me-2 text-primary"></i>My Shops
+                        </h5>
+                        <a href="{{ url_for('main_bp.add_shop', new=1) }}" class="btn btn-sm btn-primary">
+                            <i class="bi bi-plus-lg me-1"></i>Add Shop
+                        </a>
+                    </div>
+                </div>
+                <div class="card-body p-4">
+                    {% if owned_shops %}
+                        {% for shop in owned_shops %}
+                        <div class="owned-shop-item">
+                            <div class="d-flex justify-content-between align-items-start gap-3 flex-wrap">
+                                <div>
+                                    <div class="owned-shop-name">{{ shop.name }}</div>
+                                    <div class="owned-shop-meta mt-1">
+                                        {% if shop.town or shop.region %}
+                                            <i class="bi bi-geo-alt me-1"></i>{{ shop.town or 'Location set' }}{% if shop.town and shop.region %}, {% endif %}{{ shop.region or '' }}
+                                        {% else %}
+                                            <i class="bi bi-pin-map me-1"></i>Location not completed yet
+                                        {% endif %}
+                                    </div>
+                                    <div class="owned-shop-meta mt-1">
+                                        <i class="bi bi-shield-check me-1"></i>{{ shop.verification_status|replace('_', ' ')|title }}
+                                    </div>
+                                </div>
+                                <a href="{{ url_for('seller_template_bp.seller_shop_preview', shop_id=shop.id) }}" class="btn btn-outline-primary btn-sm">
+                                    <i class="bi bi-eye me-1"></i>View Shop
+                                </a>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="owned-shop-empty">
+                            <div class="fw-semibold text-dark mb-1">No shops yet</div>
+                            <div class="small mb-3">Create your first shop and it will appear here with a quick visitor preview link.</div>
+                            <a href="{{ url_for('main_bp.add_shop', new=1) }}" class="btn btn-primary btn-sm">
+                                <i class="bi bi-plus-lg me-1"></i>Create First Shop
+                            </a>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+
             <div class="modern-card">
                 <div class="card-header-modern">
                     <h5 class="mb-0 fw-bold">

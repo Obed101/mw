@@ -59,8 +59,7 @@ class User(db.Model, UserMixin):
     owned_shops = db.relationship(
         "Shop",
         foreign_keys="Shop.owner_id",
-        back_populates="owner",
-        uselist=False
+        back_populates="owner"
     )
     
     verified_shops = db.relationship(

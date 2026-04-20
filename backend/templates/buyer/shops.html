@@ -6,10 +6,10 @@
 <div class="container py-4">
     <div class="row mb-4">
         <div class="col-12 d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3">
-            <h1 class="fw-bold">Browse Shops</h1>
-            <div class="d-flex align-items-center gap-3">
+            <h1 class="fw-bold">Shops</h1>
+            <div class="align-items-center gap-3">
                 <a href="{{ url_for('main_bp.add_shop') if current_user.is_authenticated else url_for('main_bp.login', next=url_for('main_bp.add_shop')) }}" class="btn btn-primary fw-bold">
-                    <i class="bi bi-shop-window me-2"></i>ADD YOUR SHOP
+                    <i class="bi bi-shop-window me-2"></i>ADD SHOP
                 </a>
             </div>
         </div>

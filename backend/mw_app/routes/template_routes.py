@@ -1,9 +1,16 @@
 # Template routes for HTMX frontend
-from flask import Blueprint, render_template, request, redirect, url_for, flash, session, current_app
+import json
+from pathlib import Path
+from uuid import uuid4
+from datetime import datetime, timezone
+
+from flask import Blueprint, render_template, request, redirect, url_for, flash, session, current_app, make_response
 from sqlalchemy import func, or_
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import aliased
 from flask_login import login_user, current_user, logout_user
 from urllib.parse import quote_plus
+from werkzeug.utils import secure_filename
 from ..forms import LoginForm, RegistrationForm
 from ..utils.helpers import admin_required
 from ..models import (
@@ -11,6 +18,7 @@ from ..models import (
     Product,
     Shop,
     UserFollowShop,
+    UserFavoriteProduct,
     User,
     USER_ROLE_BUYER,
     USER_ROLE_SELLER,
@@ -27,6 +35,13 @@ seller_bp = Blueprint('seller_template_bp', __name__, url_prefix='/seller')
 buyer_bp = Blueprint('buyer_template_bp', __name__, url_prefix='/buyer')
 admin_bp = Blueprint('admin_template_bp', __name__, url_prefix='/admin')
 
+DEFAULT_SHOP_PLACEHOLDER_IMAGE = '/static/images/mw_logo_trans.png'
+ALLOWED_SHOP_IMAGE_EXTENSIONS = {
+    '.jpg',
+    '.jpeg',
+    '.png',
+    '.webp',
+}
 
 
 def login_required(func):
@@ -76,14 +91,86 @@ def _build_shop_map_embed_url(shop):
     return None
 
 
+def _infer_image_suffix(file_storage):
+    filename = secure_filename(file_storage.filename or '')
+    suffix = Path(filename).suffix.lower()
+    if suffix in ALLOWED_SHOP_IMAGE_EXTENSIONS:
+        return suffix
+
+    mime_to_suffix = {
+        'image/jpeg': '.jpg',
+        'image/png': '.png',
+        'image/webp': '.webp',
+    }
+    return mime_to_suffix.get(file_storage.mimetype or '')
+
+
+def _store_shop_front_image(file_storage, shop_id):
+    suffix = _infer_image_suffix(file_storage)
+    if not suffix:
+        raise ValueError('Upload a JPG, PNG, or WEBP image.')
+
+    upload_dir = Path(current_app.static_folder) / 'uploads' / 'shops'
+    upload_dir.mkdir(parents=True, exist_ok=True)
+
+    stored_name = f"shop-{shop_id}-{uuid4().hex}{suffix}"
+    file_storage.save(upload_dir / stored_name)
+    return url_for('static', filename=f'uploads/shops/{stored_name}')
+
+
+def _build_shop_directions_url(shop):
+    gps = _normalize_gps(shop.gps)
+    if gps:
+        return f"https://www.google.com/maps/dir/?api=1&destination={quote_plus(gps)}"
+
+    fallback_query = ", ".join(
+        [item for item in [shop.address, shop.town, shop.region, "Ghana"] if item]
+    ).strip(", ")
+    if fallback_query:
+        return f"https://www.google.com/maps/dir/?api=1&destination={quote_plus(fallback_query)}"
+
+    return None
+
+
 def _resolve_user_shop(user):
+    shops = _resolve_user_shops(user)
+    return shops[0] if shops else None
+
+
+def _resolve_user_shops(user):
     if not user:
+        return []
+
+    shops = getattr(user, 'owned_shops', None)
+    if isinstance(shops, list):
+        def sort_key(item):
+            value = item.last_updated or item.created_at or datetime.min
+            if value.tzinfo is None:
+                value = value.replace(tzinfo=timezone.utc)
+            return value
+
+        return sorted(
+            shops,
+            key=sort_key,
+            reverse=True,
+        )
+
+    single_shop = shops or getattr(user, 'shop', None)
+    return [single_shop] if single_shop else []
+
+
+def _resolve_owned_shop(user, shop_id=None):
+    shops = _resolve_user_shops(user)
+    if not shops:
         return None
 
-    shop = getattr(user, 'owned_shops', None) or getattr(user, 'shop', None)
-    if isinstance(shop, list):
-        return shop[0] if shop else None
-    return shop
+    if shop_id is None:
+        return shops[0]
+
+    for shop in shops:
+        if shop.id == shop_id:
+            return shop
+    return None
 
 
 def _seller_guard_redirect():
@@ -94,6 +181,111 @@ def _seller_guard_redirect():
         flash('Seller access is required for that page.', 'error')
         return redirect(url_for('main_bp.index'))
     return None
+
+
+def _build_shop_payload(shop):
+    if not shop:
+        return None
+
+    return {
+        'id': shop.id,
+        'name': shop.name,
+        'description': shop.description,
+        'phone': shop.phone,
+        'email': shop.email,
+        'address': shop.address,
+        'region': shop.region,
+        'district': shop.district,
+        'town': shop.town,
+        'gps': shop.gps,
+        'is_active': bool(shop.is_active),
+        'image_urls': shop.image_urls,
+        'primary_image_url': shop.primary_image_url,
+        'verification_status': shop.verification_status,
+        'phone_verified': bool(shop.phone_verified),
+        'email_verified': bool(shop.email_verified),
+        'can_request_verification': bool(shop.can_request_verification()),
+    }
+
+
+def _shop_has_custom_image(shop):
+    if not shop:
+        return False
+    return any(
+        image_url and image_url != DEFAULT_SHOP_PLACEHOLDER_IMAGE
+        for image_url in shop.image_urls
+    )
+
+
+def _build_shop_setup_state(shop):
+    step_order = ['basic', 'image', 'contact', 'description']
+
+    state = {
+        'basic_complete': bool(shop and shop.name and _normalize_gps(shop.gps) and (shop.address or '').strip()),
+        'image_complete': _shop_has_custom_image(shop),
+        'contact_complete': bool(shop and (shop.phone or shop.email)),
+        'description_complete': bool(shop and (shop.description or '').strip()),
+    }
+    state['completed_count'] = sum(1 for step in step_order if state[f'{step}_complete'])
+
+    next_step = 'complete'
+    for step in step_order:
+        if not state[f'{step}_complete']:
+            next_step = step
+            break
+    state['active_step'] = next_step
+    return state
+
+
+def _next_shop_setup_step(setup_state):
+    return setup_state.get('active_step', 'basic')
+
+
+def _build_shop_feedback_response(message, tone='success', trigger_payload=None):
+    response = make_response(
+        render_template(
+            'seller/partials/shop_setup_feedback.html',
+            message=message,
+            tone=tone,
+        )
+    )
+    if trigger_payload:
+        response.headers['HX-Trigger'] = json.dumps(trigger_payload)
+    return response
+
+
+def _build_shop_setup_success(step, message, shop):
+    setup_state = _build_shop_setup_state(shop)
+    return _build_shop_feedback_response(
+        message=message,
+        tone='success',
+        trigger_payload={
+            'shop-step-saved': {
+                'step': step,
+                'nextStep': _next_shop_setup_step(setup_state),
+                'setupState': setup_state,
+                'shop': _build_shop_payload(shop),
+            }
+        },
+    )
+
+
+def _load_shop_categories(shop_id):
+    return (
+        db.session.query(Category)
+        .join(Product, Product.category_id == Category.id)
+        .filter(
+            Product.shop_id == shop_id,
+            Product.is_active.is_(True),
+        )
+        .distinct()
+        .order_by(Category.name.asc())
+        .all()
+    )
+
+
+def _requested_shop_id():
+    return request.values.get('shop_id', type=int)
 
 
 def _serialize_template_product(product):
@@ -178,14 +370,20 @@ def shops():
 @login_required
 def add_shop():
     """Public shop onboarding page for any authenticated user."""
-    shop = _resolve_user_shop(current_user)
+    requested_shop_id = request.args.get('shop_id', type=int)
+    create_new = request.args.get('new', '').lower() in {'1', 'true', 'yes', 'on'}
+    shop = None if create_new else _resolve_owned_shop(current_user, requested_shop_id)
     map_embed_url = _build_shop_map_embed_url(shop) if shop else None
+    shop_payload = _build_shop_payload(shop)
+    setup_state = _build_shop_setup_state(shop)
 
     return render_template(
         'seller/shop.html',
         seller_id=current_user.id,
         shop=shop,
+        shop_payload=shop_payload,
         map_embed_url=map_embed_url,
+        setup_state=setup_state,
         onboarding_mode=True,
     )
 
@@ -200,17 +398,8 @@ def shop_detail(shop_id):
     ).first_or_404()
 
     map_embed_url = _build_shop_map_embed_url(shop)
-    child_categories = (
-        db.session.query(Category)
-        .join(Product, Product.category_id == Category.id)
-        .filter(
-            Product.shop_id == shop.id,
-            Product.is_active.is_(True),
-        )
-        .distinct()
-        .order_by(Category.name.asc())
-        .all()
-    )
+    directions_url = _build_shop_directions_url(shop)
+    child_categories = _load_shop_categories(shop.id)
     shop_is_favorited = False
     if current_user.is_authenticated and current_user.role == USER_ROLE_BUYER:
         shop_is_favorited = UserFollowShop.query.filter_by(
@@ -222,8 +411,32 @@ def shop_detail(shop_id):
         'buyer/shop_detail.html',
         shop=shop,
         map_embed_url=map_embed_url,
+        directions_url=directions_url,
         shop_categories=child_categories,
         shop_is_favorited=shop_is_favorited,
+    )
+
+
+@seller_bp.route('/shop/preview')
+@login_required
+def seller_shop_preview():
+    """Preview the current seller shop using the buyer-facing layout."""
+    shop = _resolve_owned_shop(current_user, request.args.get('shop_id', type=int))
+    if not shop:
+        flash('Create your shop details first before previewing it.', 'warning')
+        return redirect(url_for('main_bp.add_shop'))
+
+    map_embed_url = _build_shop_map_embed_url(shop)
+    directions_url = _build_shop_directions_url(shop)
+    child_categories = _load_shop_categories(shop.id)
+
+    return render_template(
+        'buyer/shop_detail.html',
+        shop=shop,
+        map_embed_url=map_embed_url,
+        directions_url=directions_url,
+        shop_categories=child_categories,
+        shop_is_favorited=False,
     )
 
 @main_bp.route('/products')
@@ -308,17 +521,22 @@ def categories():
 def profile():
     """User profile page"""
     from datetime import datetime, timedelta
+
+    def cleaned_value(field_name):
+        value = request.form.get(field_name, '')
+        value = value.strip() if isinstance(value, str) else ''
+        return value or None
     
     if request.method == 'POST':
         try:
             # Update user profile fields
-            current_user.first_name = request.form.get('first_name', '').strip()
-            current_user.last_name = request.form.get('last_name', '').strip()
-            current_user.phone = request.form.get('phone', '').strip()
-            current_user.region = request.form.get('region', '').strip()
-            current_user.district = request.form.get('district', '').strip()
-            current_user.town = request.form.get('town', '').strip()
-            current_user.address = request.form.get('address', '').strip()
+            current_user.first_name = cleaned_value('first_name')
+            current_user.last_name = cleaned_value('last_name')
+            current_user.phone = cleaned_value('phone')
+            current_user.region = cleaned_value('region')
+            current_user.district = cleaned_value('district')
+            current_user.town = cleaned_value('town')
+            current_user.address = cleaned_value('address')
             
             # Update timestamp
             current_user.updated_at = datetime.now()
@@ -329,6 +547,10 @@ def profile():
             flash('Profile updated successfully!', 'success')
             return redirect(url_for('main_bp.profile'))
             
+        except IntegrityError:
+            db.session.rollback()
+            flash('That phone number is already in use by another account.', 'error')
+
         except Exception as e:
             db.session.rollback()
             flash('Error updating profile. Please try again.', 'error')
@@ -391,10 +613,13 @@ def profile():
             'color': 'info'
         }
     ]
+
+    owned_shops = _resolve_user_shops(current_user)
     
     return render_template('public/profile.html', 
                          user_stats=user_stats,
-                         recent_activity=recent_activity)
+                         recent_activity=recent_activity,
+                         owned_shops=owned_shops)
 
 @auth_bp.route('/register', methods=['POST'])
 def register_post():
@@ -512,28 +737,10 @@ def seller_shop():
     if redirect_response:
         return redirect_response
 
-    shop = _resolve_user_shop(current_user)
+    shop = _resolve_owned_shop(current_user, request.args.get('shop_id', type=int))
     map_embed_url = _build_shop_map_embed_url(shop) if shop else None
-    shop_payload = None
-    if shop:
-        shop_payload = {
-            'id': shop.id,
-            'name': shop.name,
-            'description': shop.description,
-            'phone': shop.phone,
-            'email': shop.email,
-            'address': shop.address,
-            'region': shop.region,
-            'district': shop.district,
-            'town': shop.town,
-            'gps': shop.gps,
-            'is_active': bool(shop.is_active),
-            'image_urls': shop.image_urls,
-            'verification_status': shop.verification_status,
-            'phone_verified': bool(shop.phone_verified),
-            'email_verified': bool(shop.email_verified),
-            'can_request_verification': bool(shop.can_request_verification()),
-        }
+    shop_payload = _build_shop_payload(shop)
+    setup_state = _build_shop_setup_state(shop)
 
     return render_template(
         'seller/shop.html',
@@ -541,8 +748,142 @@ def seller_shop():
         shop=shop,
         shop_payload=shop_payload,
         map_embed_url=map_embed_url,
+        setup_state=setup_state,
         onboarding_mode=False,
     )
+
+
+@seller_bp.route('/shop/setup/basic', methods=['POST'])
+@login_required
+def save_shop_basic_step():
+    """Save the basic shop info step."""
+    try:
+        shop = _resolve_owned_shop(current_user, _requested_shop_id())
+        name = str(request.form.get('name') or '').strip()
+        gps_value = str(request.form.get('gps') or '').strip()
+        address = str(request.form.get('address') or '').strip()
+        normalized_gps = _normalize_gps(gps_value)
+
+        if not name:
+            return _build_shop_feedback_response('Add your shop name to continue.', tone='danger')
+        if not normalized_gps:
+            return _build_shop_feedback_response('Choose your shop location on the map to continue.', tone='danger')
+        if not address:
+            return _build_shop_feedback_response('Add a quick direction note so people can find your shop easily.', tone='danger')
+
+        if not shop:
+            shop = Shop(
+                name=name,
+                gps=normalized_gps,
+                address=address,
+                is_active=True,
+                owner_id=current_user.id,
+            )
+            shop.replace_image_urls([DEFAULT_SHOP_PLACEHOLDER_IMAGE])
+            db.session.add(shop)
+        else:
+            shop.name = name
+            shop.gps = normalized_gps
+            shop.address = address
+
+        if current_user.role != USER_ROLE_SELLER:
+            current_user.role = USER_ROLE_SELLER
+
+        db.session.commit()
+        return _build_shop_setup_success('basic', 'Basic info saved. Nice start.', shop)
+
+    except ValueError as exc:
+        db.session.rollback()
+        return _build_shop_feedback_response(str(exc), tone='danger')
+    except Exception as exc:
+        db.session.rollback()
+        current_app.logger.exception(exc)
+        return _build_shop_feedback_response('We could not save this step yet. Please try again.', tone='danger')
+
+
+@seller_bp.route('/shop/setup/image', methods=['POST'])
+@login_required
+def save_shop_image_step():
+    """Save the front image step."""
+    try:
+        shop = _resolve_owned_shop(current_user, _requested_shop_id())
+        if not shop:
+            return _build_shop_feedback_response('Save your basic shop details first.', tone='danger')
+
+        if request.content_length and request.content_length > 6 * 1024 * 1024:
+            return _build_shop_feedback_response('Image is too large. Use a file under 6MB.', tone='danger')
+
+        uploaded_file = request.files.get('front_image')
+        if not uploaded_file or not uploaded_file.filename:
+            return _build_shop_feedback_response('Choose a front image to continue.', tone='danger')
+
+        image_url = _store_shop_front_image(uploaded_file, shop.id)
+        remaining_images = [
+            image_key for image_key in shop.image_urls
+            if image_key and image_key not in {DEFAULT_SHOP_PLACEHOLDER_IMAGE, image_url}
+        ]
+        shop.replace_image_urls([image_url, *remaining_images][:3])
+        db.session.commit()
+
+        return _build_shop_setup_success('image', 'Front image saved.', shop)
+
+    except ValueError as exc:
+        db.session.rollback()
+        return _build_shop_feedback_response(str(exc), tone='danger')
+    except Exception as exc:
+        db.session.rollback()
+        current_app.logger.exception(exc)
+        return _build_shop_feedback_response('We could not save the image yet. Please try again.', tone='danger')
+
+
+@seller_bp.route('/shop/setup/contact', methods=['POST'])
+@login_required
+def save_shop_contact_step():
+    """Save the business contact step."""
+    try:
+        shop = _resolve_owned_shop(current_user, _requested_shop_id())
+        if not shop:
+            return _build_shop_feedback_response('Save your basic shop details first.', tone='danger')
+
+        email = str(request.form.get('email') or '').strip()
+        phone = str(request.form.get('phone') or '').strip()
+        if not (email or phone):
+            return _build_shop_feedback_response('Add at least an email or phone number to continue.', tone='danger')
+
+        shop.email = email or None
+        shop.phone = phone or None
+        db.session.commit()
+
+        return _build_shop_setup_success('contact', 'Contact details saved.', shop)
+
+    except Exception as exc:
+        db.session.rollback()
+        current_app.logger.exception(exc)
+        return _build_shop_feedback_response('We could not save the contact details yet. Please try again.', tone='danger')
+
+
+@seller_bp.route('/shop/setup/description', methods=['POST'])
+@login_required
+def save_shop_description_step():
+    """Save the shop description step."""
+    try:
+        shop = _resolve_owned_shop(current_user, _requested_shop_id())
+        if not shop:
+            return _build_shop_feedback_response('Save your basic shop details first.', tone='danger')
+
+        description = str(request.form.get('description') or '').strip()
+        if not description:
+            return _build_shop_feedback_response('Add a short description before finishing setup.', tone='danger')
+
+        shop.description = description
+        db.session.commit()
+
+        return _build_shop_setup_success('description', 'Setup finished. Your shop profile is saved.', shop)
+
+    except Exception as exc:
+        db.session.rollback()
+        current_app.logger.exception(exc)
+        return _build_shop_feedback_response('We could not save the description yet. Please try again.', tone='danger')
 
 @seller_bp.route('/products')
 @seller_bp.route('/products/new')
@@ -618,6 +959,67 @@ def buyer_products():
 def buyer_shop_detail(shop_id):
     """Shop detail page"""
     return redirect(url_for('main_bp.shop_detail', shop_id=shop_id))
+
+@buyer_bp.route('/wishlist')
+@login_required
+def wishlist():
+    """User wishlist page"""
+    if current_user.role != USER_ROLE_BUYER:
+        flash('Wishlist is only available for buyers', 'warning')
+        return redirect(url_for('main_bp.index'))
+    
+    favorites = UserFavoriteProduct.query.filter_by(user_id=current_user.id).order_by(
+        UserFavoriteProduct.favorited_at.desc()
+    ).all()
+    
+    products = []
+    for favorite in favorites:
+        product = Product.query.get(favorite.product_id)
+        if product and product.is_active:
+            shop = Shop.query.get(product.shop_id)
+            product_dict = {
+                'id': product.id,
+                'name': product.name,
+                'description': product.description,
+                'price': float(product.price or 0),
+                'primary_image_url': product.primary_image_url,
+                'shop_id': product.shop_id,
+                'shop_name': shop.name if shop else 'Unknown Shop',
+                'favorited_at': favorite.favorited_at.isoformat() if favorite.favorited_at else None
+            }
+            products.append(product_dict)
+    
+    return render_template('buyer/wishlist.html', products=products)
+
+@buyer_bp.route('/followed-shops')
+@login_required
+def followed_shops():
+    """User followed shops page"""
+    if current_user.role != USER_ROLE_BUYER:
+        flash('Followed shops is only available for buyers', 'warning')
+        return redirect(url_for('main_bp.index'))
+    
+    follows = UserFollowShop.query.filter_by(user_id=current_user.id).order_by(
+        UserFollowShop.followed_at.desc()
+    ).all()
+    
+    shops = []
+    for follow in follows:
+        shop = Shop.query.get(follow.shop_id)
+        if shop and shop.is_active and shop.verification_status == VERIFICATION_STATUS_VERIFIED:
+            shop_dict = {
+                'id': shop.id,
+                'name': shop.name,
+                'description': shop.description,
+                'primary_image_url': shop.primary_image_url,
+                'phone': shop.phone,
+                'town': shop.town,
+                'region': shop.region,
+                'followed_at': follow.followed_at.isoformat() if follow.followed_at else None
+            }
+            shops.append(shop_dict)
+    
+    return render_template('buyer/followed_shops.html', shops=shops)
 
 # Admin template routes
 @admin_bp.route('/dashboard')

@@ -13,13 +13,12 @@
                 <p class="lead text-white mb-4">
                     Compare prices, find shop directions and contact info, check which shops have what you're looking for.
                 </p>
-                <div class="d-flex flex-column flex-sm-row gap-3">
+                <div class="d-flex flex-column flex-lg-row gap-3">
                     <a href="{{ url_for('main_bp.products') }}" class="btn btn-warning btn-lg text-dark fw-bold">
                         <i class="bi bi-search me-2"></i>Start Searching
                     </a>
-                    <a href="{{ url_for('main_bp.shops') }}" class="btn btn-outline-light btn-lg">Find Shops</a>
                     <a href="{{ url_for('main_bp.add_shop') if current_user.is_authenticated else url_for('main_bp.login', next=url_for('main_bp.add_shop')) }}" class="btn btn-light btn-lg fw-bold text-dark">
-                        <i class="bi bi-shop-window me-2"></i>ADD YOUR SHOP
+                        <i class="bi bi-shop-window me-2"></i>ADD SHOP
                     </a>
                 </div>
             </div>

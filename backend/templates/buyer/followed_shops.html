@@ -1,0 +1,110 @@
+{% extends "base.html" %}
+
+{% block title %}Followed Shops - Market Window{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="h3 fw-bold mb-0">
+            <i class="bi bi-shop text-primary me-2"></i>
+            Followed Shops
+        </h1>
+        <span class="badge bg-primary-subtle text-primary-emphasis" id="followed-shops-count">
+            {{ shops|length if shops else 0 }} shops
+        </span>
+    </div>
+
+    {% if shops %}
+    <div class="row" id="followed-shops">
+        {% for shop in shops %}
+        <div class="col-md-6 col-lg-4 mb-4 followed-shop-item" data-shop-id="{{ shop.id }}">
+            <div class="card h-100 border-0 shadow-sm">
+                <div class="position-relative">
+                    <img src="{{ shop.primary_image_url or url_for('static', filename='images/mw_logo_trans.png') }}" 
+                         alt="{{ shop.name }}" 
+                         class="card-img-top shop-image">
+                    <button class="btn btn-sm btn-danger position-absolute top-0 end-0 m-2 rounded-circle" 
+                            hx-delete="/api/buyer/shops/{{ shop.id }}/follow"
+                            hx-target="#followed-shops"
+                            hx-swap="outerHTML"
+                            hx-confirm="Unfollow this shop?"
+                            title="Unfollow shop">
+                        <i class="bi bi-x-lg"></i>
+                    </button>
+                </div>
+                <div class="card-body d-flex flex-column">
+                    <div class="d-flex align-items-start justify-content-between mb-2">
+                        <h5 class="card-title fw-semibold mb-0">{{ shop.name }}</h5>
+                        <span class="bi bi-patch-check text-mw" aria-label="Verified shop"></span>
+                    </div>
+                    
+                    <p class="card-text text-muted small flex-grow-1">{{ shop.description[:100] }}{% if shop.description|length > 100 %}...{% endif %}</p>
+                    
+                    <div class="mb-3">
+                        {% if shop.town %}<span class="badge rounded-pill text-bg-light border me-2"><i class="bi bi-geo-alt me-1"></i>{{ shop.town }}</span>{% endif %}
+                        {% if shop.region %}<span class="badge rounded-pill text-bg-light border">{{ shop.region }}</span>{% endif %}
+                    </div>
+                    
+                    {% if shop.followed_at %}
+                    <div class="mb-3">
+                        <small class="text-muted">
+                            <i class="bi bi-clock me-1"></i>
+                            Followed {{ shop.followed_at|timeago }}
+                        </small>
+                    </div>
+                    {% endif %}
+                    
+                    <div class="d-flex justify-content-between align-items-center mt-auto">
+                        {% if shop.phone %}
+                        <a href="tel:{{ shop.phone }}" class="btn btn-outline-secondary btn-sm" title="Call Shop">
+                            <i class="bi bi-telephone"></i>
+                        </a>
+                        {% endif %}
+                        <a href="/shops/{{ shop.id }}" class="btn btn-primary btn-sm">
+                            <i class="bi bi-eye me-1"></i>Visit Shop
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="text-center py-5">
+        <i class="bi bi-shop text-muted" style="font-size: 4rem;"></i>
+        <h4 class="mt-3 text-muted">You're not following any shops yet</h4>
+        <p class="text-muted">Follow your favorite shops to stay updated with their latest products!</p>
+        <a href="/shops" class="btn btn-primary">
+            <i class="bi bi-search me-2"></i>Browse Shops
+        </a>
+    </div>
+    {% endif %}
+</div>
+
+<script>
+document.addEventListener('htmx:afterSwap', function(event) {
+    // Update followed shops count when shops are unfollowed
+    if (event.detail.target.id === 'followed-shops') {
+        const count = document.querySelectorAll('#followed-shops .followed-shop-item').length;
+        const countBadge = document.getElementById('followed-shops-count');
+        if (countBadge) {
+            countBadge.textContent = `${count} shops`;
+        }
+        
+        // Show empty state if no shops left
+        if (count === 0) {
+            event.detail.target.innerHTML = `
+                <div class="text-center py-5">
+                    <i class="bi bi-shop text-muted" style="font-size: 4rem;"></i>
+                    <h4 class="mt-3 text-muted">You're not following any shops yet</h4>
+                    <p class="text-muted">Follow your favorite shops to stay updated with their latest products!</p>
+                    <a href="/shops" class="btn btn-primary">
+                        <i class="bi bi-search me-2"></i>Browse Shops
+                    </a>
+                </div>
+            `;
+        }
+    }
+});
+</script>
+{% endblock %}

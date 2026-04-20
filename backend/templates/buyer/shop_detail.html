@@ -23,7 +23,7 @@
                                 {% include 'buyer/partials/shop_favorite_button.html' %}
                             {% endif %}
                             {% if shop.promoted %}
-                            <span class="badge rounded-pill text-bg-warning-subtle text-warning-emphasis border">Promoted</span>
+                            <span class="badge rounded-pill text-bg-warning-subtle text-warning-emphasis border">Promoted Shop</span>
                             {% endif %}
                         </div>
                     </div>
@@ -37,11 +37,12 @@
                         {% if shop.email %}<a href="mailto:{{ shop.email }}" class="badge rounded-pill text-bg-light border text-decoration-none"><i class="bi bi-envelope me-1"></i>{{ shop.email }}</a>{% endif %}
                     </div>
 
+                    <div class="text-center mt-4 fw-bold">Items sold here</div>
                     {% if shop_categories %}
                     <div class="shop-category-scroll">
                         {% for category in shop_categories %}
-                        <a href="{{ url_for('main_bp.categories', category_id=category.id) }}" class="badge rounded-pill text-bg-primary-subtle text-primary-emphasis border text-decoration-none shop-category-chip">
-                            {{ category.name }}
+                        <a href="{{ url_for('main_bp.categories', category_id=category.id) }}" class="badg rounded-pll text-bg-primary-subtle text-primary-emphasis text-decoration-none shop-category-chp">
+                            {{ category.name }},
                         </a>
                         {% endfor %}
                     </div>
@@ -71,6 +72,23 @@
                     title="{{ shop.name }} location map"
                 ></iframe>
             </div>
+            {% if directions_url %}
+            <a
+                href="{{ directions_url }}"
+                class="shop-directions-button"
+                target="_blank"
+                rel="noopener noreferrer"
+            >
+                <span class="shop-directions-button__icon">
+                    <i class="bi bi-sign-turn-right-fill"></i>
+                </span>
+                <span>
+                    <span class="shop-directions-button__eyebrow">Navigate</span>
+                    <span class="shop-directions-button__label">Follow directions to shop</span>
+                </span>
+                <i class="bi bi-box-arrow-up-right shop-directions-button__arrow"></i>
+            </a>
+            {% endif %}
             {% else %}
             <div class="alert alert-light border mb-0">
                 This shop has no valid GPS location yet.
@@ -81,7 +99,7 @@
 
     <section>
         <div class="d-flex justify-content-between align-items-center mb-3">
-            <h2 class="h5 fw-bold mb-0">Products</h2>
+            <h2 class="h5 fw-bold mb-0">Products in {{ shop.name }}</h2>
             <a href="{{ url_for('main_bp.products', shop_id=shop.id) }}" class="btn btn-sm btn-outline-primary">Open Full Product Browser</a>
         </div>
 
@@ -122,6 +140,69 @@
         width: 100%;
         min-height: 360px;
         border: 0;
+    }
+
+    .shop-directions-button {
+        margin-top: 1rem;
+        display: flex;
+        align-items: center;
+        gap: 0.9rem;
+        padding: 0.95rem 1.1rem;
+        border-radius: 14px;
+        background: linear-gradient(135deg, #0f766e 0%, #14b8a6 100%);
+        color: #fff;
+        text-decoration: none;
+        box-shadow: 0 14px 30px rgba(20, 184, 166, 0.28);
+        transition: transform 0.18s ease, box-shadow 0.18s ease;
+    }
+
+    .shop-directions-button:hover {
+        color: #fff;
+        transform: translateY(-2px);
+        box-shadow: 0 18px 34px rgba(15, 118, 110, 0.34);
+    }
+
+    .shop-directions-button__icon {
+        width: 46px;
+        height: 46px;
+        border-radius: 12px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        background: rgba(255, 255, 255, 0.18);
+        font-size: 1.15rem;
+        flex-shrink: 0;
+    }
+
+    .shop-directions-button__eyebrow {
+        display: block;
+        font-size: 0.74rem;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        opacity: 0.82;
+    }
+
+    .shop-directions-button__label {
+        display: block;
+        font-size: 1rem;
+        font-weight: 700;
+        line-height: 1.2;
+    }
+
+    .shop-directions-button__arrow {
+        margin-left: auto;
+        font-size: 1rem;
+        opacity: 0.92;
+    }
+
+    @media (max-width: 576px) {
+        .shop-directions-button {
+            padding: 0.9rem 1rem;
+        }
+
+        .shop-directions-button__label {
+            font-size: 0.95rem;
+        }
     }
 
     .shop-category-scroll {
