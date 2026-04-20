@@ -445,6 +445,12 @@ def products():
     categories = Category.query.filter_by(is_active=True).order_by(Category.name.asc()).all()
     return render_template('buyer/products.html', categories=categories)
 
+@main_bp.route('/notifications')
+@login_required
+def notifications():
+    """Notifications page for all user types"""
+    return render_template('public/notifications.html')
+
 @main_bp.route('/categories')
 def categories():
     """Browse categories page"""
