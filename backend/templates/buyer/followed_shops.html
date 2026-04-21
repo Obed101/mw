@@ -18,13 +18,13 @@
     <div class="row" id="followed-shops">
         {% for shop in shops %}
         <div class="col-md-6 col-lg-4 mb-4 followed-shop-item" data-shop-id="{{ shop.id }}">
-            <div class="card h-100 border-0 shadow-sm">
+            <div class="card border-0 shadow-sm">
                 <div class="position-relative">
                     <img src="{{ shop.primary_image_url or url_for('static', filename='images/mw_logo_trans.png') }}" 
                          alt="{{ shop.name }}" 
                          class="card-img-top shop-image">
                     <button class="btn btn-sm btn-danger position-absolute top-0 end-0 m-2 rounded-circle" 
-                            hx-delete="/api/buyer/shops/{{ shop.id }}/follow"
+                            hx-post="{{ url_for('buyer_bp.follow_shop', shop_id=shop.id) }}"
                             hx-target="#followed-shops"
                             hx-swap="outerHTML"
                             hx-confirm="Unfollow this shop?"

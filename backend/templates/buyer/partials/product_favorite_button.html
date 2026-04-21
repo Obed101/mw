@@ -1,23 +1,23 @@
+{% if not product_detail %}
 <div class="favorite-product-wrapper">
-    {% if is_favorited %}
-    <button
-        type="button"
-        class="btn btn-sm btn-outline-danger favorite-toggle-btn"
-        hx-delete="{{ url_for('buyer_bp.unfavorite_product', product_id=product_id) }}"
-        hx-target="closest .favorite-product-wrapper"
-        hx-swap="outerHTML"
-    >
-        <i class="bi bi-heart-fill"></i>
-    </button>
-    {% else %}
+
     <button
         type="button"
         class="btn btn-sm btn-outline-primary favorite-toggle-btn"
         hx-post="{{ url_for('buyer_bp.favorite_product', product_id=product_id) }}"
         hx-target="closest .favorite-product-wrapper"
-        hx-swap="outerHTML"
-    >
-        <i class="bi bi-heart"></i>
+        hx-swap="outerHTML">
+        <i class="bi bi-heart{{ '-fill' if is_favorited else '' }}"></i>
     </button>
-    {% endif %}
 </div>
+{% else %}
+<div class="action-btn-wrapper" id="fav-wrapper-{{ product_id }}">
+    <button class="action-btn {% if is_favorited %}active{% endif %}"
+            hx-post="{{ url_for('buyer_bp.favorite_product', product_id=product_id, product_detail=True) }}"
+            hx-target="#fav-wrapper-{{ product_id }}"
+            hx-swap="outerHTML">
+        <i class="bi bi-heart{{ '-fill' if is_favorited else ' text-white' }}"></i>
+    </button>
+    <span class="action-label">{{ 'Liked' if is_favorited else 'Like' }}</span>
+</div>
+{% endif %}

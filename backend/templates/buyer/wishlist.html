@@ -10,76 +10,243 @@
             My Wishlist
         </h1>
         <span class="badge bg-primary-subtle text-primary-emphasis" id="wishlist-count">
-            {{ products|length if products else 0 }} items
+            {{ (shops|length if shops else 0) + (products|length if products else 0) }} items
         </span>
     </div>
 
-    {% if products %}
-    <div class="row" id="wishlist-products">
-        {% for product in products %}
-        <div class="col-md-6 col-lg-4 mb-4 wishlist-item" data-product-id="{{ product.id }}">
-            <div class="card h-100 border-0 shadow-sm">
-                <div class="position-relative">
-                    <img src="{{ product.primary_image_url or url_for('static', filename='images/mw_logo_trans.png') }}" 
-                         alt="{{ product.name }}" 
-                         class="card-img-top product-image">
-                    <button class="btn btn-sm btn-danger position-absolute top-0 end-0 m-2 rounded-circle" 
-                            hx-delete="/api/buyer/products/{{ product.id }}/favorite"
-                            hx-target="#wishlist-products"
-                            hx-swap="outerHTML"
-                            hx-confirm="Remove from wishlist?"
-                            title="Remove from wishlist">
-                        <i class="bi bi-x-lg"></i>
-                    </button>
-                </div>
-                <div class="card-body d-flex flex-column">
-                    <h5 class="card-title fw-semibold">{{ product.name }}</h5>
-                    <p class="card-text text-muted small flex-grow-1">{{ product.description[:100] }}{% if product.description|length > 100 %}...{% endif %}</p>
-                    
-                    <div class="mb-2">
-                        {% if product.shop_name %}
-                        <small class="text-muted">
-                            <i class="bi bi-shop me-1"></i>{{ product.shop_name }}
-                        </small>
-                        {% endif %}
-                    </div>
-                    
-                    <div class="d-flex justify-content-between align-items-center mt-auto">
-                        <span class="h5 text-primary mb-0">GH₵{{ "%.2f"|format(product.price) }}</span>
-                        <div class="btn-group btn-group-sm">
-                            <a href="/shops/{{ product.shop_id }}" class="btn btn-outline-secondary" title="View Shop">
-                                <i class="bi bi-shop"></i>
-                            </a>
-                            <button class="btn btn-outline-primary" title="View Product">
-                                <i class="bi bi-eye"></i>
+    <!-- Tabs -->
+    <ul class="nav nav-tabs mb-4" id="wishlistTabs" role="tablist">
+        <li class="nav-item" role="presentation">
+            <button class="nav-link active" id="shops-tab" data-bs-toggle="tab" data-bs-target="#shops" type="button" role="tab">
+                <i class="bi bi-shop me-2"></i>Shops <span class="badge bg-primary-subtle text-primary-emphasis ms-1">{{ shops|length if shops else 0 }}</span>
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="products-tab" data-bs-toggle="tab" data-bs-target="#products" type="button" role="tab">
+                <i class="bi bi-box-seam me-2"></i>Products <span class="badge bg-primary-subtle text-primary-emphasis ms-1">{{ products|length if products else 0 }}</span>
+            </button>
+        </li>
+    </ul>
+
+    <!-- Tab Content -->
+    <div class="tab-content" id="wishlistTabContent">
+        <!-- Shops Tab -->
+        <div class="tab-pane fade show active" id="shops" role="tabpanel">
+            {% if shops %}
+            <div class="row" id="followed-shops">
+                {% for shop in shops %}
+                <div class="col-md-6 col-lg-4 mb-4 followed-shop-item" data-shop-id="{{ shop.id }}">
+                    <div class="card border-0 shadow-sm">
+                        <div class="position-relative">
+                            <img src="{{ shop.primary_image_url or url_for('static', filename='images/mw_logo_trans.png') }}" 
+                                 alt="{{ shop.name }}" 
+                                 class="card-img-top shop-image">
+                            <button class="btn btn-sm btn-danger position-absolute top-0 end-0 m-2 rounded-circle" 
+                                    hx-post="{{ url_for('buyer_bp.follow_shop', shop_id=shop.id) }}"
+                                    hx-target="#followed-shops"
+                                    hx-swap="outerHTML"
+                                    hx-confirm="Unfollow this shop?"
+                                    title="Unfollow shop">
+                                <i class="bi bi-x-lg"></i>
                             </button>
+                        </div>
+                        <div class="card-body d-flex flex-column">
+                            <div class="d-flex align-items-start justify-content-between mb-2">
+                                <h5 class="card-title fw-semibold mb-0">{{ shop.name }}</h5>
+                                <span class="bi bi-patch-check text-mw" aria-label="Verified shop"></span>
+                            </div>
+                            
+                            <p class="card-text text-muted small flex-grow-1">{{ shop.description[:100] }}{% if shop.description|length > 100 %}...{% endif %}</p>
+                            
+                            <div class="mb-3">
+                                {% if shop.town %}<span class="badge rounded-pill text-bg-light border me-2"><i class="bi bi-geo-alt me-1"></i>{{ shop.town }}</span>{% endif %}
+                                {% if shop.region %}<span class="badge rounded-pill text-bg-light border">{{ shop.region }}</span>{% endif %}
+                            </div>
+                            
+                            {% if shop.followed_at %}
+                            <div class="mb-3">
+                                <small class="text-muted">
+                                    <i class="bi bi-clock me-1"></i>
+                                    <span class="followed-date" data-date="{{ shop.followed_at }}">Followed {{ shop.followed_at }}</span>
+                                </small>
+                            </div>
+                            {% endif %}
+                            
+                            <div class="d-flex justify-content-between align-items-center mt-auto">
+                                {% if shop.phone %}
+                                <a href="tel:{{ shop.phone }}" class="btn btn-outline-secondary btn-sm" title="Call Shop">
+                                    <i class="bi bi-telephone"></i>
+                                </a>
+                                {% endif %}
+                                <a href="/shops/{{ shop.id }}" class="btn btn-primary btn-sm">
+                                    <i class="bi bi-eye me-1"></i>Visit Shop
+                                </a>
+                            </div>
                         </div>
                     </div>
                 </div>
+                {% endfor %}
             </div>
+            {% else %}
+            <div class="text-center py-5">
+                <i class="bi bi-shop text-muted" style="font-size: 4rem;"></i>
+                <h4 class="mt-3 text-muted">You're not following any shops yet</h4>
+                <p class="text-muted">Follow your favorite shops to stay updated with their latest products!</p>
+                <a href="/shops" class="btn btn-primary">
+                    <i class="bi bi-search me-2"></i>Browse Shops
+                </a>
+            </div>
+            {% endif %}
         </div>
-        {% endfor %}
+
+        <!-- Products Tab -->
+        <div class="tab-pane fade" id="products" role="tabpanel">
+            {% if products %}
+            <div class="row" id="wishlist-products">
+                {% for product in products %}
+                <div class="col-md-6 col-lg-4 mb-4 wishlist-item" data-product-id="{{ product.id }}">
+                    <div class="card border-0 shadow-sm">
+                        <div class="position-relative">
+                            <img src="{{ product.primary_image_url or url_for('static', filename='images/mw_logo_trans.png') }}" 
+                                 alt="{{ product.name }}" 
+                                 class="card-img-top product-image">
+                            <button class="btn btn-sm btn-danger position-absolute top-0 end-0 m-2 rounded-circle" 
+                                    hx-post="{{ url_for('buyer_bp.favorite_product', product_id=product.id) }}"
+                                    hx-target="#wishlist-products"
+                                    hx-swap="outerHTML"
+                                    hx-confirm="Remove from wishlist?"
+                                    title="Remove from wishlist">
+                                <i class="bi bi-x-lg"></i>
+                            </button>
+                        </div>
+                        <div class="card-body d-flex flex-column">
+                            <h5 class="card-title fw-semibold">{{ product.name }}</h5>
+                            <p class="card-text text-muted small flex-grow-1">{{ product.description[:100] }}{% if product.description|length > 100 %}...{% endif %}</p>
+                            
+                            <div class="mb-2">
+                                {% if product.shop_name %}
+                                <small class="text-muted">
+                                    <i class="bi bi-shop me-1"></i>{{ product.shop_name }}
+                                </small>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="d-flex justify-content-between align-items-center mt-auto">
+                                <span class="h5 text-primary mb-0">GH₵{{ "%.2f"|format(product.price) }}</span>
+                                <div class="btn-group btn-group-sm">
+                                    <a href="/shops/{{ product.shop_id }}" class="btn btn-outline-secondary" title="View Shop">
+                                        <i class="bi bi-shop"></i>
+                                    </a>
+                                    <a href="/explore/products/{{ product.id }}" class="btn btn-outline-primary" title="View Product">
+                                        <i class="bi bi-eye"></i>
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="text-center py-5">
+                <i class="bi bi-heart text-muted" style="font-size: 4rem;"></i>
+                <h4 class="mt-3 text-muted">Your product wishlist is empty</h4>
+                <p class="text-muted">Start adding products you love to your wishlist!</p>
+                <a href="/products" class="btn btn-primary">
+                    <i class="bi bi-search me-2"></i>Browse Products
+                </a>
+            </div>
+            {% endif %}
+        </div>
     </div>
-    {% else %}
-    <div class="text-center py-5">
-        <i class="bi bi-heart text-muted" style="font-size: 4rem;"></i>
-        <h4 class="mt-3 text-muted">Your wishlist is empty</h4>
-        <p class="text-muted">Start adding products you love to your wishlist!</p>
-        <a href="/products" class="btn btn-primary">
-            <i class="bi bi-search me-2"></i>Browse Products
-        </a>
-    </div>
-    {% endif %}
 </div>
 
 <script>
+// Function to format date as "followed X ago"
+function timeAgo(dateString) {
+    const date = new Date(dateString);
+    const now = new Date();
+    const days = Math.floor((now - date) / (1000 * 60 * 60 * 24));
+    
+    if (days === 0) {
+        return 'Followed today';
+    }
+    
+    if (days < 30) {
+        return `Followed ${days} day${days !== 1 ? 's' : ''} ago`;
+    }
+    
+    const months = Math.floor(days / 30);
+    if (months < 12) {
+        return `Followed ${months} month${months !== 1 ? 's' : ''} ago`;
+    }
+    
+    const years = Math.floor(days / 365);
+    return `Followed ${years} year${years !== 1 ? 's' : ''} ago`;
+}
+
+// Format all followed dates on page load
+document.addEventListener('DOMContentLoaded', function() {
+    document.querySelectorAll('.followed-date').forEach(function(el) {
+        const dateString = el.getAttribute('data-date');
+        if (dateString) {
+            el.textContent = timeAgo(dateString);
+        }
+    });
+});
+
 document.addEventListener('htmx:afterSwap', function(event) {
-    // Update wishlist count when items are removed
+    // Format dates after HTMX swap
+    event.detail.target.querySelectorAll('.followed-date').forEach(function(el) {
+        const dateString = el.getAttribute('data-date');
+        if (dateString) {
+            el.textContent = timeAgo(dateString);
+        }
+    });
+    
+    // Update followed shops count when shops are unfollowed
+    if (event.detail.target.id === 'followed-shops') {
+        const count = document.querySelectorAll('#followed-shops .followed-shop-item').length;
+        const countBadge = document.getElementById('wishlist-count');
+        if (countBadge) {
+            const productsCount = document.querySelectorAll('#wishlist-products .wishlist-item').length;
+            countBadge.textContent = `${count + productsCount} items`;
+        }
+        
+        // Update shops tab badge
+        const shopsTabBadge = document.querySelector('#shops-tab .badge');
+        if (shopsTabBadge) {
+            shopsTabBadge.textContent = count;
+        }
+        
+        // Show empty state if no shops left
+        if (count === 0) {
+            event.detail.target.innerHTML = `
+                <div class="text-center py-5">
+                    <i class="bi bi-shop text-muted" style="font-size: 4rem;"></i>
+                    <h4 class="mt-3 text-muted">You're not following any shops yet</h4>
+                    <p class="text-muted">Follow your favorite shops to stay updated with their latest products!</p>
+                    <a href="/shops" class="btn btn-primary">
+                        <i class="bi bi-search me-2"></i>Browse Shops
+                    </a>
+                </div>
+            `;
+        }
+    }
+    
+    // Update wishlist products count when items are removed
     if (event.detail.target.id === 'wishlist-products') {
         const count = document.querySelectorAll('#wishlist-products .wishlist-item').length;
         const countBadge = document.getElementById('wishlist-count');
         if (countBadge) {
-            countBadge.textContent = `${count} items`;
+            const shopsCount = document.querySelectorAll('#followed-shops .followed-shop-item').length;
+            countBadge.textContent = `${shopsCount + count} items`;
+        }
+        
+        // Update products tab badge
+        const productsTabBadge = document.querySelector('#products-tab .badge');
+        if (productsTabBadge) {
+            productsTabBadge.textContent = count;
         }
         
         // Show empty state if no items left
@@ -87,7 +254,7 @@ document.addEventListener('htmx:afterSwap', function(event) {
             event.detail.target.innerHTML = `
                 <div class="text-center py-5">
                     <i class="bi bi-heart text-muted" style="font-size: 4rem;"></i>
-                    <h4 class="mt-3 text-muted">Your wishlist is empty</h4>
+                    <h4 class="mt-3 text-muted">Your product wishlist is empty</h4>
                     <p class="text-muted">Start adding products you love to your wishlist!</p>
                     <a href="/products" class="btn btn-primary">
                         <i class="bi bi-search me-2"></i>Browse Products

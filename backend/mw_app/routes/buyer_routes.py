@@ -49,14 +49,6 @@ def _load_buyer_user(user_id):
             }),
             404,
         )
-    if user.role != USER_ROLE_BUYER:
-        return None, (
-            jsonify({
-                'success': False,
-                'message': 'Only buyer accounts can favorite shops or products'
-            }),
-            403,
-        )
     return user, None
 
 
@@ -68,11 +60,12 @@ def _render_shop_favorite_button(shop_id, is_favorited):
     )
 
 
-def _render_product_favorite_button(product_id, is_favorited):
+def _render_product_favorite_button(product_id, is_favorited, product_detail=None):
     return render_template(
         'buyer/partials/product_favorite_button.html',
         product_id=product_id,
         is_favorited=is_favorited,
+        product_detail=product_detail,
     )
 
 
@@ -662,7 +655,7 @@ def check_availability():
 @buyer_bp.route("/shops/<int:shop_id>/follow", methods=["POST"])
 @buyer_bp.route("/shops/<int:shop_id>/favorite", methods=["POST"])
 def follow_shop(shop_id):
-    """Favorite (follow) a shop"""
+    """Toggle shop follow status - adds if not following, removes if following."""
     try:
         data = _request_json()
         user_id = _resolve_user_id(request.args.get('user_id', type=int), data)
@@ -694,84 +687,43 @@ def follow_shop(shop_id):
         ).first()
 
         if existing_follow:
-            if _is_htmx_request():
-                return _render_shop_favorite_button(shop_id=shop_id, is_favorited=True), 200
-            return jsonify({
-                'success': False,
-                'message': 'Already following this shop'
-            }), 409
+            # Already following - unfollow it (toggle off)
+            db.session.delete(existing_follow)
+            db.session.commit()
 
-        follow = UserFollowShop(
-            user_id=user_id,
-            shop_id=shop_id
-        )
-
-        db.session.add(follow)
-        _notify_shop_owner_and_admins_for_favorite(user=user, shop=shop, product=None)
-        db.session.commit()
-
-        if _is_htmx_request():
-            return _render_shop_favorite_button(shop_id=shop_id, is_favorited=True), 200
-        return jsonify({
-            'success': True,
-            'message': f'Added {shop.name} to favorites',
-            'follow': follow.to_dict()
-        }), 201
-
-    except Exception as e:
-        db.session.rollback()
-        return jsonify({
-            'success': False,
-            'message': 'Error following shop',
-            'error': str(e)
-        }), 500
-
-@buyer_bp.route("/shops/<int:shop_id>/follow", methods=["DELETE"])
-@buyer_bp.route("/shops/<int:shop_id>/favorite", methods=["DELETE"])
-def unfollow_shop(shop_id):
-    """Remove a shop from favorites (unfollow)."""
-    try:
-        data = _request_json()
-        user_id = _resolve_user_id(request.args.get('user_id', type=int), data)
-
-        if not user_id:
-            return jsonify({
-                'success': False,
-                'message': 'User ID is required'
-            }), 400
-
-        user, error_response = _load_buyer_user(user_id)
-        if error_response:
-            return error_response
-
-        follow = UserFollowShop.query.filter_by(
-            user_id=user_id,
-            shop_id=shop_id
-        ).first()
-
-        if not follow:
             if _is_htmx_request():
                 return _render_shop_favorite_button(shop_id=shop_id, is_favorited=False), 200
+
             return jsonify({
-                'success': False,
-                'message': 'Not following this shop'
-            }), 404
+                'success': True,
+                'message': f'Removed {shop.name} from favorites',
+                'is_favorited': False,
+            }), 200
+        else:
+            # Not following - follow it (toggle on)
+            follow = UserFollowShop(
+                user_id=user_id,
+                shop_id=shop_id
+            )
+            db.session.add(follow)
+            _notify_shop_owner_and_admins_for_favorite(user=user, shop=shop, product=None)
+            db.session.commit()
 
-        db.session.delete(follow)
-        db.session.commit()
+            if _is_htmx_request():
+                return _render_shop_favorite_button(shop_id=shop_id, is_favorited=True), 200
 
-        if _is_htmx_request():
-            return _render_shop_favorite_button(shop_id=shop_id, is_favorited=False), 200
-        return jsonify({
-            'success': True,
-            'message': f'Removed shop from favorites for {user.username}'
-        }), 200
+            return jsonify({
+                'success': True,
+                'message': f'Added {shop.name} to favorites',
+                'follow': follow.to_dict(),
+                'is_favorited': True,
+            }), 201
 
     except Exception as e:
         db.session.rollback()
         return jsonify({
             'success': False,
-            'message': 'Error unfollowing shop',
+            'message': 'Error toggling shop follow',
             'error': str(e)
         }), 500
 
@@ -867,10 +819,11 @@ def check_following_status(shop_id):
 
 @buyer_bp.route("/products/<int:product_id>/favorite", methods=["POST"])
 def favorite_product(product_id):
-    """Add a product to buyer favorites."""
+    """Toggle product favorite status - adds if not favorited, removes if favorited."""
     try:
         data = _request_json()
         user_id = _resolve_user_id(request.args.get('user_id', type=int), data)
+        product_detail = request.args.get('product_detail', type=bool) or data.get('product_detail', False)
 
         if not user_id:
             return jsonify({
@@ -898,34 +851,44 @@ def favorite_product(product_id):
             user_id=user_id,
             product_id=product_id,
         ).first()
+        
         if existing_favorite:
+            # Already favorited - unfavorite it (toggle off)
+            db.session.delete(existing_favorite)
+            db.session.commit()
+            
             if _is_htmx_request():
-                return _render_product_favorite_button(product_id=product_id, is_favorited=True), 200
+                return _render_product_favorite_button(product_id=product_id, is_favorited=False, product_detail=product_detail), 200
+            print(f'Removed "{product.name}" from favorites')
             return jsonify({
-                'success': False,
-                'message': 'Product is already in favorites'
-            }), 409
+                'success': True,
+                'message': f'Removed "{product.name}" from favorites',
+                'is_favorited': False,
+            }), 200
+        else:
+            # Not favorited - favorite it (toggle on)
+            favorite = UserFavoriteProduct(user_id=user_id, product_id=product_id)
+            db.session.add(favorite)
+            _notify_shop_owner_and_admins_for_favorite(
+                user=user,
+                shop=product.shop,
+                product=product,
+            )
+            db.session.commit()
 
-        favorite = UserFavoriteProduct(user_id=user_id, product_id=product_id)
-        db.session.add(favorite)
-        _notify_shop_owner_and_admins_for_favorite(
-            user=user,
-            shop=product.shop,
-            product=product,
-        )
-        db.session.commit()
+            if _is_htmx_request():
+                return _render_product_favorite_button(product_id=product_id, is_favorited=True, product_detail=product_detail), 200
 
-        if _is_htmx_request():
-            return _render_product_favorite_button(product_id=product_id, is_favorited=True), 200
-
-        return jsonify({
-            'success': True,
-            'message': f'Added "{product.name}" to favorites',
-            'favorite': favorite.to_dict(),
-        }), 201
+            return jsonify({
+                'success': True,
+                'message': f'Added "{product.name}" to favorites',
+                'favorite': favorite.to_dict(),
+                'is_favorited': True,
+            }), 201
 
     except Exception as e:
         db.session.rollback()
+        print(e)
         return jsonify({
             'success': False,
             'message': 'Error adding product to favorites',
@@ -956,7 +919,7 @@ def unfavorite_product(product_id):
         ).first()
         if not favorite:
             if _is_htmx_request():
-                return _render_product_favorite_button(product_id=product_id, is_favorited=False), 200
+                return _render_product_favorite_button(product_id=product_id, is_favorited=False, product_detail=True), 200
             return jsonify({
                 'success': False,
                 'message': 'Product is not in favorites'
@@ -966,7 +929,7 @@ def unfavorite_product(product_id):
         db.session.commit()
 
         if _is_htmx_request():
-            return _render_product_favorite_button(product_id=product_id, is_favorited=False), 200
+            return _render_product_favorite_button(product_id=product_id, is_favorited=False, product_detail=True), 200
 
         return jsonify({
             'success': True,

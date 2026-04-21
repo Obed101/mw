@@ -969,11 +969,29 @@ def buyer_shop_detail(shop_id):
 @buyer_bp.route('/wishlist')
 @login_required
 def wishlist():
-    """User wishlist page"""
-    if current_user.role != USER_ROLE_BUYER:
-        flash('Wishlist is only available for buyers', 'warning')
-        return redirect(url_for('main_bp.index'))
+    """User wishlist page with shops and products tabs"""
+    # Fetch followed shops
+    follows = UserFollowShop.query.filter_by(user_id=current_user.id).order_by(
+        UserFollowShop.followed_at.desc()
+    ).all()
     
+    shops = []
+    for follow in follows:
+        shop = Shop.query.get(follow.shop_id)
+        if shop and shop.is_active and shop.verification_status == VERIFICATION_STATUS_VERIFIED:
+            shop_dict = {
+                'id': shop.id,
+                'name': shop.name,
+                'description': shop.description,
+                'primary_image_url': shop.primary_image_url,
+                'phone': shop.phone,
+                'town': shop.town,
+                'region': shop.region,
+                'followed_at': follow.followed_at.isoformat() if follow.followed_at else None
+            }
+            shops.append(shop_dict)
+    
+    # Fetch favorited products
     favorites = UserFavoriteProduct.query.filter_by(user_id=current_user.id).order_by(
         UserFavoriteProduct.favorited_at.desc()
     ).all()
@@ -995,37 +1013,13 @@ def wishlist():
             }
             products.append(product_dict)
     
-    return render_template('buyer/wishlist.html', products=products)
+    return render_template('buyer/wishlist.html', shops=shops, products=products)
 
 @buyer_bp.route('/followed-shops')
 @login_required
 def followed_shops():
-    """User followed shops page"""
-    if current_user.role != USER_ROLE_BUYER:
-        flash('Followed shops is only available for buyers', 'warning')
-        return redirect(url_for('main_bp.index'))
-    
-    follows = UserFollowShop.query.filter_by(user_id=current_user.id).order_by(
-        UserFollowShop.followed_at.desc()
-    ).all()
-    
-    shops = []
-    for follow in follows:
-        shop = Shop.query.get(follow.shop_id)
-        if shop and shop.is_active and shop.verification_status == VERIFICATION_STATUS_VERIFIED:
-            shop_dict = {
-                'id': shop.id,
-                'name': shop.name,
-                'description': shop.description,
-                'primary_image_url': shop.primary_image_url,
-                'phone': shop.phone,
-                'town': shop.town,
-                'region': shop.region,
-                'followed_at': follow.followed_at.isoformat() if follow.followed_at else None
-            }
-            shops.append(shop_dict)
-    
-    return render_template('buyer/followed_shops.html', shops=shops)
+    """Redirect followed shops to unified wishlist page"""
+    return redirect(url_for('buyer_bp.wishlist'))
 
 # Admin template routes
 @admin_bp.route('/dashboard')

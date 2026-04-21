@@ -3,7 +3,7 @@
     {% for product in products %}
     <div class="market-grid-item">
         <a href="{{ url_for('buyer_bp.product_detail', product_id=product.id) }}" class="text-decoration-none">
-            <div class="card h-100 border-0 shadow-sm product-card product-card-compact">
+            <div class="card border-0 shadow-sm product-card product-card-compact">
                 <div class="market-card-media">
                     <img src="{{ product.primary_image_url or url_for('static', filename='images/mw_logo_trans.png') }}" class="card-img-top market-card-image" alt="{{ product.name }}">
                     <span class="badge product-qty-badge">
