@@ -290,6 +290,59 @@ def shop_products(shop_id):
             'error': str(e)
         }), 404
 
+@buyer_bp.route("/products/<int:product_id>")
+def product_detail(product_id):
+    """View detailed information for a specific product"""
+    try:
+        product = Product.query.get_or_404(product_id)
+        shop = product.shop
+        
+        # Check if user has favorited this product
+        is_favorited = False
+        is_following = False
+        if current_user.is_authenticated:
+            favorite = UserFavoriteProduct.query.filter_by(
+                user_id=current_user.id,
+                product_id=product_id
+            ).first()
+            is_favorited = favorite is not None
+            
+            follow = UserFollowShop.query.filter_by(
+                user_id=current_user.id,
+                shop_id=shop.id
+            ).first()
+            is_following = follow is not None
+
+        # Get related products (same category, excluding current)
+        related_products = Product.query.filter(
+            Product.category_id == product.category_id,
+            Product.id != product.id,
+            Product.is_active == True
+        ).limit(4).all()
+
+        if _is_htmx_request():
+            return render_template(
+                'buyer/product_detail.html',
+                product=product,
+                shop=shop,
+                is_favorited=is_favorited,
+                is_following=is_following,
+                related_products=related_products
+            )
+
+        # For non-HTMX requests, we still render the full page
+        return render_template(
+            'buyer/product_detail.html',
+            product=product,
+            shop=shop,
+            is_favorited=is_favorited,
+            is_following=is_following,
+            related_products=related_products
+        )
+
+    except Exception as e:
+        return render_template('public/index.html', error=str(e))
+
 @buyer_bp.route("/categories")
 def get_categories():
     """Get all active product categories for filtering"""

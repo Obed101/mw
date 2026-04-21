@@ -1,0 +1,480 @@
+{% extends "base.html" %}
+
+{% block title %}{{ product.name }} - Market Window{% endblock %}
+
+{% block styles %}
+<style>
+    /* TikTok-style Media Section */
+    .product-media-container {
+        position: relative;
+        width: 100%;
+        background: #000;
+        border-radius: 0 0 20px 20px;
+        overflow: hidden;
+        aspect-ratio: 4/5;
+        max-height: 70vh;
+    }
+
+    .product-media-carousel {
+        height: 100%;
+        width: 100%;
+    }
+
+    .carousel-item {
+        height: 100%;
+        text-align: center;
+    }
+
+    .carousel-item img {
+        height: 100%;
+        width: 100%;
+        object-fit: contain;
+    }
+
+    /* Floating Action Buttons (TikTok Style) */
+    .floating-actions {
+        position: absolute;
+        right: 15px;
+        bottom: 80px;
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+        z-index: 10;
+    }
+
+    .action-btn-wrapper {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        color: white;
+        text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+    }
+
+    .action-btn {
+        width: 45px;
+        height: 45px;
+        border-radius: 50%;
+        background: rgba(255, 255, 255, 0.2);
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.3);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.2rem;
+        color: white;
+        transition: all 0.3s ease;
+        cursor: pointer;
+    }
+
+    .action-btn:active {
+        transform: scale(0.9);
+    }
+
+    .action-btn.active {
+        color: #ff3b5c; /* TikTok Red */
+    }
+
+    .action-label {
+        font-size: 0.75rem;
+        margin-top: 4px;
+        font-weight: 600;
+    }
+
+    /* Temu-style Content Section */
+    .product-info-section {
+        padding: 20px;
+        background: white;
+        border-radius: 20px 20px 0 0;
+        margin-top: -20px;
+        position: relative;
+        z-index: 5;
+        box-shadow: 0 -10px 20px rgba(0,0,0,0.05);
+    }
+
+    .price-tag {
+        font-size: 1.75rem;
+        font-weight: 800;
+        color: var(--primary-purple);
+        margin-bottom: 5px;
+    }
+
+    .product-title {
+        font-size: 1.25rem;
+        font-weight: 700;
+        color: #333;
+        line-height: 1.4;
+        margin-bottom: 15px;
+    }
+
+    .shop-card-mini {
+        display: flex;
+        align-items: center;
+        padding: 12px;
+        background: #f8f9fa;
+        border-radius: 12px;
+        margin-bottom: 20px;
+        border: 1px solid #eee;
+    }
+
+    .shop-logo-mini {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        background: var(--light-mauve);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: bold;
+        color: var(--primary-purple);
+        margin-right: 12px;
+    }
+
+    .shop-info-mini {
+        flex-grow: 1;
+    }
+
+    .shop-name-mini {
+        font-weight: 700;
+        font-size: 0.95rem;
+        margin-bottom: 0;
+    }
+
+    .shop-meta-mini {
+        font-size: 0.75rem;
+        color: #666;
+    }
+
+    /* Sticky Bottom Bar (Temu Style) */
+    .sticky-action-bar {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        background: white;
+        padding: 12px 20px;
+        display: flex;
+        gap: 12px;
+        box-shadow: 0 -5px 15px rgba(0,0,0,0.08);
+        z-index: 1000;
+        /* Adjust for mobile bottom nav if present */
+        margin-bottom: 60px; 
+    }
+
+    .btn-contact {
+        flex: 1;
+        background: var(--gradient-primary);
+        color: white;
+        border: none;
+        border-radius: 12px;
+        font-weight: 700;
+        padding: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+    }
+
+    .btn-visit-shop {
+        width: 50px;
+        height: 50px;
+        border-radius: 12px;
+        border: 1px solid #ddd;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #333;
+        background: #f8f9fa;
+    }
+
+    /* Detail Tabs/Sections */
+    .detail-section {
+        margin-bottom: 25px;
+    }
+
+    .section-title {
+        font-size: 1rem;
+        font-weight: 700;
+        margin-bottom: 12px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .description-text {
+        font-size: 0.9rem;
+        color: #555;
+        line-height: 1.6;
+    }
+
+    .spec-item {
+        display: flex;
+        justify-content: space-between;
+        padding: 8px 0;
+        border-bottom: 1px solid #f0f0f0;
+        font-size: 0.85rem;
+    }
+
+    .spec-label {
+        color: #888;
+    }
+
+    .spec-value {
+        font-weight: 600;
+        color: #333;
+    }
+
+    /* Related Products */
+    .related-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 12px;
+    }
+
+    .related-card {
+        border-radius: 12px;
+        overflow: hidden;
+        border: 1px solid #eee;
+    }
+
+    .related-img {
+        width: 100%;
+        aspect-ratio: 1;
+        object-fit: cover;
+    }
+
+    .related-info {
+        padding: 8px;
+    }
+
+    .related-title {
+        font-size: 0.8rem;
+        font-weight: 600;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .related-price {
+        font-size: 0.85rem;
+        font-weight: 700;
+        color: var(--primary-purple);
+    }
+
+    /* Desktop Adjustments */
+    @media (min-width: 992px) {
+        .main-content {
+            max-width: 1000px;
+            margin: 0 auto;
+            display: flex;
+            gap: 30px;
+            padding-top: 30px;
+        }
+
+        .product-media-container {
+            flex: 1;
+            border-radius: 20px;
+            max-height: 80vh;
+        }
+
+        .product-info-section {
+            flex: 1;
+            margin-top: 0;
+            border-radius: 20px;
+            box-shadow: none;
+            border: 1px solid #eee;
+        }
+
+        .sticky-action-bar {
+            position: static;
+            margin-top: 20px;
+            box-shadow: none;
+            padding: 0;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid p-0 pb-5 mb-5">
+    <div class="row g-0">
+        <!-- Media Section (TikTok Style) -->
+        <div class="col-12 col-lg-6">
+            <div class="product-media-container" x-data="{ activeIndex: 0 }">
+                <div id="productCarousel" class="carousel slide product-media-carousel" data-bs-ride="false">
+                    <div class="carousel-inner h-100">
+                        {% if product.image_urls %}
+                            {% for url in product.image_urls %}
+                            <div class="carousel-item h-100 {% if loop.first %}active{% endif %}">
+                                <img src="{{ url }}" alt="{{ product.name }}">
+                            </div>
+                            {% endfor %}
+                        {% else %}
+                            <div class="carousel-item h-100 active">
+                                <img src="{{ url_for('static', filename='images/mw_logo_color.png') }}" alt="Placeholder" style="opacity: 0.3; filter: grayscale(1);">
+                            </div>
+                        {% endif %}
+                    </div>
+                    
+                    {% if product.image_urls|length > 1 %}
+                    <button class="carousel-control-prev" type="button" data-bs-target="#productCarousel" data-bs-slide="prev">
+                        <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+                    </button>
+                    <button class="carousel-control-next" type="button" data-bs-target="#productCarousel" data-bs-slide="next">
+                        <span class="carousel-control-next-icon" aria-hidden="true"></span>
+                    </button>
+                    {% endif %}
+                </div>
+
+                <!-- Floating Actions (TikTok Style) -->
+                <div class="floating-actions">
+                    <div class="action-btn-wrapper">
+                        <button class="action-btn {% if is_favorited %}active{% endif %}" 
+                                hx-post="/explore/products/{{ product.id }}/favorite"
+                                hx-swap="outerHTML"
+                                id="fav-btn-{{ product.id }}">
+                            <i class="bi {% if is_favorited %}bi-heart-fill{% else %}bi-heart{% endif %}"></i>
+                        </button>
+                        <span class="action-label">Like</span>
+                    </div>
+                    
+                    <div class="action-btn-wrapper">
+                        <button class="action-btn" onclick="shareProduct()">
+                            <i class="bi bi-share-fill"></i>
+                        </button>
+                        <span class="action-label">Share</span>
+                    </div>
+
+                    <div class="action-btn-wrapper">
+                        <button class="action-btn" onclick="window.open('https://wa.me/{{ shop.phone }}', '_blank')">
+                            <i class="bi bi-whatsapp"></i>
+                        </button>
+                        <span class="action-label">Chat</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Info Section (Temu Style) -->
+        <div class="col-12 col-lg-6">
+            <div class="product-info-section">
+                <div class="price-tag">GH₵ {{ "%.2f"|format(product.price) }}</div>
+                <h1 class="product-title">{{ product.name }}</h1>
+
+                <!-- Shop Card -->
+                <div class="shop-card-mini">
+                    <div class="shop-logo-mini">
+                        {{ shop.name[0]|upper }}
+                    </div>
+                    <div class="shop-info-mini">
+                        <h3 class="shop-name-mini">
+                            {{ shop.name }}
+                            {% if shop.verification_status == 'verified' %}
+                            <i class="bi bi-patch-check-fill text-primary ms-1"></i>
+                            {% endif %}
+                        </h3>
+                        <p class="shop-meta-mini">{{ shop.town }}, {{ shop.region }}</p>
+                    </div>
+                    <button class="btn btn-sm {% if is_following %}btn-outline-secondary{% else %}btn-primary{% endif %} rounded-pill px-3"
+                            hx-post="/explore/shops/{{ shop.id }}/follow"
+                            hx-swap="outerHTML">
+                        {% if is_following %}Following{% else %}Follow{% endif %}
+                    </button>
+                </div>
+
+                <!-- Description -->
+                <div class="detail-section" x-data="{ expanded: false }">
+                    <h4 class="section-title"><i class="bi bi-info-circle"></i> Description</h4>
+                    <div class="description-text" :class="expanded ? '' : 'text-truncate-3'">
+                        {{ product.description or 'No description available.' }}
+                    </div>
+                    {% if product.description and product.description|length > 150 %}
+                    <button class="btn btn-link btn-sm p-0 mt-2 text-primary text-decoration-none" @click="expanded = !expanded">
+                        <span x-text="expanded ? 'Show Less' : 'Read More'"></span>
+                    </button>
+                    {% endif %}
+                </div>
+
+                <!-- Specifications -->
+                <div class="detail-section">
+                    <h4 class="section-title"><i class="bi bi-list-ul"></i> Specifications</h4>
+                    <div class="spec-item">
+                        <span class="spec-label">Condition</span>
+                        <span class="spec-value">New</span>
+                    </div>
+                    <div class="spec-item">
+                        <span class="spec-label">Category</span>
+                        <span class="spec-value">{{ product.category.name if product.category else 'General' }}</span>
+                    </div>
+                    <div class="spec-item">
+                        <span class="spec-label">Stock</span>
+                        <span class="spec-value {% if product.stock < 5 %}text-danger{% endif %}">
+                            {{ product.stock }} units left
+                        </span>
+                    </div>
+                </div>
+
+                <!-- Related Products -->
+                {% if related_products %}
+                <div class="detail-section">
+                    <h4 class="section-title"><i class="bi bi-grid-3x3-gap"></i> Similar Items</h4>
+                    <div class="related-grid">
+                        {% for item in related_products %}
+                        <a href="/explore/products/{{ item.id }}" class="text-decoration-none text-dark">
+                            <div class="related-card">
+                                <img src="{{ item.primary_image_url or url_for('static', filename='images/mw_logo_color.png') }}" class="related-img" alt="{{ item.name }}">
+                                <div class="related-info">
+                                    <div class="related-title">{{ item.name }}</div>
+                                    <div class="related-price">GH₵ {{ "%.2f"|format(item.price) }}</div>
+                                </div>
+                            </div>
+                        </a>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endif %}
+
+                <!-- Sticky Action Bar (Temu Style) -->
+                <div class="sticky-action-bar">
+                    <a href="/explore/shops/{{ shop.id }}" class="btn-visit-shop">
+                        <i class="bi bi-shop fs-4"></i>
+                    </a>
+                    <button class="btn-contact" onclick="window.open('tel:{{ shop.phone }}', '_self')">
+                        <i class="bi bi-telephone-fill"></i>
+                        Call Seller
+                    </button>
+                    <button class="btn-contact" style="background: #25D366;" onclick="window.open('https://wa.me/{{ shop.phone }}', '_blank')">
+                        <i class="bi bi-whatsapp"></i>
+                        WhatsApp
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    function shareProduct() {
+        if (navigator.share) {
+            navigator.share({
+                title: '{{ product.name }}',
+                text: 'Check out this product on Market Window!',
+                url: window.location.href,
+            }).catch(console.error);
+        } else {
+            // Fallback: Copy to clipboard
+            navigator.clipboard.writeText(window.location.href);
+            alert('Link copied to clipboard!');
+        }
+    }
+
+    // Handle HTMX response for favorite button
+    document.body.addEventListener('htmx:afterSwap', function(evt) {
+        if (evt.detail.target.id.startsWith('fav-btn-')) {
+            // Optional: Add a little animation
+            evt.detail.target.classList.add('animate__animated', 'animate__heartBeat');
+        }
+    });
+</script>
+{% endblock %}

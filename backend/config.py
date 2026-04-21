@@ -19,7 +19,7 @@ class Config:
 
     SQLALCHEMY_DATABASE_URI = (
         database_url
-        or "postgresql://postgres:1212@localhost:5432/market_window"
+        or "sqlite:///" + os.path.join(os.path.abspath(os.path.dirname(__file__)), "market_window.db")
     )
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     
