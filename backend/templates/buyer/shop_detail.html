@@ -18,9 +18,15 @@
                         </h1>
                         <div class="d-flex align-items-center gap-2">
                             {% if current_user.is_authenticated and current_user.role == 'buyer' %}
-                                {% set shop_id = shop.id %}
-                                {% set is_favorited = shop_is_favorited %}
-                                {% include 'buyer/partials/shop_favorite_button.html' %}
+                            <button
+                                type="button"
+                                class="btn btn-sm {% if shop_is_favorited %}btn-outline-danger{% else %}btn-outline-primary{% endif %} favorite-toggle-btn"
+                                hx-post="{{ url_for('buyer_bp.follow_shop', shop_id=shop.id, text_only=True) }}"
+                                hx-target="this"
+                                hx-swap="innerHTML"
+                            >
+                                <span class="favorite-btn-label">{% if shop_is_favorited %}Following{% else %}Follow{% endif %}</span>
+                            </button>
                             {% endif %}
                             {% if shop.promoted %}
                             <span class="badge rounded-pill text-bg-warning-subtle text-warning-emphasis border">Promoted Shop</span>

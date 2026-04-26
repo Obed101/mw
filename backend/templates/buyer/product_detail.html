@@ -373,9 +373,10 @@
                         </h3>
                         <p class="shop-meta-mini">{{ shop.town }}, {{ shop.region }}</p>
                     </div>
-                    <button class="btn btn-sm {% if is_following %}btn-outline-secondary{% else %}btn-primary{% endif %} rounded-pill px-3"
-                            hx-post="{{ url_for('buyer_bp.follow_shop', shop_id=shop.id) }}"
-                            hx-swap="outerHTML">
+                    <button class="btn btn-sm btn-primary rounded-pill px-3"
+                            hx-post="{{ url_for('buyer_bp.follow_shop', shop_id=shop.id, text_only=True) }}"
+                            hx-target="this"
+                            hx-swap="innerHTML">
                         {% if is_following %}Following{% else %}Follow{% endif %}
                     </button>
                 </div>

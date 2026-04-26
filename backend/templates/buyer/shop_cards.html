@@ -27,9 +27,15 @@
                     <div class="shop-card-actions">
                         {% if current_user.is_authenticated and current_user.role == 'buyer' %}
                         <div class="shop-favorite-slot">
-                            {% set shop_id = shop.id %}
-                            {% set is_favorited = shop.id in favorite_shop_ids %}
-                            {% include 'buyer/partials/shop_favorite_button.html' %}
+                            <button
+                                type="button"
+                                class="btn btn-sm {% if shop.id in favorite_shop_ids %}btn-outline-danger{% else %}btn-outline-primary{% endif %} favorite-toggle-btn"
+                                hx-post="{{ url_for('buyer_bp.follow_shop', shop_id=shop.id, text_only=True) }}"
+                                hx-target="this"
+                                hx-swap="innerHTML"
+                            >
+                                <span class="favorite-btn-label">{% if shop.id in favorite_shop_ids %}Following{% else %}Follow{% endif %}</span>
+                            </button>
                         </div>
                         {% endif %}
                         {% if shop.verification_status == 'verified' %}

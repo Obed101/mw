@@ -287,55 +287,49 @@ def shop_products(shop_id):
 def product_detail(product_id):
     """View detailed information for a specific product"""
     try:
-        product = Product.query.get_or_404(product_id)
+        product = Product.query.options(
+            db.joinedload(Product.shop)
+        ).get_or_404(product_id)
+
         shop = product.shop
-        
-        # Check if user has favorited this product
+
         is_favorited = False
         is_following = False
+
         if current_user.is_authenticated:
-            favorite = UserFavoriteProduct.query.filter_by(
+            is_favorited = UserFavoriteProduct.query.filter_by(
                 user_id=current_user.id,
                 product_id=product_id
-            ).first()
-            is_favorited = favorite is not None
-            
-            follow = UserFollowShop.query.filter_by(
+            ).first() is not None
+
+            is_following = UserFollowShop.query.filter_by(
                 user_id=current_user.id,
                 shop_id=shop.id
-            ).first()
-            is_following = follow is not None
+            ).first() is not None
 
-        # Get related products (same category, excluding current)
         related_products = Product.query.filter(
             Product.category_id == product.category_id,
             Product.id != product.id,
             Product.is_active == True
         ).limit(4).all()
 
-        if _is_htmx_request():
-            return render_template(
-                'buyer/product_detail.html',
-                product=product,
-                shop=shop,
-                is_favorited=is_favorited,
-                is_following=is_following,
-                related_products=related_products
-            )
+        # IMPORTANT: controls UI variation (card vs details view)
+        variant = request.args.get("variant", "product_card")
 
-        # For non-HTMX requests, we still render the full page
         return render_template(
-            'buyer/product_detail.html',
+            "buyer/product_detail.html",
             product=product,
             shop=shop,
             is_favorited=is_favorited,
             is_following=is_following,
-            related_products=related_products
+            related_products=related_products,
+            variant=variant
         )
 
     except Exception as e:
-        return render_template('public/index.html', error=str(e))
+        raise e
 
+        
 @buyer_bp.route("/categories")
 def get_categories():
     """Get all active product categories for filtering"""
@@ -659,6 +653,7 @@ def follow_shop(shop_id):
     try:
         data = _request_json()
         user_id = _resolve_user_id(request.args.get('user_id', type=int), data)
+        text_only = request.args.get('text_only', type=bool) or data.get('text_only', False)
 
         if not user_id:
             return jsonify({
@@ -692,6 +687,8 @@ def follow_shop(shop_id):
             db.session.commit()
 
             if _is_htmx_request():
+                if text_only:
+                    return 'Follow', 200
                 return _render_shop_favorite_button(shop_id=shop_id, is_favorited=False), 200
 
             return jsonify({
@@ -710,6 +707,8 @@ def follow_shop(shop_id):
             db.session.commit()
 
             if _is_htmx_request():
+                if text_only:
+                    return 'Following', 200
                 return _render_shop_favorite_button(shop_id=shop_id, is_favorited=True), 200
 
             return jsonify({
