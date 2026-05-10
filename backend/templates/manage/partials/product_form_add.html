@@ -1,0 +1,35 @@
+<form hx-post="{{ url_for('manage_bp.add_product') }}" 
+      hx-target="#product-list-container"
+      hx-on::after-request="if(event.detail.successful && event.detail.requestConfig.method === 'post') { this.reset(); document.getElementById('add-product-panel').classList.remove('show'); }">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div class="row g-3">
+        <div class="col-12 col-md-4">
+            <label class="form-label small fw-bold">Product Name</label>
+            <input type="text" name="name" class="form-control form-control-sm" required placeholder="e.g. Fresh Mangoes">
+        </div>
+        <div class="col-6 col-md-2" id="category-field-container">
+            <label class="form-label small fw-bold">Category</label>
+            <input type="text" name="category_name" list="category-list-add" 
+                   class="form-control form-control-sm" required placeholder="Type to search..."
+                   hx-get="{{ url_for('manage_bp.search_categories') }}"
+                   hx-trigger="keyup changed delay:200ms"
+                   hx-target="#category-list-add">
+            <datalist id="category-list-add">
+                {% for c in categories %}
+                <option value="{{ c.name }}">
+                {% endfor %}
+            </datalist>
+        </div>
+        <div class="col-6 col-md-2">
+            <label class="form-label small fw-bold">Price (GHS)</label>
+            <input type="number" name="price" step="0.01" class="form-control form-control-sm" required placeholder="0.00">
+        </div>
+        <div class="col-6 col-md-2">
+            <label class="form-label small fw-bold">Initial Stock</label>
+            <input type="number" name="stock" class="form-control form-control-sm" value="0">
+        </div>
+        <div class="col-6 col-md-2 d-flex align-items-end">
+            <button type="submit" class="btn btn-primary btn-sm w-100">Save</button>
+        </div>
+    </div>
+</form>

@@ -1,0 +1,27 @@
+<!-- Admin Message Bubble Partial -->
+{% set is_me = message.is_admin %}
+
+<div class="d-flex flex-column mb-3 {% if is_me %}align-items-end{% else %}align-items-start{% endif %}" id="msg-{{ message.id }}">
+    
+    <!-- Meta -->
+    <div class="d-flex align-items-center mb-1 gap-2 mx-1">
+        {% if is_me %}
+            <small class="text-muted" style="font-size: 0.75rem;">{{ message.created_at.strftime('%H:%M') }}</small>
+            <span class="badge bg-primary rounded-pill px-2" style="font-size: 0.65rem;">Admin (You)</span>
+        {% else %}
+            <span class="fw-semibold text-dark" style="font-size: 0.8rem;">{{ message.sender.username }}</span>
+            <small class="text-muted" style="font-size: 0.75rem;">{{ message.created_at.strftime('%H:%M') }}</small>
+        {% endif %}
+    </div>
+
+    <!-- Bubble -->
+    <div class="chat-bubble {% if is_me %}chat-bubble-me{% else %}chat-bubble-them{% endif %} {% if message.is_deleted %}opacity-75{% endif %}">
+        {% if message.is_deleted %}
+            <div class="fst-italic text-center py-1">
+                <i class="bi bi-slash-circle me-2"></i>Deleted Message
+            </div>
+        {% else %}
+            {{ message.message | replace('\n', '<br>') | safe }}
+        {% endif %}
+    </div>
+</div>

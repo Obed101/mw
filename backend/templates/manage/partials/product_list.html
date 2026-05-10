@@ -1,0 +1,10 @@
+{% for product in products %}
+    {% include "manage/partials/product_row.html" %}
+{% else %}
+<tr>
+    <td colspan="5" class="text-center py-5">
+        <i class="bi bi-box-seam display-4 text-muted d-block mb-3"></i>
+        <p class="text-muted">No products found. Start by adding your first item!</p>
+    </td>
+</tr>
+{% endfor %}

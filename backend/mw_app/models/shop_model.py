@@ -61,6 +61,10 @@ class Shop(db.Model):
     rejection_reason = db.Column(db.Text)
     verification_notes = db.Column(db.Text)  # Admin notes
     
+    # AI Generation fields
+    ai_description_generated = db.Column(db.Boolean, default=False)
+    ai_job_status = db.Column(db.String(20), default='idle')  # idle, running, failed
+    
     # Foreign key: Shop is owned by a User (seller)
     owner_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
     

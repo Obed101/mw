@@ -67,6 +67,11 @@
                                 <li><a class="dropdown-item" href="/admin/dashboard">
                                     <i class="bi bi-gear me-2"></i>Admin Dashboard
                                 </a></li>
+                            {% endif %}
+                            {% if current_user.owned_shops %}
+                                <li><a class="dropdown-item" href="{{ url_for('manage_bp.products') }}">
+                                    <i class="bi bi-shop-window me-2"></i>Manage Shop
+                                </a></li>
                             {% elif current_user.role == 'seller' %}
                                 <li><a class="dropdown-item" href="/seller/dashboard">
                                     <i class="bi bi-shop me-2"></i>Seller Dashboard
@@ -74,6 +79,12 @@
                             {% endif %}
                             <li><a class="dropdown-item" href="/profile">
                                 <i class="bi bi-person me-2"></i>My Account
+                            </a></li>
+                            <li><a class="dropdown-item" href="/buyer/wishlist">
+                                <i class="bi bi-heart me-2"></i>Wishlist
+                            </a></li>
+                            <li><a class="dropdown-item" href="/me/support">
+                                <i class="bi bi-headset me-2"></i>Support
                             </a></li>
                             <li><hr class="dropdown-divider"></li>
                             <li><a class="dropdown-item" href="/auth/logout">
@@ -142,6 +153,12 @@
         </a>
                 <hr class="my-2 mx-3">
         {% if current_user.is_authenticated %}
+            {% if current_user.owned_shops %}
+            <a href="{{ url_for('manage_bp.products') }}" class="sidebar-nav-item {{ is_active('/manage') }}">
+                <i class="bi bi-shop-window"></i>
+                <span>Manage Shop</span>
+            </a>
+            {% endif %}
             <a href="/profile" class="sidebar-nav-item {{ is_active('/profile') }}">
                 <i class="bi bi-person-circle"></i>
                 <span>Profile</span>
@@ -150,9 +167,9 @@
                 <i class="bi bi-heart"></i>
                 <span>Wishlist</span>
             </a>
-            <a href="/orders" class="sidebar-nav-item {{ is_active('/orders') }}">
-                <i class="bi bi-bag-check"></i>
-                <span>Shopping</span>
+            <a href="/me/support" class="sidebar-nav-item {{ is_active('/me/support') }}">
+                <i class="bi bi-headset"></i>
+                <span>Support</span>
             </a>
         {% else %}
             <a href="/login" class="sidebar-nav-item {{ is_active('/login') }}">
@@ -186,10 +203,37 @@
             <span>Categories</span>
         </a>
         {% if current_user.is_authenticated %}
-            <a href="/profile" class="bottom-nav-item {{ is_active('/profile') }}">
-                <i class="bi bi-person-circle"></i>
-                <span>Profile</span>
-            </a>
+            <div class="bottom-nav-me dropup">
+                <button type="button"
+                        class="bottom-nav-item bottom-nav-btn {{ is_active('/profile') }}"
+                        data-bs-toggle="dropdown"
+                        aria-expanded="false"
+                        aria-label="Me menu">
+                    <i class="bi bi-person-circle"></i>
+                    <span>Me</span>
+                </button>
+                <ul class="dropdown-menu dropdown-menu-end shadow-sm mb-1">
+                    <li><a class="dropdown-item" href="/profile">
+                        <i class="bi bi-person me-2"></i>Profile
+                    </a></li>
+                    {% if current_user.owned_shops %}
+                    <li><a class="dropdown-item" href="{{ url_for('manage_bp.products') }}">
+                        <i class="bi bi-shop-window me-2"></i>Manage Shop
+                    </a></li>
+                    {% else %}
+                    <li><a class="dropdown-item" href="/shops/add">
+                        <i class="bi bi-shop me-2"></i>Create Shop
+                    </a></li>
+                    {% endif %}
+                    <li><hr class="dropdown-divider"></li>
+                    <li><a class="dropdown-item" href="/buyer/wishlist">
+                        <i class="bi bi-heart me-2"></i>Wishlist
+                    </a></li>
+                    <li><a class="dropdown-item" href="/me/support">
+                        <i class="bi bi-headset me-2"></i>Support
+                    </a></li>
+                </ul>
+            </div>
         {% else %}
             <a href="/login" class="bottom-nav-item {{ is_active('/login') }}">
                 <i class="bi bi-box-arrow-in-right"></i>

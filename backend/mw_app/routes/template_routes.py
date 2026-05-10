@@ -5,14 +5,14 @@ from uuid import uuid4
 from datetime import datetime, timezone
 
 from flask import Blueprint, render_template, request, redirect, url_for, flash, session, current_app, make_response
-from sqlalchemy import func, or_
+from sqlalchemy import func, or_, nullslast
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import aliased
 from flask_login import login_user, current_user, logout_user
 from urllib.parse import quote_plus
 from werkzeug.utils import secure_filename
 from ..forms import LoginForm, RegistrationForm
-from ..utils.helpers import admin_required
+from ..utils.location import get_user_location, haversine_distance_expr, NEAR_YOU_KM
 from ..models import (
     Category,
     Product,
@@ -22,6 +22,7 @@ from ..models import (
     User,
     USER_ROLE_BUYER,
     USER_ROLE_SELLER,
+    USER_ROLE_ADMIN,
     CATEGORY_LEVEL_LEAF,
     VERIFICATION_STATUS_VERIFIED,
 )
@@ -52,6 +53,16 @@ def login_required(func):
             next_link = request.url
             flash('A quick login is required first.', 'info')
             return redirect(url_for('login', next=next_link))
+        return func(*args, **kwargs)
+    return decorated_view
+
+def admin_required(func):
+    """Decorator to ensure the user is an admin (Session based)"""
+    @wraps(func)
+    def decorated_view(*args, **kwargs):
+        if not current_user.is_authenticated or current_user.role != USER_ROLE_ADMIN:
+            flash('Admin access is required for that page.', 'error')
+            return redirect(url_for('main_bp.index'))
         return func(*args, **kwargs)
     return decorated_view
 
@@ -310,23 +321,52 @@ def _serialize_template_product(product):
 @main_bp.route('/')
 def index():
     """Homepage - marketplace overview"""
-    verified_shops = Shop.query.filter(
+    # Resolve user location for proximity-aware sorting
+    user_lat, user_lng = get_user_location(current_user)
+    dist_expr = haversine_distance_expr(user_lat, user_lng) if user_lat is not None else None
+    user_has_location = user_lat is not None
+
+    verified_shops_q = Shop.query.filter(
         Shop.is_active.is_(True),
         Shop.verification_status == VERIFICATION_STATUS_VERIFIED,
     )
 
-    featured_shops = verified_shops.order_by(
-        Shop.promoted.desc(),
-        Shop.last_updated.desc(),
-    ).limit(6).all()
+    if dist_expr is not None:
+        featured_shops = verified_shops_q.order_by(
+            nullslast(dist_expr.asc()),
+            Shop.promoted.desc(),
+            Shop.last_updated.desc(),
+        ).limit(6).all()
+    else:
+        featured_shops = verified_shops_q.order_by(
+            Shop.promoted.desc(),
+            Shop.last_updated.desc(),
+        ).limit(6).all()
 
-    featured_products = Product.query.join(Shop).filter(
+    products_q = Product.query.join(Shop).filter(
         Product.is_active.is_(True),
         Shop.is_active.is_(True),
         Shop.verification_status == VERIFICATION_STATUS_VERIFIED,
-    ).order_by(
-        Product.created_at.desc(),
-    ).limit(12).all()
+    )
+
+    if dist_expr is not None:
+        products_q = products_q.add_columns(dist_expr.label('distance_km'))
+        raw_products = products_q.order_by(
+            nullslast(dist_expr.asc()),
+            Product.created_at.desc(),
+        ).limit(12).all()
+        featured_products = []
+        for product, dist_km in raw_products:
+            product._distance_km = dist_km
+            product._near_you = (dist_km is not None and dist_km <= NEAR_YOU_KM)
+            featured_products.append(product)
+    else:
+        featured_products = products_q.order_by(
+            Product.created_at.desc(),
+        ).limit(12).all()
+        for product in featured_products:
+            product._distance_km = None
+            product._near_you = False
 
     category_rows = db.session.query(
         Category.id,
@@ -345,6 +385,7 @@ def index():
         featured_shops=featured_shops,
         featured_products=featured_products,
         top_categories=category_rows,
+        user_has_location=user_has_location,
     )
 
 @main_bp.route('/login')

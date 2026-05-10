@@ -2,8 +2,110 @@
 
 {% block title %}My Wishlist - Market Window{% endblock %}
 
+{% block styles %}
+<style>
+    .wishlist-shell {
+        max-width: 1280px;
+    }
+
+    .wishlist-shell #wishlistTabs .nav-link {
+        padding: 0.4rem 0.62rem;
+        font-size: 0.82rem;
+    }
+
+    .wishlist-shell .wishlist-grid {
+        --bs-gutter-x: 0.65rem;
+        --bs-gutter-y: 0.65rem;
+    }
+
+    .wishlist-shell .wishlist-card {
+        border-radius: 0.72rem;
+        overflow: hidden;
+    }
+
+    .wishlist-shell .wishlist-image {
+        height: 96px;
+        object-fit: cover;
+    }
+
+    .wishlist-shell .wishlist-remove-btn {
+        width: 1.45rem;
+        height: 1.45rem;
+        padding: 0;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.62rem;
+    }
+
+    .wishlist-shell .wishlist-card .card-body {
+        padding: 0.58rem;
+        gap: 0.32rem;
+    }
+
+    .wishlist-shell .wishlist-title {
+        font-size: 0.82rem;
+        line-height: 1.16;
+        margin-bottom: 0;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+        min-height: 1.9em;
+    }
+
+    .wishlist-shell .wishlist-description {
+        font-size: 0.7rem;
+        line-height: 1.24;
+        margin-bottom: 0;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+        min-height: 2.45em;
+    }
+
+    .wishlist-shell .wishlist-meta {
+        margin-bottom: 0;
+        font-size: 0.68rem;
+    }
+
+    .wishlist-shell .wishlist-chip {
+        font-size: 0.64rem;
+        padding: 0.17rem 0.38rem;
+    }
+
+    .wishlist-shell .wishlist-actions .btn,
+    .wishlist-shell .btn-group .btn {
+        --bs-btn-padding-y: 0.16rem;
+        --bs-btn-padding-x: 0.42rem;
+        --bs-btn-font-size: 0.68rem;
+    }
+
+    .wishlist-shell .wishlist-price,
+    .wishlist-shell .wishlist-item .h5.text-primary {
+        font-size: 0.9rem;
+        font-weight: 700;
+    }
+
+    @media (max-width: 575.98px) {
+        .wishlist-shell .wishlist-image {
+            height: 84px;
+        }
+
+        .wishlist-shell .wishlist-card .card-body {
+            padding: 0.5rem;
+        }
+
+        .wishlist-shell .wishlist-title {
+            font-size: 0.78rem;
+        }
+    }
+</style>
+{% endblock %}
+
 {% block content %}
-<div class="container py-4">
+<div class="container py-4 wishlist-shell">
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h1 class="h3 fw-bold mb-0">
             <i class="bi bi-heart-fill text-danger me-2"></i>
@@ -33,15 +135,15 @@
         <!-- Shops Tab -->
         <div class="tab-pane fade show active" id="shops" role="tabpanel">
             {% if shops %}
-            <div class="row" id="followed-shops">
+            <div class="row wishlist-grid" id="followed-shops">
                 {% for shop in shops %}
-                <div class="col-md-6 col-lg-4 mb-4 followed-shop-item" data-shop-id="{{ shop.id }}">
-                    <div class="card border-0 shadow-sm">
+                <div class="col-6 col-md-4 col-lg-3 col-xl-2 followed-shop-item" data-shop-id="{{ shop.id }}">
+                    <div class="card border-0 shadow-sm wishlist-card">
                         <div class="position-relative">
                             <img src="{{ shop.primary_image_url or url_for('static', filename='images/mw_logo_trans.png') }}" 
                                  alt="{{ shop.name }}" 
-                                 class="card-img-top shop-image">
-                            <button class="btn btn-sm btn-danger position-absolute top-0 end-0 m-2 rounded-circle" 
+                                 class="card-img-top shop-image wishlist-image">
+                            <button class="btn btn-sm btn-danger position-absolute top-0 end-0 m-2 rounded-circle wishlist-remove-btn" 
                                     hx-post="{{ url_for('buyer_bp.follow_shop', shop_id=shop.id) }}"
                                     hx-target="#followed-shops"
                                     hx-swap="outerHTML"
@@ -52,19 +154,19 @@
                         </div>
                         <div class="card-body d-flex flex-column">
                             <div class="d-flex align-items-start justify-content-between mb-2">
-                                <h5 class="card-title fw-semibold mb-0">{{ shop.name }}</h5>
+                                <h5 class="card-title fw-semibold wishlist-title">{{ shop.name }}</h5>
                                 <span class="bi bi-patch-check text-mw" aria-label="Verified shop"></span>
                             </div>
                             
-                            <p class="card-text text-muted small flex-grow-1">{{ shop.description[:100] }}{% if shop.description|length > 100 %}...{% endif %}</p>
+                            <p class="card-text text-muted small flex-grow-1 wishlist-description">{{ shop.description[:70] }}{% if shop.description|length > 70 %}...{% endif %}</p>
                             
-                            <div class="mb-3">
-                                {% if shop.town %}<span class="badge rounded-pill text-bg-light border me-2"><i class="bi bi-geo-alt me-1"></i>{{ shop.town }}</span>{% endif %}
-                                {% if shop.region %}<span class="badge rounded-pill text-bg-light border">{{ shop.region }}</span>{% endif %}
+                            <div class="wishlist-meta">
+                                {% if shop.town %}<span class="badge rounded-pill text-bg-light border me-1 wishlist-chip"><i class="bi bi-geo-alt me-1"></i>{{ shop.town }}</span>{% endif %}
+                                {% if shop.region %}<span class="badge rounded-pill text-bg-light border wishlist-chip">{{ shop.region }}</span>{% endif %}
                             </div>
                             
                             {% if shop.followed_at %}
-                            <div class="mb-3">
+                            <div class="wishlist-meta">
                                 <small class="text-muted">
                                     <i class="bi bi-clock me-1"></i>
                                     <span class="followed-date" data-date="{{ shop.followed_at }}">Followed {{ shop.followed_at }}</span>
@@ -72,14 +174,14 @@
                             </div>
                             {% endif %}
                             
-                            <div class="d-flex justify-content-between align-items-center mt-auto">
+                            <div class="d-flex justify-content-between align-items-center mt-auto wishlist-actions">
                                 {% if shop.phone %}
                                 <a href="tel:{{ shop.phone }}" class="btn btn-outline-secondary btn-sm" title="Call Shop">
                                     <i class="bi bi-telephone"></i>
                                 </a>
                                 {% endif %}
                                 <a href="/shops/{{ shop.id }}" class="btn btn-primary btn-sm">
-                                    <i class="bi bi-eye me-1"></i>Visit Shop
+                                    <i class="bi bi-eye me-1"></i>Visit
                                 </a>
                             </div>
                         </div>
@@ -102,15 +204,15 @@
         <!-- Products Tab -->
         <div class="tab-pane fade" id="products" role="tabpanel">
             {% if products %}
-            <div class="row" id="wishlist-products">
+            <div class="row wishlist-grid" id="wishlist-products">
                 {% for product in products %}
-                <div class="col-md-6 col-lg-4 mb-4 wishlist-item" data-product-id="{{ product.id }}">
-                    <div class="card border-0 shadow-sm">
+                <div class="col-6 col-md-4 col-lg-3 col-xl-2 wishlist-item" data-product-id="{{ product.id }}">
+                    <div class="card border-0 shadow-sm wishlist-card">
                         <div class="position-relative">
                             <img src="{{ product.primary_image_url or url_for('static', filename='images/mw_logo_trans.png') }}" 
                                  alt="{{ product.name }}" 
-                                 class="card-img-top product-image">
-                            <button class="btn btn-sm btn-danger position-absolute top-0 end-0 m-2 rounded-circle" 
+                                 class="card-img-top product-image wishlist-image">
+                            <button class="btn btn-sm btn-danger position-absolute top-0 end-0 m-2 rounded-circle wishlist-remove-btn" 
                                     hx-post="{{ url_for('buyer_bp.favorite_product', product_id=product.id) }}"
                                     hx-target="#wishlist-products"
                                     hx-swap="outerHTML"
@@ -120,10 +222,10 @@
                             </button>
                         </div>
                         <div class="card-body d-flex flex-column">
-                            <h5 class="card-title fw-semibold">{{ product.name }}</h5>
-                            <p class="card-text text-muted small flex-grow-1">{{ product.description[:100] }}{% if product.description|length > 100 %}...{% endif %}</p>
+                            <h5 class="card-title fw-semibold wishlist-title">{{ product.name }}</h5>
+                            <p class="card-text text-muted small flex-grow-1 wishlist-description">{{ product.description[:70] }}{% if product.description|length > 70 %}...{% endif %}</p>
                             
-                            <div class="mb-2">
+                            <div class="wishlist-meta">
                                 {% if product.shop_name %}
                                 <small class="text-muted">
                                     <i class="bi bi-shop me-1"></i>{{ product.shop_name }}
@@ -131,7 +233,7 @@
                                 {% endif %}
                             </div>
                             
-                            <div class="d-flex justify-content-between align-items-center mt-auto">
+                            <div class="d-flex justify-content-between align-items-center mt-auto wishlist-actions">
                                 <span class="h5 text-primary mb-0">GH₵{{ "%.2f"|format(product.price) }}</span>
                                 <div class="btn-group btn-group-sm">
                                     <a href="/shops/{{ product.shop_id }}" class="btn btn-outline-secondary" title="View Shop">

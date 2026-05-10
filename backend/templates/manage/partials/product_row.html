@@ -1,0 +1,45 @@
+<tr id="product-row-{{ product.id }}">
+    <td class="ps-4">
+        {% if product.primary_image_url %}
+        <img src="{{ product.primary_image_url }}" class="product-row-img" alt="">
+        {% else %}
+        <div class="product-row-img d-flex align-items-center justify-content-center text-muted">
+            <i class="bi bi-image"></i>
+        </div>
+        {% endif %}
+    </td>
+    <td>
+        <div class="fw-bold">{{ product.name }}</div>
+        <div class="d-flex align-items-center gap-2 mt-1">
+            {% if product.is_active %}
+            <span class="badge bg-success-subtle text-success small">Active</span>
+            {% else %}
+            <span class="badge bg-secondary-subtle text-secondary small">Inactive</span>
+            {% endif %}
+            <span class="text-muted small">#{{ product.code or 'No Code' }}</span>
+        </div>
+    </td>
+    <td class="text-center fw-semibold">
+        GHS {{ "%.2f"|format(product.price) }}
+    </td>
+    <td class="text-center" id="stock-cell-{{ product.id }}">
+        {% include "manage/partials/stock_badge.html" %}
+    </td>
+    <td class="pe-4 text-end">
+        <div class="btn-group btn-group-sm">
+            <button class="btn btn-outline-primary" 
+                    hx-get="{{ url_for('manage_bp.edit_product', product_id=product.id) }}"
+                    hx-target="#product-row-{{ product.id }}"
+                    hx-swap="outerHTML">
+                <i class="bi bi-pencil"></i>
+            </button>
+            <button class="btn btn-outline-danger"
+                    hx-post="{{ url_for('manage_bp.delete_product', product_id=product.id) }}"
+                    hx-confirm="Are you sure you want to delete '{{ product.name }}'?"
+                    hx-target="#product-row-{{ product.id }}"
+                    hx-swap="outerHTML">
+                <i class="bi bi-trash"></i>
+            </button>
+        </div>
+    </td>
+</tr>

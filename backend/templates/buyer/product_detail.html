@@ -144,21 +144,8 @@
         color: #666;
     }
 
-    /* Sticky Bottom Bar (Temu Style) */
-    .sticky-action-bar {
-        position: fixed;
-        bottom: 0;
-        left: 0;
-        right: 0;
-        background: white;
-        padding: 12px 20px;
-        display: flex;
-        gap: 12px;
-        box-shadow: 0 -5px 15px rgba(0,0,0,0.08);
-        z-index: 1000;
-        /* Adjust for mobile bottom nav if present */
-        margin-bottom: 60px; 
-    }
+    /* Sticky Bottom Bar (Temu Style) removed */
+
 
     .btn-contact {
         flex: 1;
@@ -174,17 +161,7 @@
         gap: 8px;
     }
 
-    .btn-visit-shop {
-        width: 50px;
-        height: 50px;
-        border-radius: 12px;
-        border: 1px solid #ddd;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        color: #333;
-        background: #f8f9fa;
-    }
+    /* Removed btn-visit-shop */
 
     /* Detail Tabs/Sections */
     .detail-section {
@@ -283,13 +260,6 @@
             box-shadow: none;
             border: 1px solid #eee;
         }
-
-        .sticky-action-bar {
-            position: static;
-            margin-top: 20px;
-            box-shadow: none;
-            padding: 0;
-        }
     }
 </style>
 {% endblock %}
@@ -366,7 +336,9 @@
                     </div>
                     <div class="shop-info-mini">
                         <h3 class="shop-name-mini">
-                            {{ shop.name }}
+                            <a href="{{ url_for('buyer_bp.view_shop', shop_id=shop.id) }}" class="text-decoration-none text-dark">
+                                {{ shop.name }}
+                            </a>
                             {% if shop.verification_status == 'verified' %}
                             <i class="bi bi-patch-check-fill text-primary ms-1"></i>
                             {% endif %}
@@ -378,6 +350,18 @@
                             hx-target="this"
                             hx-swap="innerHTML">
                         {% if is_following %}Following{% else %}Follow{% endif %}
+                    </button>
+                </div>
+
+                <!-- Contact Buttons -->
+                <div class="d-flex gap-2 mb-4">
+                    <button class="btn-contact flex-grow-1" onclick="window.open('tel:{{ shop.phone }}', '_self')">
+                        <i class="bi bi-telephone-fill"></i>
+                        Call Seller
+                    </button>
+                    <button class="btn-contact flex-grow-1" style="background: #25D366;" onclick="window.open('https://wa.me/{{ shop.phone }}', '_blank')">
+                        <i class="bi bi-whatsapp"></i>
+                        WhatsApp
                     </button>
                 </div>
 
@@ -413,42 +397,38 @@
                     </div>
                 </div>
 
-                <!-- Related Products -->
-                {% if related_products %}
-                <div class="detail-section">
-                    <h4 class="section-title"><i class="bi bi-grid-3x3-gap"></i> Similar Items</h4>
-                    <div class="related-grid">
-                        {% for item in related_products %}
-                        <a href="{{ url_for('buyer_bp.product_detail', product_id=item.id) }}" class="text-decoration-none text-dark">
-                            <div class="related-card">
-                                <img src="{{ item.primary_image_url or url_for('static', filename='images/mw_logo_color.png') }}" class="related-img" alt="{{ item.name }}">
-                                <div class="related-info">
-                                    <div class="related-title">{{ item.name }}</div>
-                                    <div class="related-price">GH₵ {{ "%.2f"|format(item.price) }}</div>
-                                </div>
-                            </div>
-                        </a>
-                        {% endfor %}
-                    </div>
-                </div>
-                {% endif %}
+            </div>
+        </div>
+    </div>
 
-                <!-- Sticky Action Bar (Temu Style) -->
-                <div class="sticky-action-bar">
-                    <a href="/explore/shops/{{ shop.id }}" class="btn-visit-shop">
-                        <i class="bi bi-shop fs-4"></i>
-                    </a>
-                    <button class="btn-contact" onclick="window.open('tel:{{ shop.phone }}', '_self')">
-                        <i class="bi bi-telephone-fill"></i>
-                        Call Seller
-                    </button>
-                    <button class="btn-contact" style="background: #25D366;" onclick="window.open('https://wa.me/{{ shop.phone }}', '_blank')">
-                        <i class="bi bi-whatsapp"></i>
-                        WhatsApp
-                    </button>
+    <!-- Related Products -->
+    {% if related_products %}
+    <div class="container mt-5 px-3">
+        <h4 class="section-title"><i class="bi bi-grid-3x3-gap"></i> Similar Items</h4>
+        <div class="market-grid market-grid-products">
+            {% with products=related_products, hide_load_more=True %}
+                {% include 'buyer/product_cards.html' %}
+            {% endwith %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Discovery Feed (Infinite Scroll) -->
+    <div class="container mt-5 px-3">
+        <h4 class="section-title mb-4"><i class="bi bi-compass"></i> Discover More</h4>
+        <div id="products-container" class="market-grid market-grid-products">
+            <!-- Initial HTMX call for first page -->
+            <div hx-get="{{ url_for('buyer_bp.browse_products', page=1) }}" 
+                 hx-trigger="load" 
+                 hx-swap="outerHTML">
+                <div class="text-center py-5 w-100" style="grid-column: 1 / -1;">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
                 </div>
             </div>
         </div>
+        <div id="product-load-more-container"></div>
     </div>
 </div>
 {% endblock %}

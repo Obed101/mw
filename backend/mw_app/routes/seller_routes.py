@@ -3,6 +3,8 @@ from flask_jwt_extended import jwt_required
 from ..extensions import db
 from ..models import Shop, UserFollowShop, User, Product, StockUpdate, VerificationOTP, Notification, UserFavoriteProduct, Category, USER_ROLE_ADMIN, USER_ROLE_SELLER, VERIFICATION_STATUS_VERIFIED, VERIFICATION_STATUS_UNDER_REVIEW, VERIFICATION_STATUS_PENDING
 from ..utils.helpers import seller_required
+from ..utils.threading_utils import run_in_background
+from ..services.ai_tasks import background_generate_shop_description
 from datetime import datetime, timezone
 
 seller_bp = Blueprint('seller_bp', __name__, url_prefix='/seller')
@@ -450,6 +452,64 @@ def update_shop():
         return jsonify({
             'success': False,
             'message': 'Error updating shop',
+            'error': str(e),
+        }), 500
+
+
+@seller_bp.route("/shops/<int:shop_id>/generate-ai-description", methods=["POST"])
+@seller_required
+def generate_ai_description(shop_id):
+    """Trigger AI description generation for a shop"""
+    try:
+        # seller_id comes from token usually, but here we use a helper or request param
+        # The seller_required decorator ensures the user is a seller
+        # We need to verify ownership
+        data = _request_json()
+        seller_id = _resolve_seller_id(request.args.get('seller_id', type=int), data)
+        
+        if not seller_id:
+            return jsonify({'success': False, 'message': 'Seller ID is required'}), 400
+
+        seller, shop, error_response = _load_user_and_shop(seller_id, require_shop=True)
+        if error_response:
+            return error_response
+            
+        if shop.id != shop_id:
+             return jsonify({'success': False, 'message': 'Unauthorized access to shop'}), 403
+
+        # Check quota: once per shop unless paid
+        # Check if shop has a valid subscription
+        from ..models import Subscription, SUBSCRIPTION_TYPE_SHOP
+        active_sub = Subscription.get_active_subscription(SUBSCRIPTION_TYPE_SHOP, shop.id)
+        
+        if shop.ai_description_generated and not active_sub:
+            return jsonify({
+                'success': False, 
+                'message': 'AI description already generated. Upgrade to generate again.'
+            }), 403
+
+        if shop.ai_job_status == 'running':
+            return jsonify({'success': False, 'message': 'AI generation already in progress.'}), 409
+
+        # Trigger background task
+        # We use a unique job key to prevent duplicates
+        job_key = f"shop_desc_{shop.id}"
+        
+        @run_in_background(job_key=job_key)
+        def run_task():
+            background_generate_shop_description(shop.id)
+            
+        run_task()
+
+        return jsonify({
+            'success': True,
+            'message': 'AI generation started in the background.'
+        }), 202
+
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'message': 'Error starting AI generation',
             'error': str(e),
         }), 500
 

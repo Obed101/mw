@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+
+{% block title %}Support Inbox - Admin{% endblock %}
+
+{% block content %}
+<div class="container py-4 py-lg-5">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="fw-bold mb-0">Support Inbox</h2>
+        
+        <!-- Filters -->
+        <div class="btn-group" role="group">
+            <a href="{{ url_for('support_bp.admin_support_inbox') }}" class="btn btn-outline-secondary {% if not active_status %}active{% endif %}">All</a>
+            <a href="{{ url_for('support_bp.admin_support_inbox', status='open') }}" class="btn btn-outline-success {% if active_status == 'open' %}active{% endif %}">Open</a>
+            <a href="{{ url_for('support_bp.admin_support_inbox', status='pending') }}" class="btn btn-outline-warning {% if active_status == 'pending' %}active{% endif %}">Pending</a>
+            <a href="{{ url_for('support_bp.admin_support_inbox', status='closed') }}" class="btn btn-outline-secondary {% if active_status == 'closed' %}active{% endif %}">Closed</a>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-12">
+            <div class="card shadow-sm border-0 rounded-4 overflow-hidden">
+                <div class="list-group list-group-flush" id="inbox-container">
+                    {% include "support/partials/inbox_rows.html" %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .hover-bg-light:hover {
+        background-color: #f8f9fa !important;
+    }
+</style>
+{% endblock %}

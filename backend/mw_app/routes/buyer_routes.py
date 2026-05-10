@@ -1,6 +1,7 @@
-from flask import Blueprint, jsonify, request, render_template
+import meilisearch
+from flask import Blueprint, jsonify, request, render_template, current_app, session
 from flask_login import current_user
-from sqlalchemy import or_
+from sqlalchemy import or_, nullslast
 from ..extensions import db
 from ..models import (
     Category,
@@ -15,6 +16,7 @@ from ..models import (
     UserFollowShop,
     VERIFICATION_STATUS_VERIFIED,
 )
+from ..utils.location import get_user_location, haversine_distance_expr, NEAR_YOU_KM
 
 buyer_bp = Blueprint('buyer_bp', __name__, url_prefix='/explore')
 SHOPS_PER_PAGE = 3
@@ -103,6 +105,51 @@ def _notify_shop_owner_and_admins_for_favorite(user, shop, product=None):
         exclude_user_id=user.id,
     )
 
+@buyer_bp.route('/location', methods=['POST'])
+def update_location():
+    """Store user GPS coordinates (from browser Geolocation API).
+
+    Accepts JSON: {"latitude": float, "longitude": float}
+    - If authenticated: persists to User.latitude / User.longitude
+    - Always writes to session for anonymous users too
+    - Never overwrites valid data with null; silently ignores invalid coords
+    """
+    try:
+        data = request.get_json(silent=True) or {}
+        lat = data.get('latitude')
+        lng = data.get('longitude')
+
+        # Validate bounds
+        if lat is None or lng is None:
+            return jsonify({'ok': False, 'error': 'Missing coordinates'}), 422
+        try:
+            lat = float(lat)
+            lng = float(lng)
+        except (TypeError, ValueError):
+            return jsonify({'ok': False, 'error': 'Invalid coordinate format'}), 422
+
+        if not (-90 <= lat <= 90 and -180 <= lng <= 180):
+            return jsonify({'ok': False, 'error': 'Coordinates out of range'}), 422
+
+        # Persist to user record if logged in
+        if current_user.is_authenticated:
+            current_user.latitude = lat
+            current_user.longitude = lng
+            db.session.commit()
+
+        # Always store in session (works for both anon and logged-in users)
+        session['user_lat'] = lat
+        session['user_lng'] = lng
+
+        return jsonify({'ok': True}), 200
+
+    except Exception as exc:
+        db.session.rollback()
+        current_app.logger.exception(exc)
+        # Return success anyway — location failure must never break the UI
+        return jsonify({'ok': False}), 200
+
+
 @buyer_bp.route("/")
 def buyer_dashboard():
     """Marketplace dashboard showing available products and shops"""
@@ -120,6 +167,10 @@ def browse_shops():
         user_id = _resolve_user_id(request.args.get('user_id', type=int))
         page = request.args.get('page', 1, type=int)
         per_page = request.args.get('per_page', SHOPS_PER_PAGE, type=int)
+
+        # Resolve user location for distance-aware sorting
+        user_lat, user_lng = get_user_location(current_user)
+        dist_expr = haversine_distance_expr(user_lat, user_lng) if user_lat is not None else None
 
         query = Shop.query.filter(Shop.is_active.is_(True))
         if verified_only:
@@ -143,36 +194,57 @@ def browse_shops():
 
         query = query.distinct()
 
+        # Primary sort (user choice) + location as secondary tiebreaker
         if sort_by == 'last_updated':
-            query = query.order_by(Shop.last_updated.desc())
+            primary = [Shop.last_updated.desc()]
         elif sort_by == 'promoted':
-            query = query.order_by(Shop.promoted.desc(), Shop.name.asc())
+            primary = [Shop.promoted.desc(), Shop.name.asc()]
         else:
-            query = query.order_by(Shop.name.asc())
+            primary = [Shop.name.asc()]
 
-        shops = query.paginate(page=page, per_page=per_page, error_out=False)
+        if dist_expr is not None:
+            query = query.order_by(*primary, nullslast(dist_expr.asc()))
+        else:
+            query = query.order_by(*primary)
+
+        # Annotate distance so templates can show 'Near you' badge
+        if dist_expr is not None:
+            query = query.add_columns(dist_expr.label('distance_km'))
+            shops_page = query.paginate(page=page, per_page=per_page, error_out=False)
+            shop_items = [(row[0], row[1]) for row in shops_page.items]  # (shop, dist)
+        else:
+            shops_page = query.paginate(page=page, per_page=per_page, error_out=False)
+            shop_items = [(shop, None) for shop in shops_page.items]
 
         followed_shop_ids = set()
         if user_id:
             follows = UserFollowShop.query.filter_by(user_id=user_id).all()
             followed_shop_ids = {follow.shop_id for follow in follows}
 
+        # Attach distance / near_you onto shop objects for template use
+        shops_annotated = []
+        for shop, dist_km in shop_items:
+            shop._distance_km = dist_km
+            shop._near_you = (dist_km is not None and dist_km <= NEAR_YOU_KM)
+            shops_annotated.append(shop)
+
         if _is_htmx_request():
             return render_template(
                 'buyer/shop_cards.html',
-                shops=shops.items,
+                shops=shops_annotated,
                 followed_shop_ids=followed_shop_ids,
                 user_id=user_id,
-                has_next=shops.has_next,
-                next_page=shops.next_num,
+                has_next=shops_page.has_next,
+                next_page=shops_page.next_num,
                 search_term=search_term,
                 sort_by=sort_by,
                 category_id=category_id,
                 verified_only=verified_only,
+                user_has_location=(user_lat is not None),
             )
 
         shop_rows = []
-        for shop in shops.items:
+        for shop in shops_annotated:
             shop_rows.append(
                 {
                     'id': shop.id,
@@ -185,6 +257,8 @@ def browse_shops():
                     'primary_image_url': shop.primary_image_url,
                     'is_favorited': shop.id in followed_shop_ids,
                     'verification_status': shop.verification_status,
+                    'distance_km': round(shop._distance_km, 1) if shop._distance_km is not None else None,
+                    'near_you': shop._near_you,
                 }
             )
 
@@ -192,10 +266,10 @@ def browse_shops():
             {
                 'success': True,
                 'count': len(shop_rows),
-                'total': shops.total,
-                'page': shops.page,
-                'pages': shops.pages,
-                'has_next': shops.has_next,
+                'total': shops_page.total,
+                'page': shops_page.page,
+                'pages': shops_page.pages,
+                'has_next': shops_page.has_next,
                 'shops': shop_rows,
             }
         ), 200
@@ -447,7 +521,11 @@ def browse_products():
         sort_by = request.args.get('sort_by', 'name')
         page = request.args.get('page', 1, type=int)
         per_page = request.args.get('per_page', PRODUCTS_PER_PAGE, type=int)
-        
+
+        # Resolve user location for distance-aware secondary sort
+        user_lat, user_lng = get_user_location(current_user)
+        dist_expr = haversine_distance_expr(user_lat, user_lng) if user_lat is not None else None
+
         # Track category view if user_id and category_id are provided
         if user_id and category_id:
             try:
@@ -457,24 +535,22 @@ def browse_products():
                     interaction_type='browse'
                 )
             except Exception:
-                # Don't fail the request if tracking fails
                 pass
-        
+
         query = Product.query.join(Shop).filter(
             Shop.verification_status == VERIFICATION_STATUS_VERIFIED,
             Shop.is_active.is_(True),
             Product.is_active.is_(True),
         )
-        
-        # Filter by category
+
+        # Filters
         if category_id:
             query = query.filter(Product.category_id == category_id)
-        
-        # Filter by shop
+
         shop_id = request.args.get('shop_id', type=int)
         if shop_id:
             query = query.filter(Product.shop_id == shop_id)
-        
+
         min_price = request.args.get('min_price', type=float)
         max_price = request.args.get('max_price', type=float)
         if min_price is not None:
@@ -495,36 +571,56 @@ def browse_products():
                 )
             )
 
+        # Primary sort (user choice) + location as secondary tiebreaker
         if sort_by == 'price':
-            query = query.order_by(Product.price.asc())
+            primary = [Product.price.asc()]
         elif sort_by == 'price_desc':
-            query = query.order_by(Product.price.desc())
+            primary = [Product.price.desc()]
         elif sort_by == 'stock':
-            query = query.order_by(Product.stock.desc())
+            primary = [Product.stock.desc()]
         elif sort_by == 'newest':
-            query = query.order_by(Product.created_at.desc())
+            primary = [Product.created_at.desc()]
         else:
-            query = query.order_by(Product.name.asc())
+            primary = [Product.name.asc()]
 
-        products = query.paginate(page=page, per_page=per_page, error_out=False)
+        if dist_expr is not None:
+            query = query.order_by(*primary, nullslast(dist_expr.asc()))
+        else:
+            query = query.order_by(*primary)
+
+        # Annotate distance for Near You badge
+        if dist_expr is not None:
+            query = query.add_columns(dist_expr.label('distance_km'))
+            products_page = query.paginate(page=page, per_page=per_page, error_out=False)
+            product_items = [(row[0], row[1]) for row in products_page.items]
+        else:
+            products_page = query.paginate(page=page, per_page=per_page, error_out=False)
+            product_items = [(p, None) for p in products_page.items]
+
         favorite_product_ids = set()
         if user_id:
             try:
                 favorites = UserFavoriteProduct.query.filter_by(user_id=user_id).all()
                 favorite_product_ids = {favorite.product_id for favorite in favorites}
             except Exception:
-                # Keep product listing functional even if favorite tables are not migrated yet.
                 db.session.rollback()
                 favorite_product_ids = set()
+
+        # Attach distance / near_you onto product objects for template use
+        products_annotated = []
+        for product, dist_km in product_items:
+            product._distance_km = dist_km
+            product._near_you = (dist_km is not None and dist_km <= NEAR_YOU_KM)
+            products_annotated.append(product)
 
         if _is_htmx_request():
             return render_template(
                 'buyer/product_cards.html',
-                products=products.items,
+                products=products_annotated,
                 favorite_product_ids=favorite_product_ids,
                 user_id=user_id,
-                has_next=products.has_next,
-                next_page=products.next_num,
+                has_next=products_page.has_next,
+                next_page=products_page.next_num,
                 search_term=search_term,
                 category_id=category_id,
                 shop_id=shop_id,
@@ -532,10 +628,11 @@ def browse_products():
                 max_price=max_price,
                 in_stock=in_stock,
                 sort_by=sort_by,
+                user_has_location=(user_lat is not None),
             )
 
         products_list = []
-        for product in products.items:
+        for product in products_annotated:
             products_list.append(
                 {
                     'id': product.id,
@@ -548,18 +645,20 @@ def browse_products():
                     'image_urls': product.image_urls,
                     'primary_image_url': product.primary_image_url,
                     'is_favorited': product.id in favorite_product_ids,
+                    'distance_km': round(product._distance_km, 1) if product._distance_km is not None else None,
+                    'near_you': product._near_you,
                 }
             )
 
         return jsonify({
             'success': True,
-            'total': products.total,
-            'page': products.page,
-            'pages': products.pages,
+            'total': products_page.total,
+            'page': products_page.page,
+            'pages': products_page.pages,
             'count': len(products_list),
             'products': products_list
         }), 200
-        
+
     except Exception as e:
         return jsonify({
             'success': False,
@@ -627,11 +726,62 @@ def view_product(product_id):
             'error': str(e)
         }), 500
 
-@buyer_bp.route("/products/search")
-def search_products():
-    """Search products by name across all shops"""
-    # Query params: q (search query), shop_id, min_price, max_price
-    return jsonify({"message": "Search products"})
+@buyer_bp.route("/global-search")
+def global_search():
+    """Global search across products, shops, and categories using MeiliSearch."""
+    q = request.args.get('q', '').strip()
+    if len(q) < 2:
+        return ""
+
+    products_hits = []
+    shops_hits = []
+    categories_hits = []
+
+    try:
+        # Connect to MeiliSearch
+        ms_url = current_app.config.get('MEILISEARCH_URL', 'http://127.0.0.1:7700')
+        ms_key = current_app.config.get('MEILISEARCH_KEY', 'masterKey')
+        client = meilisearch.Client(ms_url, ms_key)
+
+        # Execute searches (handles typo tolerance naturally)
+        products_res = client.index('products').search(q, {'limit': 5})
+        products_hits = products_res.get('hits', [])
+
+        shops_res = client.index('shops').search(q, {'limit': 3})
+        shops_hits = shops_res.get('hits', [])
+
+        categories_res = client.index('categories').search(q, {'limit': 3})
+        categories_hits = categories_res.get('hits', [])
+
+    except Exception as e:
+        # Fallback to DB search if MeiliSearch is unavailable
+        products_db = Product.query.filter(
+            Product.name.ilike(f'%{q}%'), 
+            Product.is_active.is_(True)
+        ).limit(5).all()
+        
+        shops_db = Shop.query.filter(
+            Shop.name.ilike(f'%{q}%'), 
+            Shop.is_active.is_(True)
+        ).limit(3).all()
+        
+        categories_db = Category.query.filter(
+            Category.name.ilike(f'%{q}%'), 
+            Category.is_active.is_(True)
+        ).limit(3).all()
+
+        # Format exactly like MeiliSearch hits for the template
+        products_hits = [{'id': p.id, 'name': p.name, 'price': p.price, 'primary_image_url': p.primary_image_url, 'shop_name': p.shop.name if p.shop else ''} for p in products_db]
+        shops_hits = [{'id': s.id, 'name': s.name, 'town': s.town, 'primary_image_url': s.primary_image_url} for s in shops_db]
+        categories_hits = [{'id': c.id, 'name': c.name} for c in categories_db]
+
+    return render_template(
+        'public/partials/global_search_results.html',
+        products=products_hits,
+        shops=shops_hits,
+        categories=categories_hits,
+        query=q
+    )
 
 @buyer_bp.route("/products/compare")
 def compare_prices():

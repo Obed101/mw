@@ -60,8 +60,9 @@ def create_app():
     migrate = Migrate()
     migrate.init_app(app, db)
 
-    # Register blueprints with proper URL prefixes
     from .routes import admin_bp, seller_bp, buyer_bp, auth_bp
+    from .routes.manage_routes import manage_bp
+    from .routes.support_routes import support_bp
     from .routes.template_routes import main_bp, admin_bp as admin_template_bp, seller_bp as seller_template_bp, buyer_bp as buyer_template_bp, auth_bp as auth_template_bp
     
     # Template routes (for HTMX)
@@ -70,6 +71,8 @@ def create_app():
     app.register_blueprint(seller_template_bp)
     app.register_blueprint(buyer_template_bp)
     app.register_blueprint(auth_template_bp)
+    app.register_blueprint(manage_bp)
+    app.register_blueprint(support_bp)
     
     # API routes
     app.register_blueprint(admin_bp, url_prefix='/api/admin')

@@ -8,8 +8,8 @@
         <div class="col-12 d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3">
             <h1 class="fw-bold">Shops</h1>
             <div class="align-items-center gap-3">
-                <a href="{{ url_for('main_bp.add_shop') if current_user.is_authenticated else url_for('main_bp.login', next=url_for('main_bp.add_shop')) }}" class="btn btn-primary fw-bold">
-                    <i class="bi bi-shop-window me-2"></i>ADD SHOP
+                <a href="{{ url_for('main_bp.add_shop', new=1) if current_user.is_authenticated else url_for('main_bp.login', next=url_for('main_bp.add_shop', new=1)) }}" class="btn btn-sm btn-primary">
+                    <i class="bi bi-plus-lg me-1"></i>Add Shop
                 </a>
             </div>
         </div>
@@ -116,6 +116,12 @@
             </div>
             <p class="mt-2 text-mw">Loading shops...</p>
         </div>
+    </div>
+    <div id="shops-load-spinner" class="htmx-indicator text-center py-3">
+        <div class="spinner-border spinner-border-sm text-primary" role="status">
+            <span class="visually-hidden">Loading more shops...</span>
+        </div>
+        <span class="ms-2 text-muted small">Loading more shops...</span>
     </div>
 
     <div class="text-center mt-4" id="load-more-container"></div>

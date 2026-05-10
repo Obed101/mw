@@ -21,6 +21,8 @@ from .subscription_model import Subscription, \
     SUBSCRIPTION_TYPE_USER, SUBSCRIPTION_TYPE_PRODUCT, SUBSCRIPTION_TYPE_SHOP, \
     VALID_SUBSCRIPTION_TYPES
 from .engagement_model import UserFavoriteProduct, Notification
+from .support_model import SupportConversation, SupportMessage, \
+    CONVERSATION_STATUS_OPEN, CONVERSATION_STATUS_PENDING, CONVERSATION_STATUS_CLOSED
 
 # Make these available at the package level
 __all__ = [
@@ -31,6 +33,7 @@ __all__ = [
     'Category',
     'Subscription',
     'UserFavoriteProduct', 'Notification',
+    'SupportConversation', 'SupportMessage',
     
     # Constants
     'USER_STATUS_ACTIVE', 'USER_STATUS_SUSPENDED', 'USER_STATUS_PENDING',
@@ -44,5 +47,6 @@ __all__ = [
     'VERIFICATION_STATUS_REJECTED', 'VERIFICATION_STATUS_SUSPENDED', 'VALID_VERIFICATION_STATUSES',
     'MAX_SHOP_IMAGES', 'MAX_PRODUCT_IMAGES',
     'SUBSCRIPTION_TYPE_USER', 'SUBSCRIPTION_TYPE_PRODUCT', 'SUBSCRIPTION_TYPE_SHOP',
-    'VALID_SUBSCRIPTION_TYPES'
+    'VALID_SUBSCRIPTION_TYPES',
+    'CONVERSATION_STATUS_OPEN', 'CONVERSATION_STATUS_PENDING', 'CONVERSATION_STATUS_CLOSED'
 ]

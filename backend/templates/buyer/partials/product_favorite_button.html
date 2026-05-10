@@ -4,6 +4,7 @@
     <button
         type="button"
         class="btn btn-sm btn-outline-primary favorite-toggle-btn"
+        onclick="event.preventDefault(); event.stopPropagation();"
         hx-post="{{ url_for('buyer_bp.favorite_product', product_id=product_id) }}"
         hx-target="closest .favorite-product-wrapper"
         hx-swap="outerHTML">

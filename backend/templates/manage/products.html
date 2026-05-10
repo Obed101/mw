@@ -1,0 +1,107 @@
+{% extends "manage/base_manage.html" %}
+
+{% block manage_styles %}
+<style>
+    .product-row-img {
+        width: 48px;
+        height: 48px;
+        object-fit: cover;
+        border-radius: 8px;
+        background: #f3f4f6;
+    }
+    .stock-control {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        background: #f9fafb;
+        border: 1px solid #e5e7eb;
+        border-radius: 8px;
+        padding: 2px 4px;
+    }
+    .stock-btn {
+        width: 24px;
+        height: 24px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 4px;
+        border: none;
+        background: white;
+        color: #4b5563;
+        font-weight: bold;
+        transition: all 0.2s;
+    }
+    .stock-btn:hover {
+        background: #ede9fe;
+        color: #6d28d9;
+    }
+    .add-panel {
+        display: none;
+    }
+    .add-panel.show {
+        display: block;
+    }
+</style>
+{% endblock %}
+
+{% block manage_content %}
+<!-- Search & Filter Controls -->
+<div class="card-manage mb-4">
+    <div class="p-3 bg-white border-bottom d-flex flex-wrap gap-3 align-items-center justify-content-between">
+        <div class="d-flex gap-2 flex-grow-1" style="min-width: 250px;">
+            <div class="input-group input-group-sm">
+                <span class="input-group-text bg-white border-end-0"><i class="bi bi-search"></i></span>
+                <input type="text" name="search" class="form-control border-start-0" 
+                       placeholder="Search products..."
+                       hx-get="{{ url_for('manage_bp.product_list') }}"
+                       hx-trigger="keyup changed delay:300ms, search"
+                       hx-target="#product-list-container"
+                       hx-indicator=".htmx-indicator">
+            </div>
+            <select name="filter" class="form-select form-select-sm w-auto"
+                    hx-get="{{ url_for('manage_bp.product_list') }}"
+                    hx-target="#product-list-container">
+                <option value="all">All Status</option>
+                <option value="active">Active</option>
+                <option value="inactive">Inactive</option>
+                <option value="low">Low Stock</option>
+                <option value="out">Out of Stock</option>
+            </select>
+        </div>
+        <button class="btn btn-primary btn-sm" onclick="document.getElementById('add-product-panel').classList.toggle('show')">
+            <i class="bi bi-plus-lg me-1"></i>Add Product
+        </button>
+    </div>
+
+    <!-- Add Product Panel (HTMX Slide-in/Toggle) -->
+    <div id="add-product-panel" class="add-panel border-bottom bg-light">
+        <div class="p-4">
+            <h4 class="h6 fw-bold mb-3">Quick Add Product</h4>
+            {% include 'manage/partials/product_form_add.html' %}
+        </div>
+    </div>
+
+    <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+            <thead class="bg-light">
+                <tr>
+                    <th class="ps-4 py-3 text-muted small fw-bold" style="width: 50px;">Item</th>
+                    <th class="py-3 text-muted small fw-bold">Name & Status</th>
+                    <th class="py-3 text-muted small fw-bold text-center" style="width: 120px;">Price</th>
+                    <th class="py-3 text-muted small fw-bold text-center" style="width: 150px;">Stock</th>
+                    <th class="pe-4 py-3 text-muted small fw-bold text-end" style="width: 150px;">Actions</th>
+                </tr>
+            </thead>
+            <tbody id="product-list-container" hx-get="{{ url_for('manage_bp.product_list') }}" hx-trigger="load">
+                <!-- HTMX loaded content -->
+                <tr>
+                    <td colspan="5" class="text-center py-5">
+                        <div class="spinner-border text-primary htmx-indicator" role="status"></div>
+                        <span class="ms-2">Loading inventory...</span>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

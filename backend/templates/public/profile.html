@@ -404,9 +404,17 @@
                                         <i class="bi bi-shield-check me-1"></i>{{ shop.verification_status|replace('_', ' ')|title }}
                                     </div>
                                 </div>
-                                <a href="{{ url_for('seller_template_bp.seller_shop_preview', shop_id=shop.id) }}" class="btn btn-outline-primary btn-sm">
-                                    <i class="bi bi-eye me-1"></i>View Shop
-                                </a>
+                                <div class="d-flex gap-2 flex-wrap">
+                                    <a href="{{ url_for('seller_template_bp.seller_shop_preview', shop_id=shop.id) }}" class="btn btn-outline-primary btn-sm">
+                                        <i class="bi bi-eye me-1"></i>Public View
+                                    </a>
+                                    <form action="{{ url_for('manage_bp.switch_shop', shop_id=shop.id) }}" method="POST" class="m-0">
+                                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                        <button type="submit" class="btn btn-primary btn-sm">
+                                            <i class="bi bi-gear me-1"></i>Manage
+                                        </button>
+                                    </form>
+                                </div>
                             </div>
                         </div>
                         {% endfor %}

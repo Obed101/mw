@@ -1,0 +1,85 @@
+{% extends "base.html" %}
+
+{% block title %}My Support Conversations - Market Window{% endblock %}
+
+{% block content %}
+<div class="container py-4 py-lg-5">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="fw-bold mb-0">My Support Conversations</h2>
+        <a href="{{ url_for('support_bp.contact') }}" class="btn btn-primary rounded-pill d-flex align-items-center gap-2">
+            <i class="bi bi-plus-lg"></i> <span class="d-none d-sm-inline">New Conversation</span>
+        </a>
+    </div>
+
+    <div class="row">
+        <div class="col-12">
+            {% if conversations %}
+            <div class="list-group list-group-flush rounded-4 shadow-sm bg-white overflow-hidden border-0">
+                {% for conv in conversations %}
+                {% set last_msg = conv.messages[-1] if conv.messages else none %}
+                {% set unread_count = conv.messages | selectattr('is_admin', 'equalto', true) | selectattr('is_read', 'equalto', false) | list | length %}
+                <a href="{{ url_for('support_bp.my_support_chat', id=conv.id) }}" class="list-group-item list-group-item-action p-4 border-bottom position-relative hover-bg-light transition-all">
+                    <div class="d-flex w-100 justify-content-between align-items-center mb-2">
+                        <h6 class="mb-0 fw-bold text-truncate w-75 pe-3">
+                            {{ conv.subject or 'Support Ticket #' ~ conv.id }}
+                        </h6>
+                        <small class="text-muted text-nowrap">{{ conv.updated_at.strftime('%b %d, %Y') }}</small>
+                    </div>
+                    
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div class="text-muted text-truncate w-75 pe-3 small">
+                            {% if last_msg %}
+                                {% if last_msg.is_admin %}
+                                    <span class="text-primary fw-medium">Support:</span> 
+                                {% else %}
+                                    <span class="text-secondary fw-medium">You:</span> 
+                                {% endif %}
+                                {% if last_msg.is_deleted %}
+                                    <i class="bi bi-slash-circle me-1"></i>Deleted Message
+                                {% else %}
+                                    {{ last_msg.message | truncate(80) }}
+                                {% endif %}
+                            {% else %}
+                                <i>No messages yet.</i>
+                            {% endif %}
+                        </div>
+                        <div class="d-flex align-items-center gap-2">
+                            {% if conv.status == 'open' %}
+                                <span class="badge bg-success-subtle text-success rounded-pill px-3 fw-medium">Open</span>
+                            {% elif conv.status == 'pending' %}
+                                <span class="badge bg-warning-subtle text-warning rounded-pill px-3 fw-medium">Pending</span>
+                            {% else %}
+                                <span class="badge bg-secondary-subtle text-secondary rounded-pill px-3 fw-medium">Closed</span>
+                            {% endif %}
+                            
+                            {% if unread_count > 0 %}
+                                <span class="badge bg-danger rounded-pill">{{ unread_count }}</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                </a>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="text-center py-5 bg-white rounded-4 shadow-sm border-0">
+                <div class="text-muted mb-3">
+                    <i class="bi bi-inbox fs-1"></i>
+                </div>
+                <h5>No support conversations yet</h5>
+                <p class="text-muted mb-4">If you have any questions or issues, feel free to reach out.</p>
+                <a href="{{ url_for('support_bp.contact') }}" class="btn btn-outline-primary rounded-pill px-4">Contact Support</a>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<style>
+    .hover-bg-light:hover {
+        background-color: #f8f9fa !important;
+    }
+    .transition-all {
+        transition: all 0.2s ease-in-out;
+    }
+</style>
+{% endblock %}

@@ -92,64 +92,62 @@
     }
 
     .seller-setup-shell .step-chip-list {
-        display: grid;
-        grid-template-columns: repeat(4, minmax(0, 1fr));
-        gap: 0.75rem;
+        display: flex;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 0.35rem;
+        width: fit-content;
+        max-width: 100%;
     }
 
     .seller-setup-shell .step-chip {
-        width: 100%;
-        text-align: left;
-        border-radius: 1rem;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+        border-radius: 999px;
         border: 1px solid var(--setup-line);
         background: var(--setup-surface-soft);
-        padding: 0.8rem 0.9rem;
-        transition: transform 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
+        padding: 0.28rem 0.58rem 0.28rem 0.45rem;
+        font-size: 0.74rem;
+        line-height: 1;
+        white-space: nowrap;
+        transition: border-color 0.18s ease, box-shadow 0.18s ease, background 0.18s ease;
     }
 
     .seller-setup-shell .step-chip.is-active {
-        border-color: rgba(92, 103, 222, 0.38);
+        border-color: rgba(92, 103, 222, 0.44);
         background: var(--setup-accent-soft);
-        box-shadow: 0 12px 24px rgba(92, 103, 222, 0.14);
-        transform: translateY(-1px);
+        box-shadow: 0 5px 14px rgba(92, 103, 222, 0.14);
     }
 
     .seller-setup-shell .step-chip.is-complete {
-        border-color: rgba(123, 97, 217, 0.22);
-        background: rgba(247, 242, 255, 0.95);
+        border-color: rgba(123, 97, 217, 0.28);
+        background: rgba(247, 242, 255, 0.98);
     }
 
     .seller-setup-shell .step-chip.is-locked {
-        opacity: 0.52;
+        opacity: 0.54;
         cursor: not-allowed;
     }
 
     .seller-setup-shell .step-chip__count {
-        width: 1.9rem;
-        height: 1.9rem;
+        width: 1.05rem;
+        height: 1.05rem;
         border-radius: 999px;
         display: inline-flex;
         align-items: center;
         justify-content: center;
         background: #fff;
-        border: 1px solid rgba(15, 23, 42, 0.08);
-        font-size: 0.82rem;
+        border: 1px solid rgba(15, 23, 42, 0.1);
+        font-size: 0.64rem;
         font-weight: 700;
-        margin-bottom: 0.55rem;
+        flex-shrink: 0;
     }
 
     .seller-setup-shell .step-chip__title {
-        display: block;
         color: var(--setup-ink);
         font-weight: 700;
-        font-size: 0.95rem;
-    }
-
-    .seller-setup-shell .step-chip__hint {
-        display: block;
-        color: var(--setup-muted);
-        font-size: 0.77rem;
-        margin-top: 0.18rem;
+        font-size: 0.73rem;
     }
 
     .seller-setup-shell .setup-card {
@@ -418,7 +416,6 @@
     }
 
     @media (max-width: 991.98px) {
-        .seller-setup-shell .step-chip-list,
         .seller-setup-shell .summary-grid,
         .seller-setup-shell .upload-shell {
             grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -431,7 +428,6 @@
             padding: 1rem;
         }
 
-        .seller-setup-shell .step-chip-list,
         .seller-setup-shell .summary-grid,
         .seller-setup-shell .upload-shell {
             grid-template-columns: minmax(0, 1fr);
@@ -534,7 +530,6 @@
                         </template>
                     </span>
                     <span class="step-chip__title" x-text="stepTitles[step]"></span>
-                    <span class="step-chip__hint" x-text="stepHints[step]"></span>
                 </button>
             </template>
         </div>
@@ -919,16 +914,10 @@
         return {
             stepOrder: ['basic', 'image', 'contact', 'description'],
             stepTitles: {
-                basic: 'Basic Info',
-                image: 'Front Image',
-                contact: 'Contact Info',
-                description: 'Description',
-            },
-            stepHints: {
-                basic: 'Name, pin, and directions',
-                image: 'A quick photo',
-                contact: 'How buyers reach you',
-                description: 'What you sell',
+                basic: 'Basic',
+                image: 'Image',
+                contact: 'Contact',
+                description: 'About',
             },
             activeStep: config.activeStep || 'basic',
             stepState: config.setupState || {},

@@ -58,6 +58,15 @@ class Product(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.now(timezone.utc))
     updated_at = db.Column(db.DateTime, default=datetime.now(timezone.utc), onupdate=datetime.now(timezone.utc))
 
+    def __init__(self, **kwargs):
+        super(Product, self).__init__(**kwargs)
+        if not self.code:
+            self.code = self.generate_code()
+
+    # AI tracking fields
+    ai_tag_hash = db.Column(db.String(64))
+    ai_job_status = db.Column(db.String(20), default='idle')  # idle, running, failed
+
     # Foreign key: Product belongs to a Shop
     shop_id = db.Column(db.Integer, db.ForeignKey("shop.id"), nullable=False)
     shop = db.relationship("Shop", backref="products")
@@ -124,13 +133,15 @@ class Product(db.Model):
     def __repr__(self):
         return f'<Product {self.name}>'
 
-    def generate_code():
+    @classmethod
+    def generate_code(cls):
         """Generate a unique 8-character alphanumeric code for the product"""
         import random
         import string
         while True:
             code = ''.join(random.choices(string.ascii_letters + string.digits, k=8))
-            if not Product.query.filter_by(code=code).first():
+            # Note: This requires an active app context and DB session
+            if not db.session.query(cls).filter_by(code=code).first():
                 return code
 
     def is_low_stock(self, threshold=10):

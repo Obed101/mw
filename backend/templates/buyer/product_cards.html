@@ -9,6 +9,11 @@
                     <span class="badge product-qty-badge">
                         <i class="bi bi-box-seam me-1"></i>{{ product.stock }} available
                     </span>
+                    {% if product._near_you is defined and product._near_you %}
+                    <span class="position-absolute top-0 start-0 m-2 badge rounded-pill near-you-badge">
+                        <i class="bi bi-geo-alt-fill me-1"></i>Near you
+                    </span>
+                    {% endif %}
                 </div>
                 <div class="card-body product-card-body-compact">
                     <div class="d-flex justify-content-between align-items-start mb-2">
@@ -53,15 +58,19 @@
 </div>
 {% endif %}
 
+{% if not hide_load_more %}
 <div class="text-center mt-4" id="product-load-more-container" hx-swap-oob="true">
     {% if has_next %}
-    <button
-        class="btn btn-primary"
+    <div
         hx-get="{{ url_for('buyer_bp.browse_products', page=next_page, search=search_term, category_id=category_id, shop_id=shop_id, min_price=min_price, max_price=max_price, in_stock=in_stock, sort_by=sort_by) }}"
-        hx-target="#products-container"
+        hx-trigger="revealed"
         hx-swap="beforeend"
+        hx-target="#products-container"
     >
-        <i class="bi bi-arrow-down-circle me-2"></i>Load More Products
-    </button>
+        <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Loading...</span>
+        </div>
+    </div>
     {% endif %}
 </div>
+{% endif %}

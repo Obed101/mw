@@ -20,12 +20,11 @@
                             {% if current_user.is_authenticated and current_user.role == 'buyer' %}
                             <button
                                 type="button"
-                                class="btn btn-sm {% if shop_is_favorited %}btn-outline-danger{% else %}btn-outline-primary{% endif %} favorite-toggle-btn"
+                                class="btn btn-sm rounded-pill px-3 btn-outline-primary favorite-toggle-btn"
                                 hx-post="{{ url_for('buyer_bp.follow_shop', shop_id=shop.id, text_only=True) }}"
                                 hx-target="this"
-                                hx-swap="innerHTML"
-                            >
-                                <span class="favorite-btn-label">{% if shop_is_favorited %}Following{% else %}Follow{% endif %}</span>
+                                hx-swap="innerHTML">
+                                {% if shop_is_favorited %}Following{% else %}Follow{% endif %}
                             </button>
                             {% endif %}
                             {% if shop.promoted %}
@@ -45,10 +44,11 @@
 
                     <div class="text-center mt-4 fw-bold">Items sold here</div>
                     {% if shop_categories %}
-                    <div class="shop-category-scroll">
+                    <div class="shop-category-scroll mt-2">
                         {% for category in shop_categories %}
-                        <a href="{{ url_for('main_bp.categories', category_id=category.id) }}" class="badg rounded-pll text-bg-primary-subtle text-primary-emphasis text-decoration-none shop-category-chp">
-                            {{ category.name }},
+                        <a href="{{ url_for('main_bp.categories', category_id=category.id) }}"
+                           class="badge rounded-pill text-decoration-none shop-category-pill">
+                            {{ category.name }}
                         </a>
                         {% endfor %}
                     </div>

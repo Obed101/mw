@@ -14,3 +14,6 @@ werkzeug==2.3.7
 wtforms==3.0.1
 email-validator==2.0.0
 bleach==6.0.0
+meilisearch==0.31.1
+google-generativeai==0.3.2
+tenacity==8.2.3

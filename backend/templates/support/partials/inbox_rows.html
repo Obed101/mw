@@ -1,0 +1,62 @@
+{% if conversations %}
+    {% for conv in conversations %}
+    {% set last_msg = conv.messages[-1] if conv.messages else none %}
+    {% set unread_count = conv.messages | selectattr('is_admin', 'equalto', false) | selectattr('is_read', 'equalto', false) | list | length %}
+    
+    <a href="{{ url_for('support_bp.admin_support_chat', id=conv.id) }}" class="list-group-item list-group-item-action p-3 p-md-4 border-bottom hover-bg-light transition-all position-relative">
+        
+        {% if unread_count > 0 %}
+            <span class="position-absolute top-0 start-0 w-100 h-100 border-start border-4 border-primary" style="pointer-events: none; opacity: 0.8;"></span>
+        {% endif %}
+        
+        <div class="d-flex w-100 justify-content-between align-items-center mb-2">
+            <div class="d-flex align-items-center gap-2">
+                <span class="badge bg-secondary rounded-pill" style="font-size: 0.7rem;">#{{ conv.id }}</span>
+                <h6 class="mb-0 fw-bold text-truncate" style="max-width: 250px;">
+                    {{ conv.subject or 'No Subject' }}
+                </h6>
+                <span class="text-muted mx-1">&bull;</span>
+                <span class="text-primary fw-medium small">{{ conv.user.username }}</span>
+            </div>
+            
+            <div class="d-flex align-items-center gap-2">
+                <small class="text-muted text-nowrap d-none d-md-block">{{ conv.updated_at.strftime('%b %d, %H:%M') }}</small>
+                {% if conv.status == 'open' %}
+                    <span class="badge bg-success-subtle text-success rounded-pill px-2">Open</span>
+                {% elif conv.status == 'pending' %}
+                    <span class="badge bg-warning-subtle text-warning rounded-pill px-2">Pending</span>
+                {% else %}
+                    <span class="badge bg-secondary-subtle text-secondary rounded-pill px-2">Closed</span>
+                {% endif %}
+            </div>
+        </div>
+        
+        <div class="d-flex justify-content-between align-items-center">
+            <div class="text-muted text-truncate w-75 pe-3 small">
+                {% if last_msg %}
+                    {% if last_msg.is_admin %}
+                        <i class="bi bi-reply-fill text-muted me-1"></i>
+                    {% endif %}
+                    {% if last_msg.is_deleted %}
+                        <i class="bi bi-slash-circle me-1"></i>Deleted Message
+                    {% else %}
+                        {{ last_msg.message | truncate(100) }}
+                    {% endif %}
+                {% else %}
+                    <i>No messages.</i>
+                {% endif %}
+            </div>
+            
+            {% if unread_count > 0 %}
+                <span class="badge bg-danger rounded-pill shadow-sm">{{ unread_count }} new</span>
+            {% endif %}
+        </div>
+    </a>
+    {% endfor %}
+{% else %}
+    <div class="text-center py-5">
+        <div class="text-muted mb-3"><i class="bi bi-check2-circle fs-1"></i></div>
+        <h5>Inbox Zero!</h5>
+        <p class="text-muted mb-0">There are no support conversations matching this filter.</p>
+    </div>
+{% endif %}

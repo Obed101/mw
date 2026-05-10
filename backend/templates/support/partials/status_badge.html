@@ -1,0 +1,7 @@
+{% if conversation.status == 'open' %}
+    <span class="badge bg-success-subtle text-success rounded-pill px-2">Open</span>
+{% elif conversation.status == 'pending' %}
+    <span class="badge bg-warning-subtle text-warning rounded-pill px-2">Pending</span>
+{% else %}
+    <span class="badge bg-secondary-subtle text-secondary rounded-pill px-2">Closed</span>
+{% endif %}

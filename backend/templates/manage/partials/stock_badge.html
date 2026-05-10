@@ -1,0 +1,22 @@
+<div class="d-flex flex-column align-items-center gap-1">
+    <div class="stock-control">
+        <form hx-post="{{ url_for('manage_bp.quick_stock_update', product_id=product.id) }}" 
+              hx-target="#stock-cell-{{ product.id }}" class="m-0">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="hidden" name="change" value="-1">
+            <button type="submit" class="stock-btn"><i class="bi bi-dash"></i></button>
+        </form>
+        <span class="fw-bold px-2">{{ product.stock }}</span>
+        <form hx-post="{{ url_for('manage_bp.quick_stock_update', product_id=product.id) }}" 
+              hx-target="#stock-cell-{{ product.id }}" class="m-0">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="hidden" name="change" value="1">
+            <button type="submit" class="stock-btn"><i class="bi bi-plus"></i></button>
+        </form>
+    </div>
+    {% if product.stock <= 0 %}
+    <span class="text-danger x-small fw-bold text-uppercase">Out of stock</span>
+    {% elif product.stock <= 10 %}
+    <span class="text-warning x-small fw-bold text-uppercase">Low stock</span>
+    {% endif %}
+</div>

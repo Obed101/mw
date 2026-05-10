@@ -39,6 +39,9 @@ class User(db.Model, UserMixin):
     district = db.Column(db.String(100))
     town = db.Column(db.String(100))
     address = db.Column(db.String(255))
+    # GPS coordinates — captured from browser Geolocation API
+    latitude = db.Column(db.Float, nullable=True)
+    longitude = db.Column(db.Float, nullable=True)
     
     # Account status and timestamps
     is_email_verified = db.Column(db.Boolean, default=False)
@@ -83,12 +86,12 @@ class User(db.Model, UserMixin):
     # Status management
     def activate(self):
         """Activate the user account."""
-        self.status = UserStatus.ACTIVE
+        self.status = USER_STATUS_ACTIVE
         self.updated_at = datetime.now(timezone.utc)
 
     def suspend(self):
         """Suspend the user account."""
-        self.status = UserStatus.SUSPENDED
+        self.status = USER_STATUS_SUSPENDED
         self.updated_at = datetime.now(timezone.utc)
 
     def is_active(self):
@@ -187,14 +190,6 @@ class User(db.Model, UserMixin):
                 recommended_categories.append(cat_dict)
         
         return recommended_categories
-    
-    def set_password(self, password):
-        """Hash and set the password"""
-        self.password_hash = generate_password_hash(password)
-    
-    def check_password(self, password):
-        """Check if provided password matches the hash"""
-        return check_password_hash(self.password_hash, password)
     
     def make_premium(self):
         """Upgrade user to premium status"""

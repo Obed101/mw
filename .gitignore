@@ -23,6 +23,10 @@ sdist/
 var/
 *.egg-info/
 *.egg
+**/versions/*
+**/database.sqlite
+**/data.ms/*
+
 
 # Flask / config
 instance/
@@ -53,3 +57,9 @@ pnpm-debug.log*
 # OS-specific
 .DS_Store
 Thumbs.db
+
+# Uploads & Media
+uploads/
+backend/mw_app/static/uploads/
+**/uploads/
+*meilisearch.exe
