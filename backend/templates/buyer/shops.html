@@ -15,8 +15,7 @@
         </div>
     </div>
 
-    <div x-data="{ showExtraCriteria: false, verifiedOnly: true }" class="mb-4">
-        <input type="hidden" name="verified_only" :value="verifiedOnly ? 'true' : 'false'">
+    <div x-data="{ showExtraCriteria: false }" class="mb-4">
         <div class="row g-3 align-items-center">
             <div class="col-md-8">
                 <div class="input-group">
@@ -29,7 +28,7 @@
                         hx-get="{{ url_for('buyer_bp.browse_shops') }}"
                         hx-trigger="keyup changed delay:400ms"
                         hx-target="#shops-container"
-                        hx-include="[name='sort_by'], [name='category_id'], [name='verified_only']"
+                        hx-include="[name='sort_by'], [name='category_id']"
                         hx-swap="innerHTML"
                     >
                 </div>
@@ -55,7 +54,7 @@
                     hx-get="{{ url_for('buyer_bp.browse_shops') }}"
                     hx-trigger="change"
                     hx-target="#shops-container"
-                    hx-include="[name='search'], [name='sort_by'], [name='verified_only']"
+                    hx-include="[name='search'], [name='sort_by']"
                     hx-swap="innerHTML"
                 >
                     <option value="">All Categories</option>
@@ -71,33 +70,13 @@
                     hx-get="{{ url_for('buyer_bp.browse_shops') }}"
                     hx-trigger="change"
                     hx-target="#shops-container"
-                    hx-include="[name='search'], [name='category_id'], [name='verified_only']"
+                    hx-include="[name='search'], [name='category_id']"
                     hx-swap="innerHTML"
                 >
                     <option value="name" selected>Sort by Name</option>
                     <option value="last_updated">Newest</option>
                     <option value="promoted">Promoted First</option>
                 </select>
-            </div>
-            <div class="col-md-6">
-                <div class="form-check form-switch d-flex align-items-center gap-2 mt-2">
-                    <input
-                        class="form-check-input"
-                        type="checkbox"
-                        role="switch"
-                        id="verified-only-toggle"
-                        x-model="verifiedOnly"
-                        checked
-                        hx-get="{{ url_for('buyer_bp.browse_shops') }}"
-                        hx-trigger="change"
-                        hx-target="#shops-container"
-                        hx-include="[name='search'], [name='category_id'], [name='sort_by'], [name='verified_only']"
-                        hx-swap="innerHTML"
-                    >
-                    <label class="form-check-label fw-semibold" for="verified-only-toggle">
-                        Verified Shops Only
-                    </label>
-                </div>
             </div>
         </div>
     </div>

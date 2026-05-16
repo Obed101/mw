@@ -315,26 +315,6 @@
         padding: 1.5rem;
     }
 
-    /* Chart Placeholder */
-    .chart-placeholder {
-        background: #f9fafb;
-        border-radius: 8px;
-        padding: 2rem;
-        text-align: center;
-        color: #9ca3af;
-        min-height: 300px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        flex-direction: column;
-    }
-
-    .chart-placeholder i {
-        font-size: 3rem;
-        margin-bottom: 1rem;
-        opacity: 0.5;
-    }
-
     /* Responsive */
     @media (max-width: 768px) {
         .metric-card {
@@ -355,18 +335,24 @@
 {% block content %}
 <div class="container-fluid px-3 px-lg-4 py-4">
     <!-- Page Header -->
-    <div class="d-flex justify-content-between align-items-center mb-5">
+    <div class="d-flex justify-content-between align-items-center mb-5 flex-wrap gap-3">
         <div>
             <h1 class="h2 fw-bold mb-1">Seller Dashboard</h1>
-            <p class="text-muted mb-0">Welcome back! Here's your shop performance overview.</p>
+            <p class="text-muted mb-0">
+                {% if dashboard.primary_shop %}
+                    Live overview for {{ dashboard.primary_shop.name }}{% if dashboard.metrics.shops_count > 1 %} and {{ dashboard.metrics.shops_count - 1 }} more shop{% if dashboard.metrics.shops_count > 2 %}s{% endif %}{% endif %}.
+                {% else %}
+                    Create your first shop to start managing products on Market Window.
+                {% endif %}
+            </p>
         </div>
         <div class="d-flex gap-2">
-            <button class="btn btn-outline-secondary btn-sm" title="Export Dashboard">
-                <i class="bi bi-download me-1"></i>Export
-            </button>
-            <button class="btn btn-outline-secondary btn-sm" title="Refresh Data">
+            <a href="{{ url_for('seller_template_bp.seller_shop') }}" class="btn btn-outline-secondary btn-sm">
+                <i class="bi bi-shop me-1"></i>Shop Setup
+            </a>
+            <a href="{{ url_for('seller_template_bp.seller_dashboard') }}" class="btn btn-outline-secondary btn-sm" title="Refresh Data">
                 <i class="bi bi-arrow-clockwise me-1"></i>Refresh
-            </button>
+            </a>
         </div>
     </div>
 
@@ -378,44 +364,61 @@
                     <h3>
                         <i class="bi bi-exclamation-triangle me-2"></i>Alerts & Notifications
                     </h3>
-                    <a href="#" class="btn btn-sm btn-link text-decoration-none">View All</a>
+                    <span class="badge bg-primary-subtle text-primary-emphasis rounded-pill">{{ dashboard.metrics.unread_notifications }} unread</span>
                 </div>
                 <div class="dashboard-card-body">
-                    <!-- Alert: New Inquiry -->
+                    {% if not dashboard.shops %}
                     <div class="alert-item info">
                         <div class="alert-icon">
-                            <i class="bi bi-chat-dots"></i>
+                            <i class="bi bi-shop"></i>
                         </div>
                         <div class="alert-content">
-                            <div class="alert-title">New Customer Inquiry</div>
-                            <div class="alert-message">You have 3 new inquiries waiting for response</div>
+                            <div class="alert-title">Create Your First Shop</div>
+                            <div class="alert-message">Your dashboard will fill with live product, stock, follower, and save data once your shop exists.</div>
                         </div>
-                        <a href="/seller/inquiries" class="btn btn-sm btn-outline-primary">View</a>
+                        <a href="{{ url_for('main_bp.add_shop', new=1) }}" class="btn btn-sm btn-outline-primary">Create</a>
                     </div>
-
-                    <!-- Alert: Low Stock -->
+                    {% endif %}
+                    {% if dashboard.metrics.low_stock_count or dashboard.metrics.out_of_stock_count %}
                     <div class="alert-item warning">
                         <div class="alert-icon">
                             <i class="bi bi-exclamation-circle"></i>
                         </div>
                         <div class="alert-content">
-                            <div class="alert-title">Low Stock Alert</div>
-                            <div class="alert-message">2 products are running low on stock. Update inventory soon.</div>
+                            <div class="alert-title">Stock Needs Attention</div>
+                            <div class="alert-message">
+                                {{ dashboard.metrics.low_stock_count }} low-stock and {{ dashboard.metrics.out_of_stock_count }} out-of-stock product{% if dashboard.metrics.low_stock_count + dashboard.metrics.out_of_stock_count != 1 %}s{% endif %}.
+                            </div>
                         </div>
-                        <a href="/seller/products" class="btn btn-sm btn-outline-primary">Manage</a>
+                        <a href="{{ url_for('manage_bp.products') }}" class="btn btn-sm btn-outline-primary">Manage</a>
                     </div>
-
-                    <!-- Alert: Verification Status -->
-                    <div class="alert-item warning">
+                    {% endif %}
+                    {% for shop in dashboard.shops if shop.verification_status != 'verified' %}
+                    <div class="alert-item info">
                         <div class="alert-icon">
                             <i class="bi bi-shield-exclamation"></i>
                         </div>
                         <div class="alert-content">
-                            <div class="alert-title">Verification Pending</div>
-                            <div class="alert-message">Your shop verification is pending. Complete your profile to speed up the process.</div>
+                            <div class="alert-title">{{ shop.name }} Verification</div>
+                            <div class="alert-message">Status: {{ shop.verification_status|replace('_', ' ')|title }}</div>
                         </div>
-                        <a href="/seller/verification" class="btn btn-sm btn-outline-primary">Complete</a>
+                        <a href="{{ url_for('seller_template_bp.seller_shop', shop_id=shop.id) }}" class="btn btn-sm btn-outline-primary">Review</a>
                     </div>
+                    {% endfor %}
+                    {% if dashboard.metrics.unread_notifications %}
+                    <div class="alert-item success">
+                        <div class="alert-icon">
+                            <i class="bi bi-bell"></i>
+                        </div>
+                        <div class="alert-content">
+                            <div class="alert-title">Unread Notifications</div>
+                            <div class="alert-message">You have {{ dashboard.metrics.unread_notifications }} unread marketplace notification{% if dashboard.metrics.unread_notifications != 1 %}s{% endif %}.</div>
+                        </div>
+                    </div>
+                    {% endif %}
+                    {% if dashboard.shops and not dashboard.metrics.low_stock_count and not dashboard.metrics.out_of_stock_count and not dashboard.metrics.unread_notifications %}
+                    <div class="text-muted small">No urgent alerts right now.</div>
+                    {% endif %}
                 </div>
             </div>
         </div>
@@ -423,74 +426,70 @@
 
     <!-- Key Metrics Section -->
     <div class="row g-4 mb-5">
-        <!-- Profile Views Today -->
         <div class="col-12 col-sm-6 col-lg-3">
             <div class="metric-card border-left-primary">
                 <div class="d-flex justify-content-between align-items-start mb-2">
                     <div>
-                        <div class="metric-label">Profile Views Today</div>
-                        <div class="metric-value" id="profile-views">324</div>
+                        <div class="metric-label">Products</div>
+                        <div class="metric-value">{{ dashboard.metrics.products_count }}</div>
                     </div>
                     <div class="metric-icon primary">
-                        <i class="bi bi-eye"></i>
+                        <i class="bi bi-box-seam"></i>
                     </div>
                 </div>
                 <div class="metric-change positive">
-                    <i class="bi bi-arrow-up"></i> 12% from yesterday
+                    {{ dashboard.metrics.active_products_count }} active
                 </div>
             </div>
         </div>
 
-        <!-- Product Views -->
         <div class="col-12 col-sm-6 col-lg-3">
             <div class="metric-card border-left-success">
                 <div class="d-flex justify-content-between align-items-start mb-2">
                     <div>
-                        <div class="metric-label">Product Views</div>
-                        <div class="metric-value" id="product-views">1,847</div>
+                        <div class="metric-label">Followers</div>
+                        <div class="metric-value">{{ dashboard.metrics.followers_count }}</div>
                     </div>
                     <div class="metric-icon success">
-                        <i class="bi bi-box"></i>
+                        <i class="bi bi-people"></i>
                     </div>
                 </div>
                 <div class="metric-change positive">
-                    <i class="bi bi-arrow-up"></i> 8% this week
+                    Across {{ dashboard.metrics.shops_count }} shop{% if dashboard.metrics.shops_count != 1 %}s{% endif %}
                 </div>
             </div>
         </div>
 
-        <!-- New Inquiries -->
         <div class="col-12 col-sm-6 col-lg-3">
             <div class="metric-card border-left-info">
                 <div class="d-flex justify-content-between align-items-start mb-2">
                     <div>
-                        <div class="metric-label">New Inquiries</div>
-                        <div class="metric-value" id="new-inquiries">12</div>
+                        <div class="metric-label">Wishlist Saves</div>
+                        <div class="metric-value">{{ dashboard.metrics.wishlist_saves }}</div>
                     </div>
                     <div class="metric-icon info">
-                        <i class="bi bi-chat-dots"></i>
-                    </div>
-                </div>
-                <div class="metric-change positive">
-                    <i class="bi bi-arrow-up"></i> 3 unread
-                </div>
-            </div>
-        </div>
-
-        <!-- Wishlist Saves -->
-        <div class="col-12 col-sm-6 col-lg-3">
-            <div class="metric-card border-left-warning">
-                <div class="d-flex justify-content-between align-items-start mb-2">
-                    <div>
-                        <div class="metric-label">Wishlist Saves</div>
-                        <div class="metric-value" id="wishlist-saves">456</div>
-                    </div>
-                    <div class="metric-icon warning">
                         <i class="bi bi-heart"></i>
                     </div>
                 </div>
                 <div class="metric-change positive">
-                    <i class="bi bi-arrow-up"></i> 24 new this week
+                    Real buyer saves
+                </div>
+            </div>
+        </div>
+
+        <div class="col-12 col-sm-6 col-lg-3">
+            <div class="metric-card border-left-warning">
+                <div class="d-flex justify-content-between align-items-start mb-2">
+                    <div>
+                        <div class="metric-label">Stock Units</div>
+                        <div class="metric-value">{{ dashboard.metrics.total_stock }}</div>
+                    </div>
+                    <div class="metric-icon warning">
+                        <i class="bi bi-boxes"></i>
+                    </div>
+                </div>
+                <div class="metric-change positive">
+                    {{ dashboard.metrics.low_stock_count + dashboard.metrics.out_of_stock_count }} need attention
                 </div>
             </div>
         </div>
@@ -502,7 +501,7 @@
             <h3 class="fw-bold mb-3">Quick Actions</h3>
         </div>
         <div class="col-12 col-sm-6 col-lg-3">
-            <a href="/seller/products/new" class="quick-action-btn">
+            <a href="{{ url_for('manage_bp.add_product') }}" class="quick-action-btn">
                 <div class="quick-action-icon">
                     <i class="bi bi-plus-circle"></i>
                 </div>
@@ -510,7 +509,7 @@
             </a>
         </div>
         <div class="col-12 col-sm-6 col-lg-3">
-            <a href="/seller/products?filter=low-stock" class="quick-action-btn">
+            <a href="{{ url_for('manage_bp.products') }}" class="quick-action-btn">
                 <div class="quick-action-icon" style="background: rgba(245, 158, 11, 0.1); color: var(--warning-orange);">
                     <i class="bi bi-exclamation-circle"></i>
                 </div>
@@ -518,15 +517,15 @@
             </a>
         </div>
         <div class="col-12 col-sm-6 col-lg-3">
-            <a href="/seller/inquiries" class="quick-action-btn">
+            <a href="{{ url_for('manage_bp.products') }}" class="quick-action-btn">
                 <div class="quick-action-icon" style="background: rgba(6, 182, 212, 0.1); color: var(--info-cyan);">
-                    <i class="bi bi-chat-left-text"></i>
+                    <i class="bi bi-grid"></i>
                 </div>
-                <div class="quick-action-label">View Inquiries</div>
+                <div class="quick-action-label">Manage Products</div>
             </a>
         </div>
         <div class="col-12 col-sm-6 col-lg-3">
-            <a href="/seller/shop/edit" class="quick-action-btn">
+            <a href="{{ url_for('seller_template_bp.seller_shop') }}" class="quick-action-btn">
                 <div class="quick-action-icon" style="background: rgba(16, 185, 129, 0.1); color: var(--success-green);">
                     <i class="bi bi-pencil-square"></i>
                 </div>
@@ -546,58 +545,59 @@
                 </div>
                 <div class="dashboard-card-body">
                     <div class="row g-4">
-                        <!-- Email Verification -->
                         <div class="col-12 col-md-6 col-lg-4">
                             <div class="d-flex align-items-center justify-content-between">
                                 <div class="d-flex align-items-center gap-2">
                                     <i class="bi bi-envelope-fill" style="font-size: 1.5rem; color: var(--primary-purple);"></i>
                                     <div>
                                         <div class="fw-bold">Email Verification</div>
-                                        <small class="text-muted">obed@example.com</small>
+                                        <small class="text-muted">{{ current_user.email }}</small>
                                     </div>
                                 </div>
-                                <span class="status-badge verified">
-                                    <i class="bi bi-check-circle"></i> Verified
+                                <span class="status-badge {% if current_user.is_email_verified %}verified{% else %}pending{% endif %}">
+                                    <i class="bi {% if current_user.is_email_verified %}bi-check-circle{% else %}bi-clock{% endif %}"></i>
+                                    {% if current_user.is_email_verified %}Verified{% else %}Pending{% endif %}
                                 </span>
                             </div>
                         </div>
 
-                        <!-- Phone Verification -->
                         <div class="col-12 col-md-6 col-lg-4">
                             <div class="d-flex align-items-center justify-content-between">
                                 <div class="d-flex align-items-center gap-2">
                                     <i class="bi bi-telephone-fill" style="font-size: 1.5rem; color: var(--success-green);"></i>
                                     <div>
                                         <div class="fw-bold">Phone Verification</div>
-                                        <small class="text-muted">+233 XX XXX XXXX</small>
+                                        <small class="text-muted">{{ current_user.phone or 'No phone added' }}</small>
                                     </div>
                                 </div>
-                                <span class="status-badge pending">
-                                    <i class="bi bi-clock"></i> Pending
+                                <span class="status-badge {% if current_user.is_phone_verified %}verified{% else %}pending{% endif %}">
+                                    <i class="bi {% if current_user.is_phone_verified %}bi-check-circle{% else %}bi-clock{% endif %}"></i>
+                                    {% if current_user.is_phone_verified %}Verified{% else %}Pending{% endif %}
                                 </span>
                             </div>
                         </div>
 
-                        <!-- Shop Verification -->
                         <div class="col-12 col-md-6 col-lg-4">
                             <div class="d-flex align-items-center justify-content-between">
                                 <div class="d-flex align-items-center gap-2">
                                     <i class="bi bi-shop" style="font-size: 1.5rem; color: var(--info-cyan);"></i>
                                     <div>
                                         <div class="fw-bold">Shop Verification</div>
-                                        <small class="text-muted">Business License</small>
+                                        <small class="text-muted">{{ dashboard.primary_shop.name if dashboard.primary_shop else 'No shop yet' }}</small>
                                     </div>
                                 </div>
-                                <span class="status-badge unverified">
-                                    <i class="bi bi-x-circle"></i> Not Verified
+                                {% set shop_status = dashboard.primary_shop.verification_status if dashboard.primary_shop else 'pending' %}
+                                <span class="status-badge {% if shop_status == 'verified' %}verified{% elif shop_status in ['pending', 'under_review'] %}pending{% else %}unverified{% endif %}">
+                                    <i class="bi {% if shop_status == 'verified' %}bi-check-circle{% elif shop_status in ['pending', 'under_review'] %}bi-clock{% else %}bi-x-circle{% endif %}"></i>
+                                    {{ shop_status|replace('_', ' ')|title }}
                                 </span>
                             </div>
                         </div>
                     </div>
 
                     <div class="mt-4 pt-4 border-top">
-                        <a href="/seller/verification" class="btn btn-primary">
-                            <i class="bi bi-shield-check me-2"></i>Complete Verification
+                        <a href="{{ url_for('seller_template_bp.seller_shop') }}" class="btn btn-primary">
+                            <i class="bi bi-shield-check me-2"></i>Review Shop Details
                         </a>
                     </div>
                 </div>
@@ -611,47 +611,25 @@
             <div class="dashboard-card">
                 <div class="dashboard-card-header">
                     <h3>
-                        <i class="bi bi-clock-history me-2"></i>Recent Inquiries
+                        <i class="bi bi-clock-history me-2"></i>Recent Activity
                     </h3>
-                    <a href="/seller/inquiries" class="btn btn-sm btn-link text-decoration-none">View All</a>
+                    <a href="{{ url_for('manage_bp.products') }}" class="btn btn-sm btn-link text-decoration-none">Manage</a>
                 </div>
                 <div class="dashboard-card-body p-0">
-                    <!-- Inquiry 1 -->
-                    <div class="activity-item">
-                        <div class="activity-avatar">JD</div>
-                        <div class="activity-content">
-                            <div class="activity-title">John Doe</div>
-                            <div class="activity-meta">"Is this product available in blue?"</div>
-                            <div class="activity-time">2 hours ago</div>
+                    {% for activity in dashboard.recent_activity %}
+                    <a href="{{ activity.url or '#' }}" class="activity-item text-decoration-none">
+                        <div class="activity-avatar">
+                            <i class="bi bi-{{ activity.icon }}"></i>
                         </div>
-                    </div>
-
-                    <!-- Inquiry 2 -->
-                    <div class="activity-item">
-                        <div class="activity-avatar" style="background: rgba(16, 185, 129, 0.1); color: var(--success-green);">SA</div>
                         <div class="activity-content">
-                            <div class="activity-title">Sarah Anderson</div>
-                            <div class="activity-meta">"What's the shipping cost to Accra?"</div>
-                            <div class="activity-time">5 hours ago</div>
+                            <div class="activity-title">{{ activity.title }}</div>
+                            <div class="activity-meta">{{ activity.description }}</div>
+                            <div class="activity-time">{{ activity.time_ago }}</div>
                         </div>
-                    </div>
-
-                    <!-- Inquiry 3 -->
-                    <div class="activity-item">
-                        <div class="activity-avatar" style="background: rgba(6, 182, 212, 0.1); color: var(--info-cyan);">MK</div>
-                        <div class="activity-content">
-                            <div class="activity-title">Michael King</div>
-                            <div class="activity-meta">"Do you offer bulk discounts?"</div>
-                            <div class="activity-time">1 day ago</div>
-                        </div>
-                    </div>
-
-                    <!-- View More -->
-                    <div class="activity-item border-top pt-3">
-                        <a href="/seller/inquiries" class="btn btn-sm btn-outline-primary w-100">
-                            View All Inquiries
-                        </a>
-                    </div>
+                    </a>
+                    {% else %}
+                    <div class="p-4 text-muted small">No recent seller activity yet.</div>
+                    {% endfor %}
                 </div>
             </div>
         </div>
@@ -663,56 +641,32 @@
                     <h3>
                         <i class="bi bi-fire me-2"></i>Popular Products
                     </h3>
-                    <a href="/seller/products" class="btn btn-sm btn-link text-decoration-none">View All</a>
+                    <a href="{{ url_for('manage_bp.products') }}" class="btn btn-sm btn-link text-decoration-none">View All</a>
                 </div>
                 <div class="dashboard-card-body p-0">
-                    <!-- Product 1 -->
+                    {% for product in dashboard.popular_products %}
                     <div class="activity-item">
                         <div class="activity-avatar" style="background: rgba(245, 158, 11, 0.1); color: var(--warning-orange); font-size: 1.25rem;">
                             <i class="bi bi-box"></i>
                         </div>
                         <div class="activity-content">
-                            <div class="activity-title">Wireless Headphones</div>
+                            <div class="activity-title">{{ product.name }}</div>
                             <div class="activity-meta">
-                                <i class="bi bi-eye me-1"></i>342 views
-                                <span class="ms-3"><i class="bi bi-heart me-1"></i>28 saves</span>
+                                <i class="bi bi-boxes me-1"></i>{{ product.stock or 0 }} in stock
+                                <span class="ms-3"><i class="bi bi-heart me-1"></i>{{ dashboard.favorite_counts.get(product.id, 0) }} saves</span>
                             </div>
                         </div>
-                        <span class="badge bg-success">Top</span>
+                        {% if product.is_active %}
+                            <span class="badge bg-success">Active</span>
+                        {% else %}
+                            <span class="badge bg-secondary">Inactive</span>
+                        {% endif %}
                     </div>
-
-                    <!-- Product 2 -->
-                    <div class="activity-item">
-                        <div class="activity-avatar" style="background: rgba(245, 158, 11, 0.1); color: var(--warning-orange); font-size: 1.25rem;">
-                            <i class="bi bi-box"></i>
-                        </div>
-                        <div class="activity-content">
-                            <div class="activity-title">USB-C Cable Pack</div>
-                            <div class="activity-meta">
-                                <i class="bi bi-eye me-1"></i>287 views
-                                <span class="ms-3"><i class="bi bi-heart me-1"></i>19 saves</span>
-                            </div>
-                        </div>
-                        <span class="badge bg-info">Trending</span>
-                    </div>
-
-                    <!-- Product 3 -->
-                    <div class="activity-item">
-                        <div class="activity-avatar" style="background: rgba(245, 158, 11, 0.1); color: var(--warning-orange); font-size: 1.25rem;">
-                            <i class="bi bi-box"></i>
-                        </div>
-                        <div class="activity-content">
-                            <div class="activity-title">Phone Case Pro</div>
-                            <div class="activity-meta">
-                                <i class="bi bi-eye me-1"></i>156 views
-                                <span class="ms-3"><i class="bi bi-heart me-1"></i>12 saves</span>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- View More -->
+                    {% else %}
+                    <div class="p-4 text-muted small">No products yet.</div>
+                    {% endfor %}
                     <div class="activity-item border-top pt-3">
-                        <a href="/seller/products" class="btn btn-sm btn-outline-primary w-100">
+                        <a href="{{ url_for('manage_bp.products') }}" class="btn btn-sm btn-outline-primary w-100">
                             View All Products
                         </a>
                     </div>
@@ -721,77 +675,28 @@
         </div>
     </div>
 
-    <!-- Performance Charts Section -->
-    <div class="row mb-5">
-        <!-- Views Trend Chart -->
-        <div class="col-12 col-lg-6">
-            <div class="dashboard-card">
-                <div class="dashboard-card-header">
-                    <h3>
-                        <i class="bi bi-graph-up me-2"></i>Views Trend
-                    </h3>
-                    <div class="btn-group btn-group-sm" role="group">
-                        <input type="radio" class="btn-check" name="chart-period-1" id="week-1" checked>
-                        <label class="btn btn-outline-secondary" for="week-1">Week</label>
-                        <input type="radio" class="btn-check" name="chart-period-1" id="month-1">
-                        <label class="btn btn-outline-secondary" for="month-1">Month</label>
-                    </div>
-                </div>
-                <div class="dashboard-card-body">
-                    <div class="chart-placeholder">
-                        <i class="bi bi-graph-up"></i>
-                        <p>Chart will be rendered here using Chart.js or similar library</p>
-                        <small class="text-muted">Profile views and product views trend</small>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Inquiry Sources Chart -->
-        <div class="col-12 col-lg-6">
-            <div class="dashboard-card">
-                <div class="dashboard-card-header">
-                    <h3>
-                        <i class="bi bi-pie-chart me-2"></i>Inquiry Sources
-                    </h3>
-                    <div class="btn-group btn-group-sm" role="group">
-                        <input type="radio" class="btn-check" name="chart-period-2" id="week-2" checked>
-                        <label class="btn btn-outline-secondary" for="week-2">Week</label>
-                        <input type="radio" class="btn-check" name="chart-period-2" id="month-2">
-                        <label class="btn btn-outline-secondary" for="month-2">Month</label>
-                    </div>
-                </div>
-                <div class="dashboard-card-body">
-                    <div class="chart-placeholder">
-                        <i class="bi bi-pie-chart"></i>
-                        <p>Chart will be rendered here using Chart.js or similar library</p>
-                        <small class="text-muted">Where your inquiries are coming from</small>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Product Performance Chart -->
     <div class="row mb-5">
         <div class="col-12">
             <div class="dashboard-card">
                 <div class="dashboard-card-header">
                     <h3>
-                        <i class="bi bi-bar-chart me-2"></i>Top Performing Products
+                        <i class="bi bi-eye me-2"></i>Visibility Snapshot
                     </h3>
-                    <div class="btn-group btn-group-sm" role="group">
-                        <input type="radio" class="btn-check" name="chart-period-3" id="week-3" checked>
-                        <label class="btn btn-outline-secondary" for="week-3">Week</label>
-                        <input type="radio" class="btn-check" name="chart-period-3" id="month-3">
-                        <label class="btn btn-outline-secondary" for="month-3">Month</label>
-                    </div>
                 </div>
                 <div class="dashboard-card-body">
-                    <div class="chart-placeholder" style="min-height: 250px;">
-                        <i class="bi bi-bar-chart"></i>
-                        <p>Chart will be rendered here using Chart.js or similar library</p>
-                        <small class="text-muted">Product performance based on views, inquiries, and sales</small>
+                    <div class="row g-3">
+                        <div class="col-12 col-md-6">
+                            <div class="p-3 rounded border bg-light">
+                                <div class="metric-label mb-1">Tracked Product Views</div>
+                                <div class="h3 fw-bold mb-0">{{ dashboard.metrics.product_views }}</div>
+                            </div>
+                        </div>
+                        <div class="col-12 col-md-6">
+                            <div class="p-3 rounded border bg-light">
+                                <div class="metric-label mb-1">Tracked Shop Views</div>
+                                <div class="h3 fw-bold mb-0">{{ dashboard.metrics.shop_views }}</div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -805,11 +710,6 @@
 {% block scripts %}
 <script>
     document.addEventListener('DOMContentLoaded', function() {
-        // Load dashboard data via HTMX or fetch API
-        // Example: Load alerts dynamically
-        // htmx.ajax('GET', '/api/seller/alerts', '#alerts-section');
-
-        // Animate metric cards on load
         const metricCards = document.querySelectorAll('.metric-card');
         metricCards.forEach((card, index) => {
             setTimeout(() => {
@@ -823,16 +723,6 @@
                 });
             }, index * 100);
         });
-
-        // Example: Load real data from API
-        // fetch('/api/seller/dashboard/metrics')
-        //     .then(response => response.json())
-        //     .then(data => {
-        //         document.getElementById('profile-views').textContent = data.profile_views;
-        //         document.getElementById('product-views').textContent = data.product_views;
-        //         document.getElementById('new-inquiries').textContent = data.new_inquiries;
-        //         document.getElementById('wishlist-saves').textContent = data.wishlist_saves;
-        //     });
     });
 </script>
 {% endblock %}

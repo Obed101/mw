@@ -5,6 +5,18 @@ from ..extensions import db
 CONVERSATION_STATUS_OPEN = 'open'
 CONVERSATION_STATUS_PENDING = 'pending'
 CONVERSATION_STATUS_CLOSED = 'closed'
+SUPPORT_NOTIFICATION_TYPE = 'support_message'
+SUPPORT_NOTIFICATION_TYPES = {
+    SUPPORT_NOTIFICATION_TYPE,
+    'new_support_ticket',
+    'support_reply',
+}
+
+
+def _simple_datetime_label(value):
+    if not value:
+        return None
+    return f"{value.strftime('%b')} {value.day}, {value.year} {value.strftime('%I:%M %p').lstrip('0')}"
 
 class SupportConversation(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -48,6 +60,10 @@ class SupportMessage(db.Model):
     conversation = db.relationship("SupportConversation", back_populates="messages")
     sender = db.relationship("User", backref="support_messages")
 
+    @property
+    def sent_at_label(self):
+        return _simple_datetime_label(self.created_at)
+
     def to_dict(self):
         return {
             'id': self.id,
@@ -57,5 +73,6 @@ class SupportMessage(db.Model):
             'is_admin': self.is_admin,
             'is_read': self.is_read,
             'is_deleted': self.is_deleted,
-            'created_at': self.created_at.isoformat() if self.created_at else None
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+            'sent_at_label': self.sent_at_label,
         }

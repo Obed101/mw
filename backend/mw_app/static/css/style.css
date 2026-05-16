@@ -1115,6 +1115,10 @@ body {
     background-color: var(--light-mauve);
 }
 
+.notification-item.unread {
+    background-color: rgba(13, 110, 253, 0.06) !important;
+}
+
 .notification-item:last-child {
     border-bottom: none;
 }
@@ -1177,6 +1181,11 @@ body {
 
 .notification-icon.system {
     background: linear-gradient(135deg, #6b7280, #4b5563);
+    color: white;
+}
+
+.notification-icon.support {
+    background: linear-gradient(135deg, #0ea5e9, #2563eb);
     color: white;
 }
 

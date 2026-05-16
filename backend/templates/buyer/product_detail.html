@@ -336,7 +336,7 @@
                     </div>
                     <div class="shop-info-mini">
                         <h3 class="shop-name-mini">
-                            <a href="{{ url_for('buyer_bp.view_shop', shop_id=shop.id) }}" class="text-decoration-none text-dark">
+                            <a href="{{ url_for('main_bp.shop_detail', shop_id=shop.id) }}" class="text-decoration-none text-dark">
                                 {{ shop.name }}
                             </a>
                             {% if shop.verification_status == 'verified' %}

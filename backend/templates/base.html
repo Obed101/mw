@@ -40,18 +40,21 @@
             
             <div class="ms-auto d-flex align-items-center gap-3">
                 {% if current_user.is_authenticated %}
-                    <button class="btn btn-link position-relative p-2" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                    <button class="btn btn-link position-relative p-2" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Notifications">
                         <i class="bi bi-bell fs-5"></i>
-                        <span class="position-absolute top-0 start-100 translate-middle-x badge rounded-pill bg-danger" id="notification-count" style="font-size: 0.65rem; padding: 0.25rem 0.4rem; margin-left: -4px;">3</span>
+                        <span class="position-absolute top-0 start-100 translate-middle-x badge rounded-pill bg-danger" id="notification-count" style="font-size: 0.65rem; padding: 0.25rem 0.4rem; margin-left: -4px; display: none;">0</span>
                     </button>
                     <div class="dropdown-menu dropdown-menu-end" style="min-width: 320px;">
-                        <div class="notification-dropdown">
+                        <div class="notification-dropdown"
+                             data-feed-url="{{ url_for('main_bp.notification_feed') }}"
+                             data-read-url-template="{{ url_for('main_bp.mark_notification_read', notification_id=0) }}"
+                             data-read-all-url="{{ url_for('main_bp.mark_notifications_read') }}">
                             <div class="notification-header">
                                 <h6 class="mb-0">Notifications</h6>
-                                <a href="/notifications" class="btn btn-sm btn-outline-primary">View All</a>
+                                <button type="button" class="btn btn-sm btn-outline-primary" id="notifications-read-all">Mark read</button>
                             </div>
                             <div class="notification-list" id="notification-dropdown-list">
-                                <!-- Notifications will be loaded here -->
+                                <div class="p-3 text-muted small">Loading notifications...</div>
                             </div>
                         </div>
                     </div>

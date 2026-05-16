@@ -4,7 +4,7 @@ from pathlib import Path
 from uuid import uuid4
 from datetime import datetime, timezone
 
-from flask import Blueprint, render_template, request, redirect, url_for, flash, session, current_app, make_response
+from flask import Blueprint, render_template, request, redirect, url_for, flash, session, current_app, make_response, jsonify
 from sqlalchemy import func, or_, nullslast
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import aliased
@@ -17,14 +17,16 @@ from ..models import (
     Category,
     Product,
     Shop,
+    StockUpdate,
     UserFollowShop,
     UserFavoriteProduct,
+    UserBrowsingHistory,
+    Notification,
     User,
     USER_ROLE_BUYER,
     USER_ROLE_SELLER,
     USER_ROLE_ADMIN,
     CATEGORY_LEVEL_LEAF,
-    VERIFICATION_STATUS_VERIFIED,
 )
 from ..extensions import oauth, db
 import secrets
@@ -65,6 +67,94 @@ def admin_required(func):
             return redirect(url_for('main_bp.index'))
         return func(*args, **kwargs)
     return decorated_view
+
+
+def _simple_datetime_label(value):
+    if not value:
+        return None
+    return f"{value.strftime('%b')} {value.day}, {value.year} {value.strftime('%I:%M %p').lstrip('0')}"
+
+
+def _time_ago(value):
+    if not value:
+        return "Just now"
+
+    now = datetime.now(timezone.utc)
+    if value.tzinfo is None:
+        value = value.replace(tzinfo=timezone.utc)
+
+    delta = now - value
+    seconds = max(int(delta.total_seconds()), 0)
+    if seconds < 60:
+        return "Just now"
+    minutes = seconds // 60
+    if minutes < 60:
+        return f"{minutes}m ago"
+    hours = minutes // 60
+    if hours < 24:
+        return f"{hours}h ago"
+    days = hours // 24
+    if days < 30:
+        return f"{days}d ago"
+    months = days // 30
+    if months < 12:
+        return f"{months}mo ago"
+    return f"{days // 365}y ago"
+
+
+def _timestamp_or_zero(value):
+    if not value:
+        return 0
+    if value.tzinfo is None:
+        value = value.replace(tzinfo=timezone.utc)
+    return value.timestamp()
+
+
+def _notification_icon(notification):
+    payload = notification.get_payload() or {}
+    if payload.get('icon'):
+        return payload['icon']
+
+    notification_type = notification.notification_type or ''
+    if 'support' in notification_type:
+        return 'support'
+    if 'shop' in notification_type:
+        return 'shop'
+    if 'product' in notification_type or 'stock' in notification_type:
+        return 'product'
+    if 'user' in notification_type:
+        return 'user'
+    return 'system'
+
+
+def _bootstrap_icon_name(icon):
+    return {
+        'support': 'headset',
+        'product': 'box-seam',
+        'system': 'bell',
+        'user': 'person',
+    }.get(icon, icon)
+
+
+def _notification_action_url(notification):
+    payload = notification.get_payload() or {}
+    if payload.get('action_url'):
+        return payload['action_url']
+    if payload.get('conversation_id') and 'support' in (notification.notification_type or ''):
+        if current_user.is_authenticated and current_user.role == USER_ROLE_ADMIN:
+            return url_for('support_bp.admin_support_chat', id=payload['conversation_id'])
+        return url_for('support_bp.my_support_chat', id=payload['conversation_id'])
+    return None
+
+
+def _notification_to_dict(notification):
+    data = notification.to_dict()
+    data.update({
+        'icon': _notification_icon(notification),
+        'action_url': _notification_action_url(notification),
+        'created_at_label': _simple_datetime_label(notification.created_at),
+    })
+    return data
 
 
 def _normalize_gps(gps_value):
@@ -326,19 +416,16 @@ def index():
     dist_expr = haversine_distance_expr(user_lat, user_lng) if user_lat is not None else None
     user_has_location = user_lat is not None
 
-    verified_shops_q = Shop.query.filter(
-        Shop.is_active.is_(True),
-        Shop.verification_status == VERIFICATION_STATUS_VERIFIED,
-    )
+    active_shops_q = Shop.query.filter(Shop.is_active.is_(True))
 
     if dist_expr is not None:
-        featured_shops = verified_shops_q.order_by(
+        featured_shops = active_shops_q.order_by(
             nullslast(dist_expr.asc()),
             Shop.promoted.desc(),
             Shop.last_updated.desc(),
         ).limit(6).all()
     else:
-        featured_shops = verified_shops_q.order_by(
+        featured_shops = active_shops_q.order_by(
             Shop.promoted.desc(),
             Shop.last_updated.desc(),
         ).limit(6).all()
@@ -346,7 +433,6 @@ def index():
     products_q = Product.query.join(Shop).filter(
         Product.is_active.is_(True),
         Shop.is_active.is_(True),
-        Shop.verification_status == VERIFICATION_STATUS_VERIFIED,
     )
 
     if dist_expr is not None:
@@ -435,7 +521,6 @@ def shop_detail(shop_id):
     shop = Shop.query.filter(
         Shop.id == shop_id,
         Shop.is_active.is_(True),
-        Shop.verification_status == VERIFICATION_STATUS_VERIFIED,
     ).first_or_404()
 
     map_embed_url = _build_shop_map_embed_url(shop)
@@ -491,6 +576,64 @@ def products():
 def notifications():
     """Notifications page for all user types"""
     return render_template('public/notifications.html')
+
+
+@main_bp.route('/notifications/feed')
+@login_required
+def notification_feed():
+    """Return the current user's personal notification list for the bell menu."""
+    limit = min(max(request.args.get('limit', 8, type=int), 1), 30)
+    notifications = Notification.query.filter_by(
+        recipient_user_id=current_user.id,
+    ).order_by(Notification.created_at.desc()).limit(limit).all()
+    unread_count = Notification.query.filter_by(
+        recipient_user_id=current_user.id,
+        is_read=False,
+    ).count()
+
+    return jsonify({
+        'success': True,
+        'unread_count': unread_count,
+        'notifications': [_notification_to_dict(notification) for notification in notifications],
+    })
+
+
+@main_bp.route('/notifications/<int:notification_id>/read', methods=['POST'])
+@login_required
+def mark_notification_read(notification_id):
+    """Mark one notification read for the current user."""
+    notification = Notification.query.filter_by(
+        id=notification_id,
+        recipient_user_id=current_user.id,
+    ).first_or_404()
+
+    if not notification.is_read:
+        notification.mark_read()
+        db.session.commit()
+
+    return jsonify({
+        'success': True,
+        'notification': _notification_to_dict(notification),
+    })
+
+
+@main_bp.route('/notifications/read-all', methods=['POST'])
+@login_required
+def mark_notifications_read():
+    """Mark the current user's personal notifications read."""
+    notifications = Notification.query.filter_by(
+        recipient_user_id=current_user.id,
+        is_read=False,
+    ).all()
+
+    for notification in notifications:
+        notification.mark_read()
+
+    db.session.commit()
+    return jsonify({
+        'success': True,
+        'updated': len(notifications),
+    })
 
 @main_bp.route('/categories')
 def categories():
@@ -603,14 +746,6 @@ def profile():
             flash('Error updating profile. Please try again.', 'error')
             print(f"Profile update error: {e}")
     
-    # Get user stats (placeholder data for now)
-    user_stats = {
-        'orders_count': 127,  # TODO: Get from orders table
-        'reviews_count': 89,  # TODO: Get from reviews table
-        'rating': 4.8,        # TODO: Calculate from reviews
-        'member_since': current_user.created_at
-    }
-    
     # Calculate membership duration
     if current_user.created_at:
         days_since_creation = (datetime.now() - current_user.created_at.replace(tzinfo=None)).days
@@ -622,46 +757,84 @@ def profile():
             member_duration = f"{days_since_creation // 365}y"
     else:
         member_duration = "New"
-    
-    user_stats['member_duration'] = member_duration
-    
-    # Get recent activity (placeholder data for now)
-    recent_activity = [
-        {
-            'type': 'order_completed',
-            'title': 'Order Completed',
-            'description': 'Electronics Store - $249.99',
-            'time_ago': '2 hours ago',
-            'icon': 'check-circle',
-            'color': 'success'
-        },
-        {
-            'type': 'review_posted',
-            'title': 'Review Posted',
-            'description': 'Fashion Boutique - 5 stars',
-            'time_ago': 'Yesterday',
-            'icon': 'star',
-            'color': 'primary'
-        },
-        {
-            'type': 'wishlist_added',
-            'title': 'Added to Wishlist',
-            'description': 'Smart Watch Pro',
-            'time_ago': '3 days ago',
-            'icon': 'heart',
-            'color': 'warning'
-        },
-        {
-            'type': 'shop_followed',
-            'title': 'New Shop Followed',
-            'description': 'Tech Gadgets Store',
-            'time_ago': '1 week ago',
-            'icon': 'shop',
-            'color': 'info'
-        }
-    ]
 
     owned_shops = _resolve_user_shops(current_user)
+    favorite_rows = UserFavoriteProduct.query.filter_by(
+        user_id=current_user.id,
+    ).order_by(UserFavoriteProduct.favorited_at.desc()).limit(5).all()
+    followed_rows = UserFollowShop.query.filter_by(
+        user_id=current_user.id,
+    ).order_by(UserFollowShop.followed_at.desc()).limit(5).all()
+    recent_notifications = Notification.query.filter_by(
+        recipient_user_id=current_user.id,
+    ).order_by(Notification.created_at.desc()).limit(5).all()
+
+    favorites_count = UserFavoriteProduct.query.filter_by(user_id=current_user.id).count()
+    following_count = UserFollowShop.query.filter_by(user_id=current_user.id).count()
+    unread_count = Notification.query.filter_by(
+        recipient_user_id=current_user.id,
+        is_read=False,
+    ).count()
+
+    user_stats = {
+        'shops_count': len(owned_shops),
+        'favorites_count': favorites_count,
+        'following_count': following_count,
+        'unread_count': unread_count,
+        'member_since': current_user.created_at,
+        'member_duration': member_duration,
+    }
+
+    recent_activity = []
+    for notification in recent_notifications:
+        recent_activity.append({
+            'title': notification.title,
+            'description': notification.message,
+            'time_ago': _time_ago(notification.created_at),
+            'icon': _bootstrap_icon_name(_notification_icon(notification)),
+            'color': 'info' if not notification.is_read else 'secondary',
+            'url': _notification_action_url(notification),
+            'sort_at': _timestamp_or_zero(notification.created_at),
+        })
+
+    for favorite in favorite_rows:
+        recent_activity.append({
+            'title': 'Saved Product',
+            'description': favorite.product.name if favorite.product else 'A product was saved',
+            'time_ago': _time_ago(favorite.favorited_at),
+            'icon': 'heart',
+            'color': 'warning',
+            'url': url_for('buyer_template_bp.wishlist'),
+            'sort_at': _timestamp_or_zero(favorite.favorited_at),
+        })
+
+    for follow in followed_rows:
+        recent_activity.append({
+            'title': 'Followed Shop',
+            'description': follow.shop.name if follow.shop else 'A shop was followed',
+            'time_ago': _time_ago(follow.followed_at),
+            'icon': 'shop',
+            'color': 'primary',
+            'url': url_for('buyer_template_bp.wishlist'),
+            'sort_at': _timestamp_or_zero(follow.followed_at),
+        })
+
+    for shop in owned_shops[:3]:
+        recent_activity.append({
+            'title': 'Shop Updated',
+            'description': shop.name,
+            'time_ago': _time_ago(shop.last_updated or shop.created_at),
+            'icon': 'shop-window',
+            'color': 'success',
+            'url': url_for('seller_template_bp.seller_shop', shop_id=shop.id),
+            'sort_at': _timestamp_or_zero(shop.last_updated or shop.created_at),
+        })
+
+    recent_activity = sorted(
+        recent_activity,
+        key=lambda item: item.get('sort_at', 0),
+        reverse=True,
+    )[:8]
     
     return render_template('public/profile.html', 
                          user_stats=user_stats,
@@ -771,9 +944,140 @@ def oauth_authorize():
 
 # Seller template routes
 @seller_bp.route('/dashboard')
+@login_required
 def seller_dashboard():
     """Seller dashboard - main overview"""
-    return render_template('seller/seller_dashboard.html')
+    redirect_response = _seller_guard_redirect()
+    if redirect_response:
+        return redirect_response
+
+    shops = _resolve_user_shops(current_user)
+    shop_ids = [shop.id for shop in shops]
+    products = []
+    product_ids = []
+
+    if shop_ids:
+        products = Product.query.filter(
+            Product.shop_id.in_(shop_ids)
+        ).order_by(Product.updated_at.desc()).all()
+        product_ids = [product.id for product in products]
+
+    active_products = [product for product in products if product.is_active]
+    low_stock_products = [product for product in products if product.stock is not None and 0 < product.stock <= 10]
+    out_of_stock_products = [product for product in products if product.stock is not None and product.stock <= 0]
+    total_stock = sum(max(product.stock or 0, 0) for product in products)
+    follower_count = UserFollowShop.query.filter(
+        UserFollowShop.shop_id.in_(shop_ids)
+    ).count() if shop_ids else 0
+    wishlist_saves = UserFavoriteProduct.query.filter(
+        UserFavoriteProduct.product_id.in_(product_ids)
+    ).count() if product_ids else 0
+    unread_notifications = Notification.query.filter_by(
+        recipient_user_id=current_user.id,
+        is_read=False,
+    ).count()
+    product_view_count = UserBrowsingHistory.query.filter(
+        UserBrowsingHistory.product_id.in_(product_ids)
+    ).count() if product_ids else 0
+    shop_view_count = UserBrowsingHistory.query.filter(
+        UserBrowsingHistory.shop_id.in_(shop_ids)
+    ).count() if shop_ids else 0
+
+    favorite_counts = {}
+    if product_ids:
+        favorite_counts = dict(
+            db.session.query(
+                UserFavoriteProduct.product_id,
+                func.count(UserFavoriteProduct.id),
+            ).filter(
+                UserFavoriteProduct.product_id.in_(product_ids)
+            ).group_by(UserFavoriteProduct.product_id).all()
+        )
+
+    popular_products = sorted(
+        products,
+        key=lambda product: (
+            favorite_counts.get(product.id, 0),
+            _timestamp_or_zero(product.updated_at or product.created_at),
+        ),
+        reverse=True,
+    )[:5]
+
+    recent_stock_updates = []
+    if product_ids:
+        recent_stock_updates = StockUpdate.query.filter(
+            StockUpdate.product_id.in_(product_ids)
+        ).order_by(StockUpdate.updated_at.desc()).limit(4).all()
+
+    recent_notifications = Notification.query.filter_by(
+        recipient_user_id=current_user.id,
+    ).order_by(Notification.created_at.desc()).limit(4).all()
+
+    recent_activity = []
+    for item in recent_notifications:
+        recent_activity.append({
+            'title': item.title,
+            'description': item.message,
+            'time_ago': _time_ago(item.created_at),
+            'icon': _bootstrap_icon_name(_notification_icon(item)),
+            'color': 'info' if not item.is_read else 'secondary',
+            'url': _notification_action_url(item),
+            'sort_at': _timestamp_or_zero(item.created_at),
+        })
+
+    for update in recent_stock_updates:
+        direction = "increased" if update.stock_change > 0 else "reduced"
+        recent_activity.append({
+            'title': update.product.name if update.product else 'Stock updated',
+            'description': f"Stock {direction} from {update.old_stock} to {update.new_stock}",
+            'time_ago': _time_ago(update.updated_at),
+            'icon': 'boxes',
+            'color': 'warning',
+            'url': url_for('manage_bp.products'),
+            'sort_at': _timestamp_or_zero(update.updated_at),
+        })
+
+    for product in products[:4]:
+        recent_activity.append({
+            'title': product.name,
+            'description': 'Product updated' if product.updated_at else 'Product added',
+            'time_ago': _time_ago(product.updated_at or product.created_at),
+            'icon': 'box-seam',
+            'color': 'primary',
+            'url': url_for('manage_bp.products'),
+            'sort_at': _timestamp_or_zero(product.updated_at or product.created_at),
+        })
+
+    recent_activity = sorted(
+        recent_activity,
+        key=lambda item: item.get('sort_at', 0),
+        reverse=True,
+    )[:6]
+
+    dashboard = {
+        'shops': shops,
+        'primary_shop': shops[0] if shops else None,
+        'metrics': {
+            'shops_count': len(shops),
+            'products_count': len(products),
+            'active_products_count': len(active_products),
+            'low_stock_count': len(low_stock_products),
+            'out_of_stock_count': len(out_of_stock_products),
+            'total_stock': total_stock,
+            'followers_count': follower_count,
+            'wishlist_saves': wishlist_saves,
+            'unread_notifications': unread_notifications,
+            'product_views': product_view_count,
+            'shop_views': shop_view_count,
+        },
+        'low_stock_products': low_stock_products[:5],
+        'out_of_stock_products': out_of_stock_products[:5],
+        'popular_products': popular_products,
+        'favorite_counts': favorite_counts,
+        'recent_activity': recent_activity,
+    }
+
+    return render_template('seller/seller_dashboard.html', dashboard=dashboard)
 
 @seller_bp.route('/shop')
 @seller_bp.route('/shop/edit')
@@ -1019,7 +1323,7 @@ def wishlist():
     shops = []
     for follow in follows:
         shop = Shop.query.get(follow.shop_id)
-        if shop and shop.is_active and shop.verification_status == VERIFICATION_STATUS_VERIFIED:
+        if shop and shop.is_active:
             shop_dict = {
                 'id': shop.id,
                 'name': shop.name,
@@ -1028,6 +1332,7 @@ def wishlist():
                 'phone': shop.phone,
                 'town': shop.town,
                 'region': shop.region,
+                'verification_status': shop.verification_status,
                 'followed_at': follow.followed_at.isoformat() if follow.followed_at else None
             }
             shops.append(shop_dict)
@@ -1042,17 +1347,18 @@ def wishlist():
         product = Product.query.get(favorite.product_id)
         if product and product.is_active:
             shop = Shop.query.get(product.shop_id)
-            product_dict = {
-                'id': product.id,
-                'name': product.name,
-                'description': product.description,
-                'price': float(product.price or 0),
-                'primary_image_url': product.primary_image_url,
-                'shop_id': product.shop_id,
-                'shop_name': shop.name if shop else 'Unknown Shop',
-                'favorited_at': favorite.favorited_at.isoformat() if favorite.favorited_at else None
-            }
-            products.append(product_dict)
+            if shop and shop.is_active:
+                product_dict = {
+                    'id': product.id,
+                    'name': product.name,
+                    'description': product.description,
+                    'price': float(product.price or 0),
+                    'primary_image_url': product.primary_image_url,
+                    'shop_id': product.shop_id,
+                    'shop_name': shop.name if shop else 'Unknown Shop',
+                    'favorited_at': favorite.favorited_at.isoformat() if favorite.favorited_at else None
+                }
+                products.append(product_dict)
     
     return render_template('buyer/wishlist.html', shops=shops, products=products)
 

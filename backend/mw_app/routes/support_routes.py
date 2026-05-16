@@ -10,7 +10,9 @@ from ..models import (
     USER_ROLE_ADMIN,
     CONVERSATION_STATUS_OPEN,
     CONVERSATION_STATUS_PENDING,
-    CONVERSATION_STATUS_CLOSED
+    CONVERSATION_STATUS_CLOSED,
+    SUPPORT_NOTIFICATION_TYPE,
+    SUPPORT_NOTIFICATION_TYPES,
 )
 from datetime import datetime, timezone
 
@@ -28,6 +30,69 @@ def _admin_required(func):
             return redirect(url_for('main_bp.index'))
         return func(*args, **kwargs)
     return decorated_view
+
+
+def _support_admin_payload(conversation):
+    return {
+        'conversation_id': conversation.id,
+        'action_url': url_for('support_bp.admin_support_chat', id=conversation.id),
+        'icon': 'support',
+    }
+
+
+def _support_user_payload(conversation):
+    return {
+        'conversation_id': conversation.id,
+        'action_url': url_for('support_bp.my_support_chat', id=conversation.id),
+        'icon': 'support',
+    }
+
+
+def _preview_message(message_text, limit=90):
+    message = " ".join((message_text or "").split())
+    if len(message) <= limit:
+        return message
+    return f"{message[:limit - 3]}..."
+
+
+def _notify_admins_of_support_message(conversation, actor, message_text, is_new_ticket=False):
+    admin_ids = [
+        admin.id
+        for admin in User.query.filter_by(role=USER_ROLE_ADMIN).all()
+    ]
+    if not admin_ids:
+        return []
+
+    subject = conversation.subject or f"Ticket #{conversation.id}"
+    title = 'New Support Message'
+    if is_new_ticket:
+        title = 'New Support Ticket'
+
+    return Notification.create_for_users(
+        user_ids=admin_ids,
+        notification_type=SUPPORT_NOTIFICATION_TYPE,
+        title=title,
+        message=f'{actor.username} sent "{_preview_message(message_text)}" in {subject}.',
+        actor_user_id=actor.id,
+        payload=_support_admin_payload(conversation),
+        exclude_user_id=actor.id,
+    )
+
+
+def _mark_admin_support_notifications_read(conversation_id):
+    notifications = Notification.query.filter(
+        Notification.recipient_user_id == current_user.id,
+        Notification.is_read.is_(False),
+        Notification.notification_type.in_(SUPPORT_NOTIFICATION_TYPES),
+    ).all()
+
+    updated = False
+    for notification in notifications:
+        payload = notification.get_payload() or {}
+        if payload.get('conversation_id') == conversation_id:
+            notification.mark_read()
+            updated = True
+    return updated
 
 # ==========================================
 # PUBLIC / BUYER ROUTES
@@ -68,18 +133,12 @@ def contact():
         )
         db.session.add(msg)
         
-        # Notify admins
-        admins = User.query.filter_by(role=USER_ROLE_ADMIN).all()
-        admin_ids = [admin.id for admin in admins]
-        if admin_ids:
-            Notification.create_for_users(
-                user_ids=admin_ids,
-                notification_type='new_support_ticket',
-                title='New Support Ticket',
-                message=f'New ticket from {current_user.username}: {message_text[:50]}...',
-                actor_user_id=current_user.id,
-                payload={'conversation_id': conversation.id}
-            )
+        _notify_admins_of_support_message(
+            conversation=conversation,
+            actor=current_user,
+            message_text=message_text,
+            is_new_ticket=True,
+        )
             
         db.session.commit()
 
@@ -137,18 +196,11 @@ def my_support_reply(id):
         
     db.session.add(msg)
     
-    # Notify admins
-    admins = User.query.filter_by(role=USER_ROLE_ADMIN).all()
-    admin_ids = [admin.id for admin in admins]
-    if admin_ids:
-        Notification.create_for_users(
-            user_ids=admin_ids,
-            notification_type='support_reply',
-            title='Support Ticket Reply',
-            message=f'Reply from {current_user.username} on ticket #{conversation.id}',
-            actor_user_id=current_user.id,
-            payload={'conversation_id': conversation.id}
-        )
+    _notify_admins_of_support_message(
+        conversation=conversation,
+        actor=current_user,
+        message_text=message_text,
+    )
         
     db.session.commit()
     
@@ -210,7 +262,8 @@ def admin_support_chat(id):
     
     # Mark messages from user as read
     unread_messages = [m for m in conversation.messages if not m.is_admin and not m.is_read]
-    if unread_messages:
+    notifications_updated = _mark_admin_support_notifications_read(conversation.id)
+    if unread_messages or notifications_updated:
         for m in unread_messages:
             m.is_read = True
         db.session.commit()
@@ -247,9 +300,9 @@ def admin_support_reply(id):
         user_ids=[conversation.user_id],
         notification_type='support_reply',
         title='Support Ticket Reply',
-        message=f'Admin replied to your ticket: {message_text[:50]}...',
+        message=f'Support replied to your ticket: {_preview_message(message_text, 70)}',
         actor_user_id=current_user.id,
-        payload={'conversation_id': conversation.id}
+        payload=_support_user_payload(conversation)
     )
         
     db.session.commit()

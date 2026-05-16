@@ -143,19 +143,13 @@
                             <img src="{{ shop.primary_image_url or url_for('static', filename='images/mw_logo_trans.png') }}" 
                                  alt="{{ shop.name }}" 
                                  class="card-img-top shop-image wishlist-image">
-                            <button class="btn btn-sm btn-danger position-absolute top-0 end-0 m-2 rounded-circle wishlist-remove-btn" 
-                                    hx-post="{{ url_for('buyer_bp.follow_shop', shop_id=shop.id) }}"
-                                    hx-target="#followed-shops"
-                                    hx-swap="outerHTML"
-                                    hx-confirm="Unfollow this shop?"
-                                    title="Unfollow shop">
-                                <i class="bi bi-x-lg"></i>
-                            </button>
                         </div>
                         <div class="card-body d-flex flex-column">
                             <div class="d-flex align-items-start justify-content-between mb-2">
                                 <h5 class="card-title fw-semibold wishlist-title">{{ shop.name }}</h5>
+                                {% if shop.verification_status == 'verified' %}
                                 <span class="bi bi-patch-check text-mw" aria-label="Verified shop"></span>
+                                {% endif %}
                             </div>
                             
                             <p class="card-text text-muted small flex-grow-1 wishlist-description">{{ shop.description[:70] }}{% if shop.description|length > 70 %}...{% endif %}</p>
@@ -175,14 +169,24 @@
                             {% endif %}
                             
                             <div class="d-flex justify-content-between align-items-center mt-auto wishlist-actions">
+                                <div class="btn-group btn-group-sm">
                                 {% if shop.phone %}
-                                <a href="tel:{{ shop.phone }}" class="btn btn-outline-secondary btn-sm" title="Call Shop">
+                                <a href="tel:{{ shop.phone }}" class="btn btn-outline-secondary" title="Call Shop">
                                     <i class="bi bi-telephone"></i>
                                 </a>
                                 {% endif %}
-                                <a href="/shops/{{ shop.id }}" class="btn btn-primary btn-sm">
-                                    <i class="bi bi-eye me-1"></i>Visit
+                                <a href="{{ url_for('main_bp.shop_detail', shop_id=shop.id) }}" class="btn btn-outline-primary" title="Visit Shop">
+                                    <i class="bi bi-eye"></i>
                                 </a>
+                                <button class="btn btn-outline-danger"
+                                        hx-post="{{ url_for('buyer_bp.follow_shop', shop_id=shop.id, wishlist=1) }}"
+                                        hx-target="closest .followed-shop-item"
+                                        hx-swap="outerHTML"
+                                        hx-confirm="Unfollow this shop?"
+                                        title="Unfollow shop">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -212,14 +216,6 @@
                             <img src="{{ product.primary_image_url or url_for('static', filename='images/mw_logo_trans.png') }}" 
                                  alt="{{ product.name }}" 
                                  class="card-img-top product-image wishlist-image">
-                            <button class="btn btn-sm btn-danger position-absolute top-0 end-0 m-2 rounded-circle wishlist-remove-btn" 
-                                    hx-post="{{ url_for('buyer_bp.favorite_product', product_id=product.id) }}"
-                                    hx-target="#wishlist-products"
-                                    hx-swap="outerHTML"
-                                    hx-confirm="Remove from wishlist?"
-                                    title="Remove from wishlist">
-                                <i class="bi bi-x-lg"></i>
-                            </button>
                         </div>
                         <div class="card-body d-flex flex-column">
                             <h5 class="card-title fw-semibold wishlist-title">{{ product.name }}</h5>
@@ -236,12 +232,20 @@
                             <div class="d-flex justify-content-between align-items-center mt-auto wishlist-actions">
                                 <span class="h5 text-primary mb-0">GH₵{{ "%.2f"|format(product.price) }}</span>
                                 <div class="btn-group btn-group-sm">
-                                    <a href="/shops/{{ product.shop_id }}" class="btn btn-outline-secondary" title="View Shop">
+                                    <a href="{{ url_for('main_bp.shop_detail', shop_id=product.shop_id) }}" class="btn btn-outline-secondary" title="View Shop">
                                         <i class="bi bi-shop"></i>
                                     </a>
-                                    <a href="/explore/products/{{ product.id }}" class="btn btn-outline-primary" title="View Product">
+                                    <a href="{{ url_for('buyer_bp.product_detail', product_id=product.id) }}" class="btn btn-outline-primary" title="View Product">
                                         <i class="bi bi-eye"></i>
                                     </a>
+                                    <button class="btn btn-outline-danger"
+                                            hx-post="{{ url_for('buyer_bp.favorite_product', product_id=product.id, wishlist=1) }}"
+                                            hx-target="closest .wishlist-item"
+                                            hx-swap="outerHTML"
+                                            hx-confirm="Remove from wishlist?"
+                                            title="Remove from wishlist">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
                                 </div>
                             </div>
                         </div>
@@ -295,7 +299,58 @@ document.addEventListener('DOMContentLoaded', function() {
             el.textContent = timeAgo(dateString);
         }
     });
+    updateWishlistCounts();
 });
+
+function updateWishlistCounts() {
+    const shopItems = document.querySelectorAll('#followed-shops .followed-shop-item');
+    const productItems = document.querySelectorAll('#wishlist-products .wishlist-item');
+    const shopsCount = shopItems.length;
+    const productsCount = productItems.length;
+
+    const countBadge = document.getElementById('wishlist-count');
+    if (countBadge) {
+        countBadge.textContent = `${shopsCount + productsCount} items`;
+    }
+
+    const shopsTabBadge = document.querySelector('#shops-tab .badge');
+    if (shopsTabBadge) {
+        shopsTabBadge.textContent = shopsCount;
+    }
+
+    const productsTabBadge = document.querySelector('#products-tab .badge');
+    if (productsTabBadge) {
+        productsTabBadge.textContent = productsCount;
+    }
+
+    const followedShops = document.getElementById('followed-shops');
+    if (followedShops && shopsCount === 0 && !followedShops.querySelector('.text-center')) {
+        followedShops.innerHTML = `
+            <div class="text-center py-5">
+                <i class="bi bi-shop text-muted" style="font-size: 4rem;"></i>
+                <h4 class="mt-3 text-muted">You're not following any shops yet</h4>
+                <p class="text-muted">Follow your favorite shops to stay updated with their latest products!</p>
+                <a href="/shops" class="btn btn-primary">
+                    <i class="bi bi-search me-2"></i>Browse Shops
+                </a>
+            </div>
+        `;
+    }
+
+    const wishlistProducts = document.getElementById('wishlist-products');
+    if (wishlistProducts && productsCount === 0 && !wishlistProducts.querySelector('.text-center')) {
+        wishlistProducts.innerHTML = `
+            <div class="text-center py-5">
+                <i class="bi bi-heart text-muted" style="font-size: 4rem;"></i>
+                <h4 class="mt-3 text-muted">Your product wishlist is empty</h4>
+                <p class="text-muted">Start adding products you love to your wishlist!</p>
+                <a href="/products" class="btn btn-primary">
+                    <i class="bi bi-search me-2"></i>Browse Products
+                </a>
+            </div>
+        `;
+    }
+}
 
 document.addEventListener('htmx:afterSwap', function(event) {
     // Format dates after HTMX swap
@@ -305,6 +360,7 @@ document.addEventListener('htmx:afterSwap', function(event) {
             el.textContent = timeAgo(dateString);
         }
     });
+    updateWishlistCounts();
     
     // Update followed shops count when shops are unfollowed
     if (event.detail.target.id === 'followed-shops') {

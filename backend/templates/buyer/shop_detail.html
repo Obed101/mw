@@ -14,7 +14,9 @@
                     <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-2">
                         <h1 class="h3 fw-bold mb-0">
                             {{ shop.name }}
+                            {% if shop.verification_status == 'verified' %}
                             <span class="bi bi-patch-check text-mw" aria-label="Verified shop"></span>
+                            {% endif %}
                         </h1>
                         <div class="d-flex align-items-center gap-2">
                             {% if current_user.is_authenticated and current_user.role == 'buyer' %}
@@ -33,7 +35,7 @@
                         </div>
                     </div>
 
-                    <p class="text-muted mb-3">{{ shop.description or "Verified shop with listed products." }}</p>
+                    <p class="text-muted mb-3">{{ shop.description or "Shop with listed products." }}</p>
 
                     <div class="d-flex flex-wrap gap-2 mb-3">
                         {% if shop.town %}<span class="badge rounded-pill text-bg-light border"><i class="bi bi-geo-alt me-1"></i>{{ shop.town }}</span>{% endif %}

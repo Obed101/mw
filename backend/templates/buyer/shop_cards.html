@@ -49,11 +49,7 @@
                             </button>
                         </div>
                         {% endif %}
-                        {% if shop.verification_status == 'verified' %}
                         <a href="{{ url_for('main_bp.shop_detail', shop_id=shop.id) }}" class="btn btn-primary btn-sm">Visit</a>
-                        {% else %}
-                        <button class="btn btn-outline-secondary btn-sm" type="button" disabled>Not Yet Public</button>
-                        {% endif %}
                     </div>
                 </div>
             </div>
@@ -71,7 +67,7 @@
 <div id="load-more-container" hx-swap-oob="true">
     {% if has_next %}
     <div
-        hx-get="{{ url_for('buyer_bp.browse_shops', page=next_page, search=search_term, sort_by=sort_by, category_id=category_id, verified_only='true' if verified_only else 'false', user_id=user_id) }}"
+        hx-get="{{ url_for('buyer_bp.browse_shops', page=next_page, search=search_term, sort_by=sort_by, category_id=category_id, user_id=user_id) }}"
         hx-trigger="revealed"
         hx-target="#shops-container"
         hx-swap="beforeend"

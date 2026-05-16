@@ -68,7 +68,7 @@ def haversine_distance_expr(user_lat, user_lng):
     R = 6371.0  # Earth radius in km
 
     # Separator position inside Shop.gps  (e.g.  "5.6037,-0.1870" → pos 7)
-    sep_pos = func.instr(Shop.gps, ',')
+    sep_pos = func.strpos(Shop.gps, ',')
 
     # Extract latitude text and cast to float
     shop_lat_text = func.substr(Shop.gps, 1, sep_pos - 1)

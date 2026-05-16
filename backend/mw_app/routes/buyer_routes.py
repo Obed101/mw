@@ -14,7 +14,6 @@ from ..models import (
     Shop,
     UserFavoriteProduct,
     UserFollowShop,
-    VERIFICATION_STATUS_VERIFIED,
 )
 from ..utils.location import get_user_location, haversine_distance_expr, NEAR_YOU_KM
 
@@ -162,8 +161,6 @@ def browse_shops():
         search_term = request.args.get('search', '').strip()
         sort_by = request.args.get('sort_by', 'name')
         category_id = request.args.get('category_id', type=int) or request.args.get('category', type=int)
-        verified_only_raw = request.args.get('verified_only', 'true')
-        verified_only = str(verified_only_raw).strip().lower() in ('1', 'true', 'yes', 'on')
         user_id = _resolve_user_id(request.args.get('user_id', type=int))
         page = request.args.get('page', 1, type=int)
         per_page = request.args.get('per_page', SHOPS_PER_PAGE, type=int)
@@ -173,8 +170,6 @@ def browse_shops():
         dist_expr = haversine_distance_expr(user_lat, user_lng) if user_lat is not None else None
 
         query = Shop.query.filter(Shop.is_active.is_(True))
-        if verified_only:
-            query = query.filter(Shop.verification_status == VERIFICATION_STATUS_VERIFIED)
 
         if search_term:
             query = query.filter(
@@ -239,7 +234,6 @@ def browse_shops():
                 search_term=search_term,
                 sort_by=sort_by,
                 category_id=category_id,
-                verified_only=verified_only,
                 user_has_location=(user_lat is not None),
             )
 
@@ -287,11 +281,9 @@ def browse_shops():
 def view_shop(shop_id):
     """View a specific shop and its products"""
     try:
-        # Only allow viewing verified shops
         shop = Shop.query.filter_by(
             id=shop_id,
             is_active=True,
-            verification_status=VERIFICATION_STATUS_VERIFIED
         ).first_or_404()
         
         # Get user_id from request (for checking if user follows)
@@ -334,11 +326,9 @@ def view_shop(shop_id):
 def shop_products(shop_id):
     """View all products available in a specific shop"""
     try:
-        # Only allow viewing products from verified shops
         shop = Shop.query.filter_by(
             id=shop_id,
             is_active=True,
-            verification_status=VERIFICATION_STATUS_VERIFIED
         ).first_or_404()
         
         # Query params: search, min_price, max_price, in_stock (true/false)
@@ -381,10 +371,11 @@ def product_detail(product_id):
                 shop_id=shop.id
             ).first() is not None
 
-        related_products = Product.query.filter(
+        related_products = Product.query.join(Shop).filter(
             Product.category_id == product.category_id,
             Product.id != product.id,
-            Product.is_active == True
+            Product.is_active == True,
+            Shop.is_active.is_(True),
         ).limit(4).all()
 
         # IMPORTANT: controls UI variation (card vs details view)
@@ -538,7 +529,6 @@ def browse_products():
                 pass
 
         query = Product.query.join(Shop).filter(
-            Shop.verification_status == VERIFICATION_STATUS_VERIFIED,
             Shop.is_active.is_(True),
             Product.is_active.is_(True),
         )
@@ -670,11 +660,10 @@ def browse_products():
 def view_product(product_id):
     """View product details including price, availability, and shop info"""
     try:
-        # Only show products from verified shops
         product = Product.query.join(Shop).filter(
             Product.id == product_id,
-            Shop.verification_status == VERIFICATION_STATUS_VERIFIED,
             Shop.is_active.is_(True),
+            Product.is_active.is_(True),
         ).first_or_404()
         
         # Get user_id from request (from session, JWT token, or query param)
@@ -818,7 +807,6 @@ def follow_shop(shop_id):
         shop = Shop.query.filter(
             Shop.id == shop_id,
             Shop.is_active.is_(True),
-            Shop.verification_status == VERIFICATION_STATUS_VERIFIED,
         ).first()
         if not shop:
             return jsonify({
@@ -837,6 +825,8 @@ def follow_shop(shop_id):
             db.session.commit()
 
             if _is_htmx_request():
+                if request.args.get('wishlist', '').lower() in ('1', 'true', 'yes'):
+                    return '', 200
                 if text_only:
                     return 'Follow', 200
                 return _render_shop_favorite_button(shop_id=shop_id, is_favorited=False), 200
@@ -900,7 +890,7 @@ def get_followed_shops():
         shops = []
         for follow in follows:
             shop = Shop.query.get(follow.shop_id)
-            if shop and shop.is_active and shop.verification_status == VERIFICATION_STATUS_VERIFIED:
+            if shop and shop.is_active:
                 shop_dict = {
                     'id': shop.id,
                     'name': shop.name,
@@ -988,7 +978,6 @@ def favorite_product(product_id):
             Product.id == product_id,
             Product.is_active.is_(True),
             Shop.is_active.is_(True),
-            Shop.verification_status == VERIFICATION_STATUS_VERIFIED,
         ).first()
         if not product:
             return jsonify({
@@ -1007,6 +996,8 @@ def favorite_product(product_id):
             db.session.commit()
             
             if _is_htmx_request():
+                if request.args.get('wishlist', '').lower() in ('1', 'true', 'yes'):
+                    return '', 200
                 return _render_product_favorite_button(product_id=product_id, is_favorited=False, product_detail=product_detail), 200
             print(f'Removed "{product.name}" from favorites')
             return jsonify({
@@ -1119,7 +1110,7 @@ def get_favorite_products():
             if not product or not product.is_active:
                 continue
             shop = product.shop
-            if not shop or not shop.is_active or shop.verification_status != VERIFICATION_STATUS_VERIFIED:
+            if not shop or not shop.is_active:
                 continue
             products.append({
                 'favorite_id': favorite.id,

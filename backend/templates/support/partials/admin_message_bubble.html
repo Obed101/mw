@@ -1,21 +1,24 @@
 <!-- Admin Message Bubble Partial -->
-{% set is_me = message.is_admin %}
+{% set is_admin_msg = message.is_admin %}
+{% set is_current_admin = is_admin_msg and message.sender_id == current_user.id %}
 
-<div class="d-flex flex-column mb-3 {% if is_me %}align-items-end{% else %}align-items-start{% endif %}" id="msg-{{ message.id }}">
+<div class="d-flex flex-column mb-3 {% if is_admin_msg %}align-items-end{% else %}align-items-start{% endif %}" id="msg-{{ message.id }}">
     
     <!-- Meta -->
     <div class="d-flex align-items-center mb-1 gap-2 mx-1">
-        {% if is_me %}
-            <small class="text-muted" style="font-size: 0.75rem;">{{ message.created_at.strftime('%H:%M') }}</small>
-            <span class="badge bg-primary rounded-pill px-2" style="font-size: 0.65rem;">Admin (You)</span>
+        {% if is_admin_msg %}
+            <small class="text-muted" style="font-size: 0.75rem;">{{ message.sent_at_label }}</small>
+            <span class="badge bg-primary rounded-pill px-2" style="font-size: 0.65rem;">
+                {% if is_current_admin %}You{% else %}{{ message.sender.username }}{% endif %}
+            </span>
         {% else %}
             <span class="fw-semibold text-dark" style="font-size: 0.8rem;">{{ message.sender.username }}</span>
-            <small class="text-muted" style="font-size: 0.75rem;">{{ message.created_at.strftime('%H:%M') }}</small>
+            <small class="text-muted" style="font-size: 0.75rem;">{{ message.sent_at_label }}</small>
         {% endif %}
     </div>
 
     <!-- Bubble -->
-    <div class="chat-bubble {% if is_me %}chat-bubble-me{% else %}chat-bubble-them{% endif %} {% if message.is_deleted %}opacity-75{% endif %}">
+    <div class="chat-bubble {% if is_admin_msg %}chat-bubble-me{% else %}chat-bubble-them{% endif %} {% if message.is_deleted %}opacity-75{% endif %}">
         {% if message.is_deleted %}
             <div class="fst-italic text-center py-1">
                 <i class="bi bi-slash-circle me-2"></i>Deleted Message

@@ -7,9 +7,9 @@
     <div class="d-flex align-items-center mb-1 gap-2 mx-1">
         {% if is_admin_msg %}
             <span class="badge bg-primary rounded-pill px-2" style="font-size: 0.65rem;">Support Team</span>
-            <small class="text-muted" style="font-size: 0.75rem;">{{ message.created_at.strftime('%H:%M') }}</small>
+            <small class="text-muted" style="font-size: 0.75rem;">{{ message.sent_at_label }}</small>
         {% else %}
-            <small class="text-muted" style="font-size: 0.75rem;">{{ message.created_at.strftime('%H:%M') }}</small>
+            <small class="text-muted" style="font-size: 0.75rem;">{{ message.sent_at_label }}</small>
             {% if message.is_read %}
                 <i class="bi bi-check2-all text-primary" style="font-size: 0.8rem;" title="Read"></i>
             {% else %}

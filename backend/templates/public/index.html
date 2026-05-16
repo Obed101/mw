@@ -130,7 +130,9 @@
                         <div class="card-body shop-card-body-compact">
                             <div class="d-flex justify-content-between align-items-start mb-2">
                                 <h6 class="fw-bold mb-0 shop-card-title text-dark">{{ shop.name }}
+                                    {% if shop.verification_status == 'verified' %}
                                     <span class="bi bi-patch-check text-mw"></span>
+                                    {% endif %}
                                 </h6>
                             </div>
                             <p class="text-muted small mb-1 shop-card-location"><i class="bi bi-geo-alt me-1"></i>{{ shop.town or shop.region or "Location unavailable" }}</p>
