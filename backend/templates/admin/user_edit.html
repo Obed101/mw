@@ -1,0 +1,127 @@
+{% extends "admin/base_admin.html" %}
+{% block admin_title %}Edit User — {{ user.username }}{% endblock %}
+
+{% block admin_content %}
+<div class="d-flex align-items-center gap-3 mb-4">
+  <a href="{{ url_for('mw_admin_bp.users') }}" class="btn-admin-sm"><i class="bi bi-arrow-left"></i> Back</a>
+  <div>
+    <h5 class="fw-bold mb-0" style="color:var(--admin-text)">Edit User</h5>
+    <p class="mb-0" style="color:var(--admin-muted);font-size:.8rem">{{ user.email }}</p>
+  </div>
+</div>
+
+<div class="row g-3">
+  <div class="col-lg-7">
+    <div class="admin-card">
+      <div class="admin-card-header"><i class="bi bi-person me-2"></i>User Details</div>
+      <div class="admin-card-body">
+        <form method="POST">
+          {{ form.hidden_tag() }}
+          <div class="row g-3">
+            <div class="col-md-6">
+              <div class="admin-form-group">
+                <label for="username">Username</label>
+                {{ form.username(id='username', class='admin-form-control') }}
+                {% if form.username.errors %}
+                  {% for err in form.username.errors %}<div style="color:#f87171;font-size:.75rem;margin-top:.25rem">{{ err }}</div>{% endfor %}
+                {% endif %}
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="admin-form-group">
+                <label for="email">Email</label>
+                {{ form.email(id='email', class='admin-form-control') }}
+                {% if form.email.errors %}
+                  {% for err in form.email.errors %}<div style="color:#f87171;font-size:.75rem;margin-top:.25rem">{{ err }}</div>{% endfor %}
+                {% endif %}
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="admin-form-group">
+                <label for="first_name">First Name</label>
+                {{ form.first_name(id='first_name', class='admin-form-control') }}
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="admin-form-group">
+                <label for="last_name">Last Name</label>
+                {{ form.last_name(id='last_name', class='admin-form-control') }}
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="admin-form-group">
+                <label for="phone">Phone</label>
+                {{ form.phone(id='phone', class='admin-form-control') }}
+              </div>
+            </div>
+            <div class="col-md-6 d-flex align-items-end pb-2">
+              <div class="admin-form-check">
+                {{ form.is_active(id='is_active') }}
+                <label for="is_active" style="font-size:.9rem;color:var(--admin-text)">Account Active</label>
+              </div>
+            </div>
+          </div>
+          <div class="d-flex gap-2 mt-3">
+            <button type="submit" class="btn-admin-primary"><i class="bi bi-check-lg"></i> Save Changes</button>
+            <a href="{{ url_for('mw_admin_bp.users') }}" class="btn-admin-sm">Cancel</a>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-5">
+    <div class="admin-card">
+      <div class="admin-card-header"><i class="bi bi-info-circle me-2"></i>Account Info</div>
+      <div class="admin-card-body">
+        <div style="font-size:.82rem;color:var(--admin-muted)">
+          <div class="d-flex justify-content-between py-2" style="border-bottom:1px solid var(--admin-border)">
+            <span>User ID</span><span style="color:var(--admin-text);font-weight:600">#{{ user.id }}</span>
+          </div>
+          <div class="d-flex justify-content-between py-2" style="border-bottom:1px solid var(--admin-border)">
+            <span>Role</span>
+            <span>
+              {% if user.is_super_admin() %}<span class="role-badge role-super">Super Admin</span>
+              {% elif user.is_any_admin() %}<span class="role-badge role-admin">Admin</span>
+              {% else %}<span class="role-badge role-user">{{ user.role|title }}</span>{% endif %}
+            </span>
+          </div>
+          <div class="d-flex justify-content-between py-2" style="border-bottom:1px solid var(--admin-border)">
+            <span>Status</span>
+            <span class="status-badge {{ 'status-active' if user.is_active else 'status-inactive' }}">
+              {{ 'Active' if user.is_active else 'Suspended' }}
+            </span>
+          </div>
+          <div class="d-flex justify-content-between py-2" style="border-bottom:1px solid var(--admin-border)">
+            <span>Admin Mode</span>
+            <span>{{ 'On' if user.admin_mode else 'Off' }}</span>
+          </div>
+          <div class="d-flex justify-content-between py-2" style="border-bottom:1px solid var(--admin-border)">
+            <span>Shops Owned</span><span style="color:var(--admin-text)">{{ user.owned_shops|length }}</span>
+          </div>
+          <div class="d-flex justify-content-between py-2">
+            <span>Joined</span>
+            <span style="color:var(--admin-text)">{{ user.created_at.strftime('%b %d, %Y') if user.created_at else '—' }}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    {% if user.owned_shops %}
+    <div class="admin-card mt-3">
+      <div class="admin-card-header"><i class="bi bi-shop me-2"></i>Owned Shops</div>
+      <div class="admin-card-body p-0">
+        {% for shop in user.owned_shops %}
+        <div class="d-flex align-items-center justify-content-between px-3 py-2" style="border-bottom:1px solid var(--admin-border)">
+          <span style="font-size:.85rem">{{ shop.name }}</span>
+          <span class="status-badge {{ 'status-verified' if shop.verification_status == 'verified' else 'status-pending' }}">
+            {{ shop.verification_status|title }}
+          </span>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

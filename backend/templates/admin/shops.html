@@ -1,0 +1,136 @@
+{% extends "admin/base_admin.html" %}
+{% block admin_title %}Shops{% endblock %}
+
+{% block admin_content %}
+<div class="d-flex align-items-center justify-content-between mb-4">
+  <div>
+    <h5 class="fw-bold mb-0" style="color:var(--admin-text)">Shops</h5>
+    <p class="mb-0" style="color:var(--admin-muted);font-size:.8rem">{{ pagination.total }} total shops</p>
+  </div>
+</div>
+
+<form method="GET" class="mb-3">
+  <div class="row g-2 align-items-center">
+    <div class="col-md-4">
+      <div class="admin-search-bar">
+        <i class="bi bi-search" style="color:var(--admin-muted)"></i>
+        <input type="text" name="q" value="{{ search }}" placeholder="Search name, email, town…">
+      </div>
+    </div>
+    <div class="col-auto">
+      <select name="status" class="admin-form-control" style="width:auto;padding:.45rem .75rem;font-size:.85rem" onchange="this.form.submit()">
+        <option value="all" {{ 'selected' if status_filter=='all' }}>All</option>
+        <option value="active" {{ 'selected' if status_filter=='active' }}>Active</option>
+        <option value="inactive" {{ 'selected' if status_filter=='inactive' }}>Inactive</option>
+        <option value="verified" {{ 'selected' if status_filter=='verified' }}>Verified</option>
+        <option value="pending" {{ 'selected' if status_filter=='pending' }}>Pending</option>
+      </select>
+    </div>
+    <div class="col-auto">
+      <button type="submit" class="btn-admin-primary"><i class="bi bi-filter"></i> Filter</button>
+    </div>
+    {% if search or status_filter != 'all' %}
+    <div class="col-auto"><a href="{{ url_for('mw_admin_bp.shops') }}" class="btn-admin-sm">Clear</a></div>
+    {% endif %}
+  </div>
+</form>
+
+<div class="admin-card">
+  <div class="p-0">
+    <table class="admin-table">
+      <thead><tr>
+        <th>Shop</th><th>Owner</th><th>Verification</th><th>Active</th><th>Created</th><th>Actions</th>
+      </tr></thead>
+      <tbody>
+      {% for shop in shops %}
+      <tr>
+        <td>
+          <div style="font-weight:600;font-size:.85rem">{{ shop.name }}</div>
+          {% if shop.town %}<div style="font-size:.72rem;color:var(--admin-muted)">{{ shop.town }}{% if shop.region %}, {{ shop.region }}{% endif %}</div>{% endif %}
+        </td>
+        <td style="font-size:.82rem;color:var(--admin-muted)">
+          {% if shop.owner %}
+            <div style="color:var(--admin-text)">{{ shop.owner.username }}</div>
+            <div style="font-size:.7rem">{{ shop.owner.email }}</div>
+          {% else %}—{% endif %}
+        </td>
+        <td>
+          {% set vs = shop.verification_status %}
+          {% if vs == 'verified' %}
+            <span class="status-badge status-verified"><i class="bi bi-patch-check-fill"></i> Verified</span>
+          {% elif vs == 'pending' %}
+            <span class="status-badge status-pending">Pending</span>
+          {% elif vs == 'under_review' %}
+            <span class="status-badge" style="background:rgba(139,92,246,.15);color:#a78bfa;border:1px solid rgba(139,92,246,.3)">Under Review</span>
+          {% elif vs == 'rejected' %}
+            <span class="status-badge status-inactive">Rejected</span>
+          {% elif vs == 'suspended' %}
+            <span class="status-badge status-suspended">Suspended</span>
+          {% endif %}
+        </td>
+        <td>
+          {% if shop.is_active %}
+            <span class="status-badge status-active">Yes</span>
+          {% else %}
+            <span class="status-badge status-inactive">No</span>
+          {% endif %}
+        </td>
+        <td style="font-size:.78rem;color:var(--admin-muted)">{{ shop.created_at.strftime('%b %d, %Y') if shop.created_at else '—' }}</td>
+        <td>
+          <div class="d-flex flex-wrap gap-1">
+            <a href="{{ url_for('mw_admin_bp.edit_shop', shop_id=shop.id) }}" class="btn-admin-sm">
+              <i class="bi bi-pencil"></i> Edit
+            </a>
+            <form method="POST" action="{{ url_for('mw_admin_bp.verify_shop', shop_id=shop.id) }}" style="display:inline">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <button type="button" class="btn-admin-sm {{ 'btn-admin-danger' if shop.verification_status == 'verified' else 'btn-admin-success' }}"
+                data-confirm="{{ 'Remove verification from' if shop.verification_status == 'verified' else 'Verify' }} &quot;{{ shop.name }}&quot;?"
+                data-confirm-title="{{ 'Remove Verification' if shop.verification_status == 'verified' else 'Verify Shop' }}"
+                data-confirm-btn="{{ 'Remove' if shop.verification_status == 'verified' else 'Verify' }}"
+                data-confirm-class="{{ 'btn-danger' if shop.verification_status == 'verified' else 'btn-success' }}"
+                data-confirm-action="{{ url_for('mw_admin_bp.verify_shop', shop_id=shop.id) }}">
+                <i class="bi bi-{{ 'patch-minus' if shop.verification_status == 'verified' else 'patch-check' }}"></i>
+                {{ 'Unverify' if shop.verification_status == 'verified' else 'Verify' }}
+              </button>
+            </form>
+            <form method="POST" action="{{ url_for('mw_admin_bp.suspend_shop', shop_id=shop.id) }}" style="display:inline">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <button type="button" class="btn-admin-sm {{ 'btn-admin-success' if not shop.is_active else 'btn-admin-danger' }}"
+                data-confirm="{{ 'Activate' if not shop.is_active else 'Suspend' }} &quot;{{ shop.name }}&quot;?"
+                data-confirm-title="{{ 'Activate' if not shop.is_active else 'Suspend' }} Shop"
+                data-confirm-btn="{{ 'Activate' if not shop.is_active else 'Suspend' }}"
+                data-confirm-class="{{ 'btn-success' if not shop.is_active else 'btn-danger' }}"
+                data-confirm-action="{{ url_for('mw_admin_bp.suspend_shop', shop_id=shop.id) }}">
+                <i class="bi bi-{{ 'check-circle' if not shop.is_active else 'slash-circle' }}"></i>
+                {{ 'Activate' if not shop.is_active else 'Suspend' }}
+              </button>
+            </form>
+          </div>
+        </td>
+      </tr>
+      {% else %}
+      <tr><td colspan="6" style="color:var(--admin-muted);text-align:center;padding:2rem">No shops found.</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{% if pagination.pages > 1 %}
+<div class="d-flex justify-content-center mt-3">
+  <div class="admin-pagination">
+    {% if pagination.has_prev %}
+      <a href="{{ url_for('mw_admin_bp.shops', page=pagination.prev_num, q=search, status=status_filter) }}"><i class="bi bi-chevron-left"></i></a>
+    {% endif %}
+    {% for p in pagination.iter_pages(left_edge=1, right_edge=1, left_current=2, right_current=2) %}
+      {% if p %}
+        <a href="{{ url_for('mw_admin_bp.shops', page=p, q=search, status=status_filter) }}" class="{{ 'current' if p == pagination.page else '' }}">{{ p }}</a>
+      {% else %}<span>…</span>{% endif %}
+    {% endfor %}
+    {% if pagination.has_next %}
+      <a href="{{ url_for('mw_admin_bp.shops', page=pagination.next_num, q=search, status=status_filter) }}"><i class="bi bi-chevron-right"></i></a>
+    {% endif %}
+  </div>
+</div>
+{% endif %}
+{% endblock %}

@@ -25,7 +25,7 @@ def _admin_required(func):
     from functools import wraps
     @wraps(func)
     def decorated_view(*args, **kwargs):
-        if not current_user.is_authenticated or current_user.role != USER_ROLE_ADMIN:
+        if not (current_user.is_authenticated and current_user.can_access_admin()):
             flash('Admin access is required for that page.', 'error')
             return redirect(url_for('main_bp.index'))
         return func(*args, **kwargs)

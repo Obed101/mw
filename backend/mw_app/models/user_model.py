@@ -1,4 +1,5 @@
 from datetime import datetime, timedelta, timezone
+# pyrefly: ignore [missing-import]
 from werkzeug.security import generate_password_hash, check_password_hash
 from sqlalchemy import func, event
 from flask_login import UserMixin
@@ -27,6 +28,10 @@ class User(db.Model, UserMixin):
     # Role and status management
     role = db.Column(db.String(20), nullable=False, default=USER_ROLE_BUYER)
     status = db.Column(db.String(20), nullable=False, default=USER_STATUS_PENDING)
+
+    # Admin system fields
+    admin_mode = db.Column(db.Boolean, default=False, server_default='false', nullable=False)
+    is_active = db.Column(db.Boolean, default=True, server_default='true', nullable=False)
     
     # Profile information
     first_name = db.Column(db.String(100))
@@ -73,6 +78,14 @@ class User(db.Model, UserMixin):
     
     # Authentication tokens (for password reset, email verification, etc.)
     auth_tokens = db.relationship("AuthToken", back_populates="user", cascade="all, delete-orphan")
+
+    # RBAC role assignments
+    user_roles = db.relationship(
+        "UserRole",
+        foreign_keys="UserRole.user_id",
+        back_populates="user",
+        cascade="all, delete-orphan",
+    )
     
     # Password hashing and verification
     def set_password(self, password):
@@ -99,7 +112,7 @@ class User(db.Model, UserMixin):
         return self.status == USER_STATUS_ACTIVE
 
     def is_admin(self):
-        """Check if user has admin role."""
+        """Check if user has legacy admin role field."""
         return self.role == USER_ROLE_ADMIN
 
     def is_seller(self):
@@ -109,6 +122,34 @@ class User(db.Model, UserMixin):
     def is_buyer(self):
         """Check if user has buyer role."""
         return self.role == USER_ROLE_BUYER
+
+    # --- RBAC helpers ---
+
+    def has_role(self, role_name):
+        """Return True if user has the named role in UserRole table."""
+        return any(ur.role.name == role_name for ur in self.user_roles if ur.role)
+
+    def is_super_admin(self):
+        """True if user has super_admin role."""
+        return self.has_role('super_admin')
+
+    def is_any_admin(self):
+        """True if user has admin OR super_admin role."""
+        return self.has_role('admin') or self.has_role('super_admin')
+
+    def can_access_admin(self):
+        """True if user is any admin AND has admin_mode enabled."""
+        result = self.is_any_admin() and bool(self.admin_mode)
+        print(f"can_access_admin() = {result}")
+        return result
+
+    def get_highest_role(self):
+        """Return the highest role name for display."""
+        if self.is_super_admin():
+            return 'super_admin'
+        if self.is_any_admin():
+            return 'admin'
+        return 'user'
 
     # Utility methods
     def update_last_login(self):

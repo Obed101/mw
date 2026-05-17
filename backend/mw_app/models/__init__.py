@@ -8,6 +8,7 @@ from .user_model import (
     TOKEN_TYPE_EMAIL_VERIFICATION, TOKEN_TYPE_PASSWORD_RESET, TOKEN_TYPE_API,
     VALID_TOKEN_TYPES
 )
+from .role_model import Role, UserRole, ROLE_SUPER_ADMIN, ROLE_ADMIN, ROLE_USER, VALID_ROLES, ADMIN_ROLES
 
 from .shop_model import Shop, ShopImage, UserFollowShop, VerificationOTP, \
     MAX_SHOP_IMAGES, \
@@ -29,6 +30,7 @@ from .support_model import SupportConversation, SupportMessage, \
 __all__ = [
     # Models
     'User', 'UserBrowsingHistory', 'AuthToken',
+    'Role', 'UserRole',
     'Shop', 'ShopImage', 'UserFollowShop', 'VerificationOTP',
     'Product', 'ProductImage', 'StockUpdate',
     'Category',

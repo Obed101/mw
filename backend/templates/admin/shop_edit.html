@@ -1,0 +1,93 @@
+{% extends "admin/base_admin.html" %}
+{% block admin_title %}Edit Shop — {{ shop.name }}{% endblock %}
+
+{% block admin_content %}
+<div class="d-flex align-items-center gap-3 mb-4">
+  <a href="{{ url_for('mw_admin_bp.shops') }}" class="btn-admin-sm"><i class="bi bi-arrow-left"></i> Back</a>
+  <div>
+    <h5 class="fw-bold mb-0" style="color:var(--admin-text)">Edit Shop</h5>
+    <p class="mb-0" style="color:var(--admin-muted);font-size:.8rem">{{ shop.name }}</p>
+  </div>
+</div>
+
+<div class="row g-3">
+  <div class="col-lg-7">
+    <div class="admin-card">
+      <div class="admin-card-header"><i class="bi bi-shop me-2"></i>Shop Details</div>
+      <div class="admin-card-body">
+        <form method="POST">
+          {{ form.hidden_tag() }}
+          <div class="admin-form-group">
+            <label>Shop Name</label>
+            {{ form.name(class='admin-form-control') }}
+            {% for err in form.name.errors %}<div style="color:#f87171;font-size:.75rem;margin-top:.25rem">{{ err }}</div>{% endfor %}
+          </div>
+          <div class="admin-form-group">
+            <label>Description</label>
+            {{ form.description(class='admin-form-control', rows=3) }}
+          </div>
+          <div class="row g-3">
+            <div class="col-md-6">
+              <div class="admin-form-group">
+                <label>Phone</label>
+                {{ form.phone(class='admin-form-control') }}
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="admin-form-group">
+                <label>Email</label>
+                {{ form.email(class='admin-form-control') }}
+              </div>
+            </div>
+          </div>
+          <div class="admin-form-group">
+            <label>Address</label>
+            {{ form.address(class='admin-form-control') }}
+          </div>
+          <div class="admin-form-group">
+            <label>Verification Status</label>
+            {{ form.verification_status(class='admin-form-control') }}
+          </div>
+          <div class="admin-form-check mb-3">
+            {{ form.is_active() }}
+            <label style="color:var(--admin-text);font-size:.9rem">Shop Active</label>
+          </div>
+          <div class="d-flex gap-2">
+            <button type="submit" class="btn-admin-primary"><i class="bi bi-check-lg"></i> Save</button>
+            <a href="{{ url_for('mw_admin_bp.shops') }}" class="btn-admin-sm">Cancel</a>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-5">
+    <div class="admin-card">
+      <div class="admin-card-header"><i class="bi bi-info-circle me-2"></i>Shop Info</div>
+      <div class="admin-card-body">
+        <div style="font-size:.82rem;color:var(--admin-muted)">
+          <div class="d-flex justify-content-between py-2" style="border-bottom:1px solid var(--admin-border)">
+            <span>Shop ID</span><span style="color:var(--admin-text);font-weight:600">#{{ shop.id }}</span>
+          </div>
+          <div class="d-flex justify-content-between py-2" style="border-bottom:1px solid var(--admin-border)">
+            <span>Owner</span>
+            <span style="color:var(--admin-text)">{{ shop.owner.username if shop.owner else '—' }}</span>
+          </div>
+          <div class="d-flex justify-content-between py-2" style="border-bottom:1px solid var(--admin-border)">
+            <span>Products</span>
+            <span style="color:var(--admin-text)">{{ shop.products|length }}</span>
+          </div>
+          <div class="d-flex justify-content-between py-2" style="border-bottom:1px solid var(--admin-border)">
+            <span>Phone Verified</span>
+            <span>{{ '✓' if shop.phone_verified else '✗' }}</span>
+          </div>
+          <div class="d-flex justify-content-between py-2">
+            <span>Created</span>
+            <span style="color:var(--admin-text)">{{ shop.created_at.strftime('%b %d, %Y') if shop.created_at else '—' }}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,152 @@
+{% extends "admin/base_admin.html" %}
+{% block admin_title %}Dashboard{% endblock %}
+
+{% block admin_content %}
+<div class="mb-4">
+  <h5 class="fw-bold mb-1" style="color:var(--admin-text)">Welcome back, {{ current_user.username }} 👋</h5>
+  <p style="color:var(--admin-muted);font-size:.875rem">Here's what's happening on Market Window.</p>
+</div>
+
+<!-- Stat Cards -->
+<div class="row g-3 mb-4">
+  <div class="col-6 col-lg-3">
+    <div class="stat-card">
+      <div class="stat-icon purple"><i class="bi bi-people-fill"></i></div>
+      <div>
+        <div class="stat-value">{{ total_users }}</div>
+        <div class="stat-label">Total Users</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-lg-3">
+    <div class="stat-card">
+      <div class="stat-icon blue"><i class="bi bi-shield-check"></i></div>
+      <div>
+        <div class="stat-value">{{ total_admins }}</div>
+        <div class="stat-label">Admins</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-lg-3">
+    <div class="stat-card">
+      <div class="stat-icon green"><i class="bi bi-shop"></i></div>
+      <div>
+        <div class="stat-value">{{ total_shops }}</div>
+        <div class="stat-label">Total Shops</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-lg-3">
+    <div class="stat-card">
+      <div class="stat-icon orange"><i class="bi bi-box-seam"></i></div>
+      <div>
+        <div class="stat-value">{{ total_products }}</div>
+        <div class="stat-label">Total Products</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Recent Users & Recent Products -->
+<div class="row g-3">
+  <div class="col-lg-6">
+    <div class="admin-card">
+      <div class="admin-card-header">
+        <span><i class="bi bi-people me-2" style="color:var(--admin-accent)"></i>Recently Joined Users</span>
+        <a href="{{ url_for('mw_admin_bp.users') }}" class="btn-admin-sm">View All</a>
+      </div>
+      <div class="p-0">
+        <table class="admin-table">
+          <thead><tr>
+            <th>User</th><th>Role</th><th>Joined</th>
+          </tr></thead>
+          <tbody>
+          {% for user in recent_users %}
+          <tr>
+            <td>
+              <div class="d-flex align-items-center gap-2">
+                <div class="admin-avatar" style="width:28px;height:28px;font-size:.7rem">{{ user.username[0]|upper }}</div>
+                <div>
+                  <div style="font-size:.85rem;font-weight:600">{{ user.username }}</div>
+                  <div style="font-size:.72rem;color:var(--admin-muted)">{{ user.email }}</div>
+                </div>
+              </div>
+            </td>
+            <td>
+              {% if user.is_super_admin() %}
+                <span class="role-badge role-super"><i class="bi bi-star-fill"></i> Super Admin</span>
+              {% elif user.is_any_admin() %}
+                <span class="role-badge role-admin"><i class="bi bi-shield"></i> Admin</span>
+              {% else %}
+                <span class="role-badge role-user">{{ user.role | title }}</span>
+              {% endif %}
+            </td>
+            <td style="font-size:.78rem;color:var(--admin-muted)">
+              {{ user.created_at.strftime('%b %d, %Y') if user.created_at else '—' }}
+            </td>
+          </tr>
+          {% else %}
+          <tr><td colspan="3" style="color:var(--admin-muted);text-align:center;padding:1.5rem">No users yet</td></tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-6">
+    <div class="admin-card">
+      <div class="admin-card-header">
+        <span><i class="bi bi-box-seam me-2" style="color:#f59e0b"></i>Recently Added Products</span>
+        <a href="{{ url_for('mw_admin_bp.products') }}" class="btn-admin-sm">View All</a>
+      </div>
+      <div class="p-0">
+        <table class="admin-table">
+          <thead><tr>
+            <th>Product</th><th>Shop</th><th>Price</th><th>Status</th>
+          </tr></thead>
+          <tbody>
+          {% for product in recent_products %}
+          <tr>
+            <td style="font-size:.85rem;font-weight:500;max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">
+              {{ product.name }}
+            </td>
+            <td style="font-size:.78rem;color:var(--admin-muted)">{{ product.shop.name if product.shop else '—' }}</td>
+            <td style="font-size:.82rem">GH₵{{ '%.2f'|format(product.price) }}</td>
+            <td>
+              {% if product.is_hidden %}
+                <span class="status-badge status-hidden">Hidden</span>
+              {% elif product.is_active %}
+                <span class="status-badge status-active">Active</span>
+              {% else %}
+                <span class="status-badge status-inactive">Inactive</span>
+              {% endif %}
+            </td>
+          </tr>
+          {% else %}
+          <tr><td colspan="4" style="color:var(--admin-muted);text-align:center;padding:1.5rem">No products yet</td></tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Quick links -->
+<div class="row g-3 mt-1">
+  <div class="col-12">
+    <div class="admin-card">
+      <div class="admin-card-header"><span>Quick Actions</span></div>
+      <div class="admin-card-body d-flex flex-wrap gap-2">
+        <a href="{{ url_for('mw_admin_bp.users') }}" class="btn-admin-primary"><i class="bi bi-people"></i> Manage Users</a>
+        <a href="{{ url_for('mw_admin_bp.shops') }}" class="btn-admin-primary" style="background:var(--admin-accent2)"><i class="bi bi-shop"></i> Manage Shops</a>
+        <a href="{{ url_for('mw_admin_bp.products') }}" class="btn-admin-primary" style="background:#f59e0b"><i class="bi bi-box"></i> Manage Products</a>
+        {% if current_user.is_super_admin() %}
+        <a href="{{ url_for('mw_admin_bp.admins') }}" class="btn-admin-primary" style="background:#10b981"><i class="bi bi-shield-lock"></i> Manage Admins</a>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

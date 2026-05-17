@@ -256,6 +256,11 @@
                         <i class="bi bi-star-fill text-warning me-1"></i>Premium
                     </span>
                     {% endif %}
+                    {% if current_user.is_any_admin() %}
+                    <span class="badge px-3 py-2" style="background:rgba(99,102,241,.25);color:#c7d2fe;border:1px solid rgba(99,102,241,.5)">
+                        <i class="bi bi-shield-check me-1"></i>{{ current_user.get_highest_role()|replace('_',' ')|title }}
+                    </span>
+                    {% endif %}
                 </div>
             </div>
             <div class="col-md-3">
@@ -375,6 +380,30 @@
         
         <!-- Recent Activity -->
         <div class="col-lg-4 mb-4">
+            {% if current_user.is_any_admin() %}
+            <div class="modern-card mb-4" style="border:1px solid rgba(99,102,241,.2)">
+                <div class="card-header-modern" style="background:linear-gradient(135deg,rgba(99,102,241,.08),rgba(139,92,246,.05))">
+                    <h5 class="mb-0 fw-bold">
+                        <i class="bi bi-shield-check me-2" style="color:#6366f1"></i>Admin Access
+                    </h5>
+                </div>
+                <div class="card-body p-4">
+                    <p class="text-muted small mb-3">Toggle Admin Mode to access the administration panel. Your admin role is always preserved when off.</p>
+                    <form method="POST" action="{{ url_for('mw_admin_bp.toggle_admin_mode_route') }}" class="mb-3">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <button type="submit" class="admin-mode-pill">
+                          <i class="bi bi-{{ 'shield-fill-check' if current_user.admin_mode else 'shield' }}"></i>
+                          Admin Mode {{ 'Enabled' if current_user.admin_mode else 'Disabled' }}
+                        </button>
+                    </form>
+                    {% if current_user.can_access_admin() %}
+                    <a href="{{ url_for('mw_admin_bp.dashboard') }}" class="btn btn-sm btn-primary fw-semibold">
+                        <i class="bi bi-speedometer2 me-1"></i>Go to Dashboard
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
             <div class="modern-card mb-4">
                 <div class="card-header-modern">
                     <div class="d-flex justify-content-between align-items-center gap-2 flex-wrap">

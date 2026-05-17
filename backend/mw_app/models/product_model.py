@@ -55,6 +55,7 @@ class Product(db.Model):
     stock = db.Column(db.Integer, default=0)
     images = db.Column(db.Text)  # Deprecated: legacy JSON/comma-separated URLs
     is_active = db.Column(db.Boolean, default=True)
+    is_hidden = db.Column(db.Boolean, default=False, server_default='false', nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.now(timezone.utc))
     updated_at = db.Column(db.DateTime, default=datetime.now(timezone.utc), onupdate=datetime.now(timezone.utc))
 

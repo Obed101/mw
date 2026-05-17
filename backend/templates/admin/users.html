@@ -1,0 +1,155 @@
+{% extends "admin/base_admin.html" %}
+{% block admin_title %}Users{% endblock %}
+
+{% block admin_content %}
+<div class="d-flex align-items-center justify-content-between mb-4">
+  <div>
+    <h5 class="fw-bold mb-0" style="color:var(--admin-text)">Users</h5>
+    <p class="mb-0" style="color:var(--admin-muted);font-size:.8rem">{{ pagination.total }} total users</p>
+  </div>
+</div>
+
+<!-- Filters -->
+<form method="GET" class="mb-3">
+  <div class="row g-2 align-items-center">
+    <div class="col-md-4">
+      <div class="admin-search-bar">
+        <i class="bi bi-search" style="color:var(--admin-muted)"></i>
+        <input type="text" name="q" value="{{ search }}" placeholder="Search username, email, phone…">
+      </div>
+    </div>
+    <div class="col-auto">
+      <select name="status" class="admin-form-control" style="width:auto;padding:.45rem .75rem;font-size:.85rem" onchange="this.form.submit()">
+        <option value="all" {{ 'selected' if status_filter=='all' }}>All Status</option>
+        <option value="active" {{ 'selected' if status_filter=='active' }}>Active</option>
+        <option value="suspended" {{ 'selected' if status_filter=='suspended' }}>Suspended</option>
+      </select>
+    </div>
+    <div class="col-auto">
+      <button type="submit" class="btn-admin-primary"><i class="bi bi-filter"></i> Filter</button>
+    </div>
+    {% if search or status_filter != 'all' %}
+    <div class="col-auto">
+      <a href="{{ url_for('mw_admin_bp.users') }}" class="btn-admin-sm">Clear</a>
+    </div>
+    {% endif %}
+  </div>
+</form>
+
+<div class="admin-card">
+  <div class="p-0">
+    <table class="admin-table">
+      <thead><tr>
+        <th>User</th><th>Role</th><th>Status</th><th>Joined</th><th>Actions</th>
+      </tr></thead>
+      <tbody>
+      {% for user in users %}
+      <tr>
+        <td>
+          <div class="d-flex align-items-center gap-2">
+            <div class="admin-avatar" style="width:30px;height:30px;font-size:.75rem">{{ user.username[0]|upper }}</div>
+            <div>
+              <div style="font-weight:600;font-size:.85rem">{{ user.username }}</div>
+              <div style="font-size:.72rem;color:var(--admin-muted)">{{ user.email }}</div>
+              {% if user.phone %}<div style="font-size:.7rem;color:var(--admin-muted)">{{ user.phone }}</div>{% endif %}
+            </div>
+          </div>
+        </td>
+        <td>
+          {% if user.is_super_admin() %}
+            <span class="role-badge role-super"><i class="bi bi-star-fill"></i> Super Admin</span>
+          {% elif user.is_any_admin() %}
+            <span class="role-badge role-admin"><i class="bi bi-shield"></i> Admin</span>
+          {% else %}
+            <span class="role-badge role-user">{{ user.role | title }}</span>
+          {% endif %}
+        </td>
+        <td>
+          {% if user.is_active %}
+            <span class="status-badge status-active">Active</span>
+          {% else %}
+            <span class="status-badge status-inactive">Suspended</span>
+          {% endif %}
+        </td>
+        <td style="font-size:.78rem;color:var(--admin-muted)">{{ user.created_at.strftime('%b %d, %Y') if user.created_at else '—' }}</td>
+        <td>
+          <div class="d-flex flex-wrap gap-1">
+            <a href="{{ url_for('mw_admin_bp.edit_user', user_id=user.id) }}" class="btn-admin-sm">
+              <i class="bi bi-pencil"></i> Edit
+            </a>
+            {% if user.id != current_user.id %}
+              {% if not (user.is_super_admin() and not current_user.is_super_admin()) %}
+              <form method="POST" action="{{ url_for('mw_admin_bp.suspend_user', user_id=user.id) }}" style="display:inline">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button type="button" class="btn-admin-sm {{ 'btn-admin-success' if not user.is_active else 'btn-admin-danger' }}"
+                  data-confirm="{{ 'Activate' if not user.is_active else 'Suspend' }} {{ user.username }}?"
+                  data-confirm-title="{{ 'Activate' if not user.is_active else 'Suspend' }} User"
+                  data-confirm-btn="{{ 'Activate' if not user.is_active else 'Suspend' }}"
+                  data-confirm-class="{{ 'btn-success' if not user.is_active else 'btn-danger' }}"
+                  data-confirm-action="{{ url_for('mw_admin_bp.suspend_user', user_id=user.id) }}">
+                  <i class="bi bi-{{ 'check-circle' if not user.is_active else 'slash-circle' }}"></i>
+                  {{ 'Activate' if not user.is_active else 'Suspend' }}
+                </button>
+              </form>
+              {% endif %}
+              {% if current_user.is_super_admin() %}
+                {% if user.is_any_admin() %}
+                <form method="POST" action="{{ url_for('mw_admin_bp.revoke_admin', user_id=user.id) }}" style="display:inline">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                  <button type="button" class="btn-admin-sm btn-admin-danger"
+                    data-confirm="Revoke all admin privileges from {{ user.username }}?"
+                    data-confirm-title="Revoke Admin Role"
+                    data-confirm-btn="Revoke"
+                    data-confirm-class="btn-danger"
+                    data-confirm-action="{{ url_for('mw_admin_bp.revoke_admin', user_id=user.id) }}">
+                    <i class="bi bi-shield-minus"></i> Revoke Admin
+                  </button>
+                </form>
+                {% else %}
+                <form method="POST" action="{{ url_for('mw_admin_bp.assign_user_role', user_id=user.id) }}" style="display:inline-flex; align-items:center; gap:0.25rem;">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                  <select name="role_name" class="admin-form-control py-0 px-2" style="height:26px;font-size:0.75rem;width:auto">
+                    <option value="admin">Admin</option>
+                    <option value="super_admin">Super Admin</option>
+                  </select>
+                  <button type="button" class="btn-admin-sm btn-admin-success m-0"
+                    data-confirm="Assign selected admin role to {{ user.username }}?"
+                    data-confirm-title="Assign Admin Role"
+                    data-confirm-btn="Assign"
+                    data-confirm-class="btn-success"
+                    data-confirm-action="{{ url_for('mw_admin_bp.assign_user_role', user_id=user.id) }}">
+                    <i class="bi bi-shield-plus"></i> Assign
+                  </button>
+                </form>
+                {% endif %}
+              {% endif %}
+            {% endif %}
+          </div>
+        </td>
+      </tr>
+      {% else %}
+      <tr><td colspan="5" style="color:var(--admin-muted);text-align:center;padding:2rem">No users found.</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{% if pagination.pages > 1 %}
+<div class="d-flex justify-content-center mt-3">
+  <div class="admin-pagination">
+    {% if pagination.has_prev %}
+      <a href="{{ url_for('mw_admin_bp.users', page=pagination.prev_num, q=search, status=status_filter) }}"><i class="bi bi-chevron-left"></i></a>
+    {% endif %}
+    {% for p in pagination.iter_pages(left_edge=1, right_edge=1, left_current=2, right_current=2) %}
+      {% if p %}
+        <a href="{{ url_for('mw_admin_bp.users', page=p, q=search, status=status_filter) }}" class="{{ 'current' if p == pagination.page else '' }}">{{ p }}</a>
+      {% else %}<span>…</span>{% endif %}
+    {% endfor %}
+    {% if pagination.has_next %}
+      <a href="{{ url_for('mw_admin_bp.users', page=pagination.next_num, q=search, status=status_filter) }}"><i class="bi bi-chevron-right"></i></a>
+    {% endif %}
+  </div>
+</div>
+{% endif %}
+{% endblock %}

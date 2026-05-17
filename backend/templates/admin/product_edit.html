@@ -1,0 +1,82 @@
+{% extends "admin/base_admin.html" %}
+{% block admin_title %}Edit Product{% endblock %}
+
+{% block admin_content %}
+<div class="d-flex align-items-center gap-3 mb-4">
+  <a href="{{ url_for('mw_admin_bp.products') }}" class="btn-admin-sm"><i class="bi bi-arrow-left"></i> Back</a>
+  <h5 class="fw-bold mb-0" style="color:var(--admin-text)">Edit Product</h5>
+</div>
+
+<div class="row g-3">
+  <div class="col-lg-7">
+    <div class="admin-card">
+      <div class="admin-card-header"><i class="bi bi-box me-2"></i>Product Details</div>
+      <div class="admin-card-body">
+        <form method="POST">
+          {{ form.hidden_tag() }}
+          <div class="admin-form-group">
+            <label>Name</label>
+            {{ form.name(class='admin-form-control') }}
+            {% for err in form.name.errors %}<div style="color:#f87171;font-size:.75rem;margin-top:.25rem">{{ err }}</div>{% endfor %}
+          </div>
+          <div class="admin-form-group">
+            <label>Description</label>
+            {{ form.description(class='admin-form-control', rows=3) }}
+          </div>
+          <div class="row g-3">
+            <div class="col-md-6">
+              <div class="admin-form-group">
+                <label>Price (GH₵)</label>
+                {{ form.price(class='admin-form-control') }}
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="admin-form-group">
+                <label>Stock</label>
+                {{ form.stock(class='admin-form-control') }}
+              </div>
+            </div>
+          </div>
+          <div class="d-flex gap-4 mb-3">
+            <div class="admin-form-check">
+              {{ form.is_active() }}
+              <label style="color:var(--admin-text);font-size:.9rem">Active</label>
+            </div>
+            <div class="admin-form-check">
+              {{ form.is_hidden() }}
+              <label style="color:var(--admin-text);font-size:.9rem">Hidden (admin override)</label>
+            </div>
+          </div>
+          <div class="d-flex gap-2">
+            <button type="submit" class="btn-admin-primary"><i class="bi bi-check-lg"></i> Save</button>
+            <a href="{{ url_for('mw_admin_bp.products') }}" class="btn-admin-sm">Cancel</a>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-5">
+    <div class="admin-card">
+      <div class="admin-card-header"><i class="bi bi-info-circle me-2"></i>Product Info</div>
+      <div class="admin-card-body">
+        <div style="font-size:.82rem;color:var(--admin-muted)">
+          <div class="d-flex justify-content-between py-2" style="border-bottom:1px solid var(--admin-border)">
+            <span>Code</span><span style="color:var(--admin-text);font-family:monospace">{{ product.code }}</span>
+          </div>
+          <div class="d-flex justify-content-between py-2" style="border-bottom:1px solid var(--admin-border)">
+            <span>Shop</span><span style="color:var(--admin-text)">{{ product.shop.name if product.shop else '—' }}</span>
+          </div>
+          <div class="d-flex justify-content-between py-2" style="border-bottom:1px solid var(--admin-border)">
+            <span>Category</span><span style="color:var(--admin-text)">{{ product.category.name if product.category else '—' }}</span>
+          </div>
+          <div class="d-flex justify-content-between py-2">
+            <span>Added</span>
+            <span style="color:var(--admin-text)">{{ product.created_at.strftime('%b %d, %Y') if product.created_at else '—' }}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

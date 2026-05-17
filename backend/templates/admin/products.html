@@ -1,0 +1,115 @@
+{% extends "admin/base_admin.html" %}
+{% block admin_title %}Products{% endblock %}
+
+{% block admin_content %}
+<div class="d-flex align-items-center justify-content-between mb-4">
+  <div>
+    <h5 class="fw-bold mb-0" style="color:var(--admin-text)">Products</h5>
+    <p class="mb-0" style="color:var(--admin-muted);font-size:.8rem">{{ pagination.total }} total products</p>
+  </div>
+</div>
+
+<form method="GET" class="mb-3">
+  <div class="row g-2 align-items-center">
+    <div class="col-md-4">
+      <div class="admin-search-bar">
+        <i class="bi bi-search" style="color:var(--admin-muted)"></i>
+        <input type="text" name="q" value="{{ search }}" placeholder="Search name, code, shop…">
+      </div>
+    </div>
+    <div class="col-auto">
+      <select name="status" class="admin-form-control" style="width:auto;padding:.45rem .75rem;font-size:.85rem" onchange="this.form.submit()">
+        <option value="all" {{ 'selected' if status_filter=='all' }}>All</option>
+        <option value="active" {{ 'selected' if status_filter=='active' }}>Active</option>
+        <option value="hidden" {{ 'selected' if status_filter=='hidden' }}>Hidden</option>
+        <option value="inactive" {{ 'selected' if status_filter=='inactive' }}>Inactive</option>
+      </select>
+    </div>
+    <div class="col-auto">
+      <button type="submit" class="btn-admin-primary"><i class="bi bi-filter"></i> Filter</button>
+    </div>
+    {% if search or status_filter != 'all' %}
+    <div class="col-auto"><a href="{{ url_for('mw_admin_bp.products') }}" class="btn-admin-sm">Clear</a></div>
+    {% endif %}
+  </div>
+</form>
+
+<div class="admin-card">
+  <div class="p-0">
+    <table class="admin-table">
+      <thead><tr>
+        <th>Product</th><th>Shop</th><th>Price</th><th>Stock</th><th>Status</th><th>Actions</th>
+      </tr></thead>
+      <tbody>
+      {% for product in products %}
+      <tr>
+        <td style="max-width:180px">
+          <div style="font-weight:600;font-size:.85rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ product.name }}</div>
+          <div style="font-size:.7rem;color:var(--admin-muted)">{{ product.code }}</div>
+        </td>
+        <td style="font-size:.82rem;color:var(--admin-muted)">{{ product.shop.name if product.shop else '—' }}</td>
+        <td style="font-size:.85rem;font-weight:600">GH₵{{ '%.2f'|format(product.price) }}</td>
+        <td style="font-size:.82rem">{{ product.stock }}</td>
+        <td>
+          {% if product.is_hidden %}
+            <span class="status-badge status-hidden"><i class="bi bi-eye-slash"></i> Hidden</span>
+          {% elif product.is_active %}
+            <span class="status-badge status-active">Active</span>
+          {% else %}
+            <span class="status-badge status-inactive">Inactive</span>
+          {% endif %}
+        </td>
+        <td>
+          <div class="d-flex flex-wrap gap-1">
+            <a href="{{ url_for('mw_admin_bp.edit_product', product_id=product.id) }}" class="btn-admin-sm">
+              <i class="bi bi-pencil"></i>
+            </a>
+            <form method="POST" action="{{ url_for('mw_admin_bp.toggle_hide_product', product_id=product.id) }}" style="display:inline">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <button type="button" class="btn-admin-sm {{ 'btn-admin-success' if product.is_hidden else '' }}"
+                data-confirm="{{ 'Unhide' if product.is_hidden else 'Hide' }} &quot;{{ product.name }}&quot;?"
+                data-confirm-title="{{ 'Unhide' if product.is_hidden else 'Hide' }} Product"
+                data-confirm-btn="{{ 'Unhide' if product.is_hidden else 'Hide' }}"
+                data-confirm-class="{{ 'btn-success' if product.is_hidden else 'btn-warning' }}"
+                data-confirm-action="{{ url_for('mw_admin_bp.toggle_hide_product', product_id=product.id) }}">
+                <i class="bi bi-{{ 'eye' if product.is_hidden else 'eye-slash' }}"></i>
+              </button>
+            </form>
+            <form method="POST" action="{{ url_for('mw_admin_bp.delete_product', product_id=product.id) }}" style="display:inline">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <button type="button" class="btn-admin-sm btn-admin-danger"
+                data-confirm="Permanently delete &quot;{{ product.name }}&quot;? This cannot be undone."
+                data-confirm-title="Delete Product"
+                data-confirm-action="{{ url_for('mw_admin_bp.delete_product', product_id=product.id) }}">
+                <i class="bi bi-trash"></i>
+              </button>
+            </form>
+          </div>
+        </td>
+      </tr>
+      {% else %}
+      <tr><td colspan="6" style="color:var(--admin-muted);text-align:center;padding:2rem">No products found.</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{% if pagination.pages > 1 %}
+<div class="d-flex justify-content-center mt-3">
+  <div class="admin-pagination">
+    {% if pagination.has_prev %}
+      <a href="{{ url_for('mw_admin_bp.products', page=pagination.prev_num, q=search, status=status_filter) }}"><i class="bi bi-chevron-left"></i></a>
+    {% endif %}
+    {% for p in pagination.iter_pages(left_edge=1, right_edge=1, left_current=2, right_current=2) %}
+      {% if p %}
+        <a href="{{ url_for('mw_admin_bp.products', page=p, q=search, status=status_filter) }}" class="{{ 'current' if p == pagination.page else '' }}">{{ p }}</a>
+      {% else %}<span>…</span>{% endif %}
+    {% endfor %}
+    {% if pagination.has_next %}
+      <a href="{{ url_for('mw_admin_bp.products', page=pagination.next_num, q=search, status=status_filter) }}"><i class="bi bi-chevron-right"></i></a>
+    {% endif %}
+  </div>
+</div>
+{% endif %}
+{% endblock %}

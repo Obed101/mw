@@ -64,6 +64,7 @@ def create_app():
     from .routes.manage_routes import manage_bp
     from .routes.support_routes import support_bp
     from .routes.template_routes import main_bp, admin_bp as admin_template_bp, seller_bp as seller_template_bp, buyer_bp as buyer_template_bp, auth_bp as auth_template_bp
+    from .admin.routes import mw_admin_bp
     
     # Template routes (for HTMX)
     app.register_blueprint(main_bp)
@@ -73,6 +74,7 @@ def create_app():
     app.register_blueprint(auth_template_bp)
     app.register_blueprint(manage_bp)
     app.register_blueprint(support_bp)
+    app.register_blueprint(mw_admin_bp)
     
     # API routes
     app.register_blueprint(admin_bp, url_prefix='/api/admin')
@@ -87,5 +89,13 @@ def create_app():
         response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization')
         response.headers.add('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,OPTIONS')
         return response
+
+    # Seed: ensure user id=1 is super_admin (runs once per startup inside app context)
+    with app.app_context():
+        try:
+            from .admin.services import ensure_super_admin_exists
+            ensure_super_admin_exists()
+        except Exception:
+            pass  # Tables may not exist yet during first migration
 
     return app

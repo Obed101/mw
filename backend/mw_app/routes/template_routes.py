@@ -62,7 +62,7 @@ def admin_required(func):
     """Decorator to ensure the user is an admin (Session based)"""
     @wraps(func)
     def decorated_view(*args, **kwargs):
-        if not current_user.is_authenticated or current_user.role != USER_ROLE_ADMIN:
+        if not (current_user.is_authenticated and current_user.can_access_admin()):
             flash('Admin access is required for that page.', 'error')
             return redirect(url_for('main_bp.index'))
         return func(*args, **kwargs)
@@ -575,7 +575,12 @@ def products():
 @login_required
 def notifications():
     """Notifications page for all user types"""
-    return render_template('public/notifications.html')
+    notifications = Notification.query.filter_by(
+        recipient_user_id=current_user.id,
+    ).order_by(Notification.created_at.desc()).limit(100).all()
+    
+    notifications_data = [_notification_to_dict(n) for n in notifications]
+    return render_template('public/notifications.html', notifications=notifications_data)
 
 
 @main_bp.route('/notifications/feed')
@@ -634,6 +639,31 @@ def mark_notifications_read():
         'success': True,
         'updated': len(notifications),
     })
+
+@main_bp.route('/notifications/<int:notification_id>', methods=['DELETE'])
+@login_required
+def delete_notification(notification_id):
+    """Delete one notification for the current user."""
+    notification = Notification.query.filter_by(
+        id=notification_id,
+        recipient_user_id=current_user.id,
+    ).first_or_404()
+
+    db.session.delete(notification)
+    db.session.commit()
+
+    return jsonify({'success': True})
+
+@main_bp.route('/notifications/clear-all', methods=['DELETE'])
+@login_required
+def clear_all_notifications():
+    """Delete all notifications for the current user."""
+    Notification.query.filter_by(
+        recipient_user_id=current_user.id,
+    ).delete()
+    db.session.commit()
+    
+    return jsonify({'success': True})
 
 @main_bp.route('/categories')
 def categories():
@@ -1368,92 +1398,4 @@ def followed_shops():
     """Redirect followed shops to unified wishlist page"""
     return redirect(url_for('buyer_bp.wishlist'))
 
-# Admin template routes
-@admin_bp.route('/dashboard')
-@admin_required
-def admin_dashboard():
-    """Admin dashboard"""
-    return render_template('admin/dashboard.html')
-
-@admin_bp.route('/users')
-@admin_required
-def admin_users():
-    """User management page"""
-    return render_template('admin/users.html')
-
-@admin_bp.route('/shops')
-@admin_required
-def admin_shops():
-    """Shop management page"""
-    return render_template('admin/shops.html')
-
-@admin_bp.route('/categories')
-@admin_required
-def admin_categories():
-    """Category management page"""
-    return render_template('admin/categories.html')
-
-@admin_bp.route('/products')
-@admin_required
-def admin_products():
-    """Product management page"""
-    return render_template('admin/products.html')
-
-@admin_bp.route('/reports')
-@admin_required
-def admin_reports():
-    """Reports and analytics page"""
-    return render_template('admin/reports.html')
-
-@admin_bp.route('/bulk-operations')
-@admin_required
-def admin_bulk_operations():
-    """Bulk operations page"""
-    return render_template('admin/bulk_operations.html')
-
-# HTMX partial endpoints (for dynamic updates)
-@seller_bp.route('/partials/products/list')
-@login_required
-def products_list_partial():
-    """Partial template for products list (HTMX updates)"""
-    redirect_response = _seller_guard_redirect()
-    if redirect_response:
-        return redirect_response
-    return render_template('seller/partials/products_list.html')
-
-@seller_bp.route('/partials/analytics/data')
-@login_required
-def analytics_data_partial():
-    """Partial template for analytics data (HTMX updates)"""
-    redirect_response = _seller_guard_redirect()
-    if redirect_response:
-        return redirect_response
-    return render_template('seller/partials/analytics_data.html')
-
-@buyer_bp.route('/partials/shops/list')
-def shops_list_partial():
-    """Partial template for shops list (HTMX updates)"""
-    return render_template('buyer/partials/shops_list.html')
-
-@buyer_bp.route('/partials/products/list')
-def products_list_partial():
-    """Partial template for products list (HTMX updates)"""
-    return render_template('buyer/partials/products_list.html')
-
-@admin_bp.route('/partials/users/list')
-@admin_required
-def users_list_partial():
-    """Partial template for users list (HTMX updates)"""
-    return render_template('admin/partials/users_list.html')
-
-@admin_bp.route('/partials/shops/list')
-@admin_required
-def shops_list_partial():
-    """Partial template for shops list (HTMX updates)"""
-    return render_template('admin/partials/shops_list.html')
-
-@admin_bp.route('/partials/reports/data')
-@admin_required
-def reports_data_partial():
-    """Partial template for reports data (HTMX updates)"""
-    return render_template('admin/partials/reports_data.html')
+# Old admin routes removed in favor of mw_admin_bp

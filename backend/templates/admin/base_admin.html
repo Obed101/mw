@@ -1,0 +1,358 @@
+{% extends "base.html" %}
+{% block title %}Admin — {{ page_title | default('Dashboard') }}{% endblock %}
+
+{% block styles %}
+<style>
+:root {
+  --admin-sidebar-w: 240px;
+  --admin-bg: #0f1117;
+  --admin-surface: #1a1d27;
+  --admin-surface2: #22263a;
+  --admin-border: rgba(255,255,255,.07);
+  --admin-accent: #6366f1;
+  --admin-accent2: #8b5cf6;
+  --admin-text: #e2e8f0;
+  --admin-muted: #94a3b8;
+}
+
+.admin-wrap { display: flex; min-height: 100vh; background: var(--admin-bg); color: var(--admin-text); }
+
+/* Sidebar */
+.admin-sidebar {
+  width: var(--admin-sidebar-w);
+  background: var(--admin-surface);
+  border-right: 1px solid var(--admin-border);
+  display: flex; flex-direction: column;
+  position: fixed; top: 0; left: 0; height: 100vh;
+  z-index: 1040; transition: transform .25s ease;
+}
+.admin-sidebar-brand {
+  padding: 1.25rem 1.5rem;
+  border-bottom: 1px solid var(--admin-border);
+  display: flex; align-items: center; gap: .75rem;
+  text-decoration: none; color: var(--admin-text);
+  font-weight: 700; font-size: 1rem;
+}
+.admin-sidebar-brand .brand-icon {
+  width: 32px; height: 32px; border-radius: 8px;
+  background: linear-gradient(135deg, var(--admin-accent), var(--admin-accent2));
+  display: flex; align-items: center; justify-content: center; font-size: .9rem;
+}
+.admin-nav { flex: 1; padding: 1rem 0; overflow-y: auto; }
+.admin-nav-section { padding: .25rem 1rem .1rem; font-size: .65rem; font-weight: 700;
+  text-transform: uppercase; letter-spacing: .08em; color: var(--admin-muted); }
+.admin-nav a {
+  display: flex; align-items: center; gap: .75rem;
+  padding: .6rem 1.5rem; color: var(--admin-muted); text-decoration: none;
+  font-size: .875rem; border-radius: 0; transition: all .15s;
+  border-left: 3px solid transparent;
+}
+.admin-nav a:hover { color: var(--admin-text); background: rgba(255,255,255,.04); }
+.admin-nav a.active { color: var(--admin-accent); background: rgba(99,102,241,.1);
+  border-left-color: var(--admin-accent); }
+.admin-nav a i { font-size: 1rem; flex-shrink: 0; }
+.admin-sidebar-footer {
+  padding: 1rem 1.5rem; border-top: 1px solid var(--admin-border);
+  font-size: .8rem; color: var(--admin-muted);
+}
+
+/* Main */
+.admin-main { margin-left: var(--admin-sidebar); flex: 1; display: flex; flex-direction: column; min-height: 100vh; }
+.admin-topbar {
+  background: var(--admin-surface); border-bottom: 1px solid var(--admin-border);
+  padding: .875rem 1.75rem; display: flex; align-items: center; gap: 1rem;
+  position: sticky; top: 0; z-index: 100;
+}
+.admin-topbar-title { font-weight: 600; font-size: 1.05rem; flex: 1; }
+.admin-mode-badge {
+  display: inline-flex; align-items: center; gap: .4rem;
+  padding: .25rem .75rem; border-radius: 999px; font-size: .72rem; font-weight: 600;
+  background: rgba(99,102,241,.15); color: var(--admin-accent); border: 1px solid rgba(99,102,241,.3);
+}
+.admin-content { padding: 1.75rem; flex: 1; }
+
+/* Cards */
+.admin-card {
+  background: var(--admin-surface); border: 1px solid var(--admin-border);
+  border-radius: 12px; overflow: hidden;
+}
+.admin-card-header {
+  padding: 1rem 1.25rem; border-bottom: 1px solid var(--admin-border);
+  display: flex; align-items: center; justify-content: space-between;
+  font-weight: 600; font-size: .9rem;
+}
+.admin-card-body { padding: 1.25rem; }
+
+/* Stat cards */
+.stat-card {
+  background: var(--admin-surface); border: 1px solid var(--admin-border);
+  border-radius: 12px; padding: 1.25rem 1.5rem;
+  display: flex; align-items: center; gap: 1rem; transition: border-color .2s;
+}
+.stat-card:hover { border-color: var(--admin-accent); }
+.stat-icon {
+  width: 48px; height: 48px; border-radius: 10px;
+  display: flex; align-items: center; justify-content: center; font-size: 1.3rem; flex-shrink: 0;
+}
+.stat-icon.purple { background: rgba(99,102,241,.15); color: var(--admin-accent); }
+.stat-icon.green  { background: rgba(16,185,129,.15);  color: #10b981; }
+.stat-icon.blue   { background: rgba(59,130,246,.15);  color: #3b82f6; }
+.stat-icon.orange { background: rgba(245,158,11,.15);  color: #f59e0b; }
+.stat-value { font-size: 1.6rem; font-weight: 700; line-height: 1; }
+.stat-label { font-size: .8rem; color: var(--admin-muted); margin-top: .2rem; }
+
+/* Table */
+.admin-table { width: 100%; border-collapse: collapse; font-size: .875rem; }
+.admin-table th {
+  padding: .75rem 1rem; text-align: left; font-size: .7rem; font-weight: 700;
+  text-transform: uppercase; letter-spacing: .06em;
+  color: var(--admin-muted); border-bottom: 1px solid var(--admin-border);
+}
+.admin-table td {
+  padding: .75rem 1rem; border-bottom: 1px solid var(--admin-border); vertical-align: middle;
+}
+.admin-table tbody tr:hover { background: rgba(255,255,255,.025); }
+.admin-table tbody tr:last-child td { border-bottom: none; }
+
+/* Badges */
+.role-badge { display: inline-flex; align-items: center; gap: .3rem; padding: .2rem .6rem;
+  border-radius: 999px; font-size: .7rem; font-weight: 600; }
+.role-super  { background: rgba(168,85,247,.15); color: #c084fc; border: 1px solid rgba(168,85,247,.3); }
+.role-admin  { background: rgba(99,102,241,.15);  color: #818cf8; border: 1px solid rgba(99,102,241,.3); }
+.role-user   { background: rgba(148,163,184,.1);  color: #94a3b8; border: 1px solid rgba(148,163,184,.2); }
+
+.status-badge { display: inline-flex; align-items: center; gap: .3rem; padding: .2rem .6rem;
+  border-radius: 999px; font-size: .7rem; font-weight: 600; }
+.status-active    { background: rgba(16,185,129,.15); color: #34d399; border: 1px solid rgba(16,185,129,.3); }
+.status-inactive  { background: rgba(239,68,68,.1);   color: #f87171; border: 1px solid rgba(239,68,68,.25); }
+.status-verified  { background: rgba(59,130,246,.15); color: #60a5fa; border: 1px solid rgba(59,130,246,.3); }
+.status-pending   { background: rgba(245,158,11,.1);  color: #fbbf24; border: 1px solid rgba(245,158,11,.25); }
+.status-suspended { background: rgba(239,68,68,.1);   color: #f87171; border: 1px solid rgba(239,68,68,.25); }
+.status-hidden    { background: rgba(107,114,128,.15); color: #9ca3af; border: 1px solid rgba(107,114,128,.25); }
+
+/* Search bar */
+.admin-search-bar {
+  background: var(--admin-surface2); border: 1px solid var(--admin-border);
+  border-radius: 8px; display: flex; align-items: center; gap: .5rem;
+  padding: .5rem .875rem; transition: border-color .15s;
+}
+.admin-search-bar:focus-within { border-color: var(--admin-accent); }
+.admin-search-bar input { background: none; border: none; outline: none; color: var(--admin-text);
+  font-size: .875rem; width: 100%; }
+.admin-search-bar input::placeholder { color: var(--admin-muted); }
+
+/* Buttons */
+.btn-admin-primary {
+  background: var(--admin-accent); border: none; color: #fff;
+  padding: .45rem 1rem; border-radius: 7px; font-size: .82rem; font-weight: 600;
+  cursor: pointer; display: inline-flex; align-items: center; gap: .4rem;
+  transition: opacity .15s; text-decoration: none;
+}
+.btn-admin-primary:hover { opacity: .85; color: #fff; }
+.btn-admin-sm {
+  padding: .3rem .65rem; border-radius: 6px; font-size: .75rem; font-weight: 600;
+  border: 1px solid var(--admin-border); background: var(--admin-surface2);
+  color: var(--admin-muted); cursor: pointer; transition: all .15s;
+  display: inline-flex; align-items: center; gap: .3rem; text-decoration: none;
+}
+.btn-admin-sm:hover { color: var(--admin-text); border-color: var(--admin-accent); }
+.btn-admin-danger { border-color: rgba(239,68,68,.4); }
+.btn-admin-danger:hover { color: #f87171; border-color: #f87171; background: rgba(239,68,68,.07); }
+.btn-admin-success { border-color: rgba(16,185,129,.4); }
+.btn-admin-success:hover { color: #34d399; border-color: #34d399; background: rgba(16,185,129,.07); }
+
+/* Pagination */
+.admin-pagination { display: flex; gap: .35rem; align-items: center; }
+.admin-pagination a, .admin-pagination span {
+  padding: .35rem .7rem; border-radius: 6px; font-size: .8rem; text-decoration: none;
+  border: 1px solid var(--admin-border); color: var(--admin-muted); background: var(--admin-surface2);
+  transition: all .15s;
+}
+.admin-pagination a:hover { color: var(--admin-text); border-color: var(--admin-accent); }
+.admin-pagination .current { background: var(--admin-accent); color: #fff; border-color: var(--admin-accent); }
+
+/* Form controls */
+.admin-form-group { margin-bottom: 1.1rem; }
+.admin-form-group label { display: block; font-size: .8rem; font-weight: 600; color: var(--admin-muted);
+  margin-bottom: .4rem; text-transform: uppercase; letter-spacing: .05em; }
+.admin-form-control {
+  width: 100%; background: var(--admin-surface2); border: 1px solid var(--admin-border);
+  border-radius: 8px; padding: .6rem .875rem; color: var(--admin-text); font-size: .9rem; outline: none;
+  transition: border-color .15s;
+}
+.admin-form-control:focus { border-color: var(--admin-accent); }
+.admin-form-check { display: flex; align-items: center; gap: .5rem; }
+.admin-form-check input { width: 1rem; height: 1rem; accent-color: var(--admin-accent); }
+
+/* Mobile sidebar toggle */
+.admin-sidebar-toggle { display: none; }
+
+/* Avatar */
+.admin-avatar {
+  width: 32px; height: 32px; border-radius: 50%;
+  background: linear-gradient(135deg, var(--admin-accent), var(--admin-accent2));
+  display: flex; align-items: center; justify-content: center;
+  font-size: .8rem; font-weight: 700; color: #fff; flex-shrink: 0;
+}
+
+/* Modal confirm */
+.confirm-modal .modal-content { background: var(--admin-surface); border: 1px solid var(--admin-border); color: var(--admin-text); }
+.confirm-modal .modal-header { border-color: var(--admin-border); }
+.confirm-modal .modal-footer { border-color: var(--admin-border); }
+
+@media (max-width: 768px) {
+  .admin-sidebar { transform: translateX(-100%); }
+  .admin-sidebar.open { transform: translateX(0); }
+  .admin-main { margin-left: 0; }
+  .admin-sidebar-toggle { display: block; }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="admin-wrap">
+  <!-- Sidebar -->
+  <aside class="admin-sidebar" id="adminSidebar">
+    <a class="admin-sidebar-brand" href="{{ url_for('mw_admin_bp.dashboard') }}">
+      <div class="brand-icon"><i class="bi bi-shield-check"></i></div>
+      <span>Admin Panel</span>
+    </a>
+
+    <nav class="admin-nav">
+      <div class="admin-nav-section">Overview</div>
+      <a href="{{ url_for('mw_admin_bp.dashboard') }}"
+         class="{{ 'active' if request.endpoint == 'mw_admin_bp.dashboard' else '' }}">
+        <i class="bi bi-speedometer2"></i> Dashboard
+      </a>
+
+      {% if current_user.is_super_admin() %}
+      <div class="admin-nav-section mt-2">Access</div>
+      <a href="{{ url_for('mw_admin_bp.admins') }}"
+         class="{{ 'active' if request.endpoint and 'admin' in request.endpoint and 'admins' in request.path else '' }}">
+        <i class="bi bi-shield-lock"></i> Admins
+      </a>
+      {% endif %}
+
+      <div class="admin-nav-section mt-2">Management</div>
+      <a href="{{ url_for('mw_admin_bp.users') }}"
+         class="{{ 'active' if request.endpoint and 'user' in (request.endpoint or '') else '' }}">
+        <i class="bi bi-people"></i> Users
+      </a>
+      <a href="{{ url_for('mw_admin_bp.shops') }}"
+         class="{{ 'active' if request.endpoint and 'shop' in (request.endpoint or '') else '' }}">
+        <i class="bi bi-shop"></i> Shops
+      </a>
+      <a href="{{ url_for('mw_admin_bp.products') }}"
+         class="{{ 'active' if request.endpoint and 'product' in (request.endpoint or '') else '' }}">
+        <i class="bi bi-box"></i> Products
+      </a>
+
+      <div class="admin-nav-section mt-2">System</div>
+      <a href="{{ url_for('mw_admin_bp.settings') }}"
+         class="{{ 'active' if request.endpoint == 'mw_admin_bp.settings' else '' }}">
+        <i class="bi bi-gear"></i> Settings
+      </a>
+    </nav>
+
+    <div class="admin-sidebar-footer">
+      <div class="d-flex align-items-center gap-2 mb-2">
+        <div class="admin-avatar">{{ current_user.username[0]|upper }}</div>
+        <div>
+          <div style="font-size:.8rem;font-weight:600;color:var(--admin-text)">{{ current_user.username }}</div>
+          <div style="font-size:.7rem;color:var(--admin-muted)">{{ current_user.get_highest_role() | replace('_',' ') | title }}</div>
+        </div>
+      </div>
+      <a href="{{ url_for('main_bp.index') }}" class="btn-admin-sm w-100 justify-content-center mt-1">
+        <i class="bi bi-arrow-left"></i> Back to Site
+      </a>
+    </div>
+  </aside>
+
+  <!-- Main -->
+  <div class="admin-main">
+    <div class="admin-topbar">
+      <button class="btn btn-link p-0 admin-sidebar-toggle me-2" onclick="document.getElementById('adminSidebar').classList.toggle('open')">
+        <i class="bi bi-list fs-5" style="color:var(--admin-muted)"></i>
+      </button>
+      <span class="admin-topbar-title">{% block admin_title %}Admin{% endblock %}</span>
+      <span class="admin-mode-badge"><i class="bi bi-shield-fill-check"></i> Admin Mode</span>
+      <a href="{{ url_for('main_bp.profile') }}" class="btn-admin-sm ms-2">
+        <i class="bi bi-person"></i>
+      </a>
+    </div>
+
+    <div class="admin-content">
+      {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        {% for category, message in messages %}
+          <div class="alert alert-{{ 'danger' if category == 'error' else category }} alert-dismissible fade show mb-3" role="alert" style="font-size:.875rem;">
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+          </div>
+        {% endfor %}
+      {% endif %}
+      {% endwith %}
+
+      {% block admin_content %}{% endblock %}
+    </div>
+  </div>
+</div>
+
+<!-- Confirm Modal -->
+<div class="modal fade confirm-modal" id="confirmModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered modal-sm">
+    <div class="modal-content">
+      <div class="modal-header border-0 pb-0">
+        <h6 class="modal-title fw-bold" id="confirmModalTitle">Confirm Action</h6>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body" id="confirmModalBody" style="font-size:.875rem;color:var(--admin-muted)">
+        Are you sure you want to perform this action?
+      </div>
+      <div class="modal-footer border-0 pt-0">
+        <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <form id="confirmModalForm" method="POST" style="display:inline">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <button type="submit" class="btn btn-sm btn-danger" id="confirmModalBtn">Confirm</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Confirmation modal helper
+document.addEventListener('click', function(e) {
+  const btn = e.target.closest('[data-confirm]');
+  if (!btn) return;
+  e.preventDefault();
+  const modal = new bootstrap.Modal(document.getElementById('confirmModal'));
+  document.getElementById('confirmModalTitle').textContent = btn.dataset.confirmTitle || 'Confirm Action';
+  document.getElementById('confirmModalBody').textContent = btn.dataset.confirm;
+  document.getElementById('confirmModalBtn').textContent = btn.dataset.confirmBtn || 'Confirm';
+  document.getElementById('confirmModalBtn').className = 'btn btn-sm ' + (btn.dataset.confirmClass || 'btn-danger');
+  const form = document.getElementById('confirmModalForm');
+  form.action = btn.dataset.confirmAction || btn.closest('form')?.action || '';
+  
+  // Clear any previously cloned inputs
+  form.querySelectorAll('.cloned-input').forEach(el => el.remove());
+  
+  // Clone inputs from the original form (except CSRF, which is already in the modal)
+  const originalForm = btn.closest('form');
+  if (originalForm) {
+    originalForm.querySelectorAll('input:not([name="csrf_token"]), select, textarea').forEach(input => {
+      const clone = input.cloneNode(true);
+      clone.className = 'cloned-input';
+      if (input.tagName === 'SELECT') clone.value = input.value;
+      clone.style.display = 'none';
+      form.appendChild(clone);
+    });
+  }
+  
+  modal.show();
+});
+</script>
+{% block admin_scripts %}{% endblock %}
+{% endblock %}

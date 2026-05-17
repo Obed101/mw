@@ -56,6 +56,14 @@
                             <div class="notification-list" id="notification-dropdown-list">
                                 <div class="p-3 text-muted small">Loading notifications...</div>
                             </div>
+                            <div class="p-2 text-center border-top" style="background:#f8fafc; border-bottom-left-radius:var(--bs-border-radius); border-bottom-right-radius:var(--bs-border-radius);">
+                                <a href="/notifications" class="text-decoration-none small fw-semibold d-block mb-1">View all notifications</a>
+                                {% if current_user.can_access_admin() %}
+                                <a href="{{ url_for('support_bp.admin_support_inbox') }}" class="text-decoration-none small fw-semibold d-block" style="color:#6366f1">
+                                    <i class="bi bi-headset me-1"></i>Admin: View Support Chats
+                                </a>
+                                {% endif %}
+                            </div>
                         </div>
                     </div>
                     <div class="dropdown">
@@ -66,10 +74,22 @@
                         </button>
                         
                         <ul class="dropdown-menu dropdown-menu-end">
-                            {% if current_user.role == 'admin' %}
-                                <li><a class="dropdown-item" href="/admin/dashboard">
-                                    <i class="bi bi-gear me-2"></i>Admin Dashboard
+                            {% if current_user.is_any_admin() %}
+                                {% if current_user.can_access_admin() %}
+                                <li><a class="dropdown-item" href="{{ url_for('mw_admin_bp.dashboard') }}">
+                                    <i class="bi bi-shield-check me-2"></i>Admin Dashboard
                                 </a></li>
+                                {% endif %}
+                                <li>
+                                  <form method="POST" action="{{ url_for('mw_admin_bp.toggle_admin_mode_route') }}" style="margin:0">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                    <button type="submit" class="dropdown-item">
+                                      <i class="bi bi-{{ 'toggle2-on text-success' if current_user.admin_mode else 'toggle2-off text-muted' }} me-2"></i>
+                                      Admin Mode {{ 'On' if current_user.admin_mode else 'Off' }}
+                                    </button>
+                                  </form>
+                                </li>
+                                <li><hr class="dropdown-divider"></li>
                             {% endif %}
                             {% if current_user.owned_shops %}
                                 <li><a class="dropdown-item" href="{{ url_for('manage_bp.products') }}">
@@ -156,6 +176,12 @@
         </a>
                 <hr class="my-2 mx-3">
         {% if current_user.is_authenticated %}
+            {% if current_user.can_access_admin() %}
+            <a href="{{ url_for('mw_admin_bp.dashboard') }}" class="sidebar-nav-item {{ is_active('/admin') }}" style="color:#818cf8">
+                <i class="bi bi-shield-check"></i>
+                <span>Admin</span>
+            </a>
+            {% endif %}
             {% if current_user.owned_shops %}
             <a href="{{ url_for('manage_bp.products') }}" class="sidebar-nav-item {{ is_active('/manage') }}">
                 <i class="bi bi-shop-window"></i>
@@ -219,6 +245,11 @@
                     <li><a class="dropdown-item" href="/profile">
                         <i class="bi bi-person me-2"></i>Profile
                     </a></li>
+                    {% if current_user.can_access_admin() %}
+                    <li><a class="dropdown-item" href="{{ url_for('mw_admin_bp.dashboard') }}">
+                        <i class="bi bi-shield-check me-2" style="color:#818cf8"></i>Admin
+                    </a></li>
+                    {% endif %}
                     {% if current_user.owned_shops %}
                     <li><a class="dropdown-item" href="{{ url_for('manage_bp.products') }}">
                         <i class="bi bi-shop-window me-2"></i>Manage Shop
