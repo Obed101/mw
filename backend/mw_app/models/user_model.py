@@ -139,9 +139,7 @@ class User(db.Model, UserMixin):
 
     def can_access_admin(self):
         """True if user is any admin AND has admin_mode enabled."""
-        result = self.is_any_admin() and bool(self.admin_mode)
-        print(f"can_access_admin() = {result}")
-        return result
+        return self.is_any_admin() and bool(self.admin_mode)
 
     def get_highest_role(self):
         """Return the highest role name for display."""

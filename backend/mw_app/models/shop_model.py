@@ -40,6 +40,7 @@ class Shop(db.Model):
     name = db.Column(db.String(150), nullable=False)
     description = db.Column(db.Text)
     promoted = db.Column(db.Boolean)
+    business_type = db.Column(db.String(20), default='sales') # sales, service, both
     address = db.Column(db.String(255))
     region = db.Column(db.String(100))
     district = db.Column(db.String(100))

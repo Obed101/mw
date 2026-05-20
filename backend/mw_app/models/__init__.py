@@ -22,6 +22,7 @@ from .subscription_model import Subscription, \
     SUBSCRIPTION_TYPE_USER, SUBSCRIPTION_TYPE_PRODUCT, SUBSCRIPTION_TYPE_SHOP, \
     VALID_SUBSCRIPTION_TYPES
 from .engagement_model import UserFavoriteProduct, Notification
+from .service_keyword_model import ServiceKeyword
 from .support_model import SupportConversation, SupportMessage, \
     CONVERSATION_STATUS_OPEN, CONVERSATION_STATUS_PENDING, CONVERSATION_STATUS_CLOSED, \
     SUPPORT_NOTIFICATION_TYPE, SUPPORT_NOTIFICATION_TYPES
@@ -35,6 +36,7 @@ __all__ = [
     'Shop', 'ShopImage', 'UserFollowShop', 'VerificationOTP',
     'Product', 'ProductImage', 'StockUpdate',
     'Category',
+    'ServiceKeyword',
     'Subscription',
     'UserFavoriteProduct', 'Notification',
     'SupportConversation', 'SupportMessage',

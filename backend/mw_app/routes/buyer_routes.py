@@ -80,12 +80,12 @@ def _notify_shop_owner_and_admins_for_favorite(user, shop, product=None):
         recipient_ids.add(shop.owner_id)
 
     if product:
-        title = 'Product Favorited'
-        message = f'{user.username} favorited "{product.name}" from {shop.name}.'
+        title = 'Product Liked'
+        message = f'{user.username} liked {product.name} from {shop.name}.'
         notification_type = 'product_favorited'
     else:
-        title = 'Shop Favorited'
-        message = f'{user.username} favorited your shop "{shop.name}".'
+        title = 'Shop Followed'
+        message = f'{user.username} followed your shop: {shop.name}.'
         notification_type = 'shop_favorited'
 
     Notification.create_for_users(
@@ -750,19 +750,28 @@ def global_search():
     except Exception as e:
         # Fallback to DB search if MeiliSearch is unavailable
         products_db = Product.query.filter(
-            Product.name.ilike(f'%{q}%'), 
+            or_(
+                Product.name.ilike(f'%{q}%'),
+                Product.description.ilike(f'%{q}%')
+            ),
             Product.is_active.is_(True)
-        ).limit(5).all()
+        ).limit(8).all()
         
         shops_db = Shop.query.filter(
-            Shop.name.ilike(f'%{q}%'), 
+            or_(
+                Shop.name.ilike(f'%{q}%'), 
+                Shop.description.ilike(f'%{q}%')
+            ),
             Shop.is_active.is_(True)
-        ).limit(3).all()
+        ).limit(4).all()
         
         categories_db = Category.query.filter(
-            Category.name.ilike(f'%{q}%'), 
+            or_(
+                Category.name.ilike(f'%{q}%'),
+                Category.description.ilike(f'%{q}%')
+            ),
             Category.is_active.is_(True)
-        ).limit(3).all()
+        ).limit(4).all()
 
         # Format exactly like MeiliSearch hits for the template
         products_hits = [{'id': p.id, 'name': p.name, 'price': p.price, 'primary_image_url': p.primary_image_url, 'shop_name': p.shop.name if p.shop else ''} for p in products_db]
