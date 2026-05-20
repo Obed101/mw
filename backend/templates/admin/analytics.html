@@ -1,0 +1,402 @@
+{% extends "admin/base_admin.html" %}
+{% block admin_title %}System Analytics{% endblock %}
+
+{% block styles %}
+{{ super() }}
+<style>
+  .analytics-card {
+    background: var(--admin-surface);
+    border: 1px solid var(--admin-border);
+    border-radius: 12px;
+    padding: 1.25rem;
+    height: 100%;
+  }
+  .analytics-card-header {
+    font-size: 0.95rem;
+    font-weight: 700;
+    margin-bottom: 1.25rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    color: var(--admin-text);
+  }
+  .chart-container {
+    position: relative;
+    width: 100%;
+    height: 280px;
+  }
+  .metric-pill {
+    background: var(--admin-surface2);
+    border: 1px solid var(--admin-border);
+    border-radius: 8px;
+    padding: 0.75rem 1rem;
+    display: flex;
+    flex-direction: column;
+  }
+  .metric-value {
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: var(--admin-text);
+  }
+  .metric-label {
+    font-size: 0.75rem;
+    color: var(--admin-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+</style>
+{% endblock %}
+
+{% block admin_content %}
+<div class="mb-4 d-flex justify-content-between align-items-center">
+  <div>
+    <h5 class="fw-bold mb-1" style="color:var(--admin-text)">System Analytics & Insights</h5>
+    <p style="color:var(--admin-muted);font-size:.875rem">Behavioral tracking data, trends, and commercial funnel analysis.</p>
+  </div>
+</div>
+
+<!-- Quick Statistics Overview -->
+<div class="row g-3 mb-4">
+  <div class="col-12 col-md-4">
+    <div class="metric-pill">
+      <span class="metric-value">{{ total_events }}</span>
+      <span class="metric-label">Total Tracked Events</span>
+    </div>
+  </div>
+  <div class="col-12 col-md-4">
+    <div class="metric-pill">
+      <span class="metric-value">{{ total_searches }}</span>
+      <span class="metric-label">Total Search Operations</span>
+    </div>
+  </div>
+  <div class="col-12 col-md-4">
+    <div class="metric-pill">
+      <span class="metric-value">{{ total_saved_searches }}</span>
+      <span class="metric-label">Total Saved Searches</span>
+    </div>
+  </div>
+</div>
+
+<!-- Charts Section -->
+<div class="row g-3 mb-4">
+  <div class="col-lg-8">
+    <div class="analytics-card">
+      <div class="analytics-card-header">
+        <span><i class="bi bi-graph-up me-2 text-primary"></i>System Traffic (Last 30 Days)</span>
+      </div>
+      <div class="chart-container">
+        <canvas id="trafficChart"></canvas>
+      </div>
+    </div>
+  </div>
+  
+  <div class="col-lg-4">
+    <div class="analytics-card">
+      <div class="analytics-card-header">
+        <span><i class="bi bi-pie-chart me-2 text-warning"></i>Event Breakdown</span>
+      </div>
+      <div class="chart-container">
+        <canvas id="breakdownChart"></canvas>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="row g-3 mb-4">
+  <div class="col-lg-6">
+    <div class="analytics-card">
+      <div class="analytics-card-header">
+        <span><i class="bi bi-funnel me-2 text-success"></i>Conversion Funnel (Last 30 Days)</span>
+      </div>
+      <div class="chart-container">
+        <canvas id="funnelChart"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-6">
+    <div class="analytics-card">
+      <div class="analytics-card-header">
+        <span><i class="bi bi-search me-2 text-danger"></i>Top Search Queries</span>
+      </div>
+      <div class="p-0" style="overflow-x: auto;">
+        <table class="admin-table">
+          <thead>
+            <tr>
+              <th>Query</th>
+              <th>Total Search Count</th>
+              <th>Success Rate</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for query, count, success_count, failed_count in top_searches %}
+            <tr>
+              <td class="fw-semibold text-white">"{{ query }}"</td>
+              <td>{{ count }}</td>
+              <td>
+                {% if count > 0 %}
+                  {% set rate = (success_count / count * 100) | round(1) %}
+                  <span class="badge {% if rate >= 80 %}bg-success{% elif rate >= 50 %}bg-warning{% else %}bg-danger{% endif %}">
+                    {{ rate }}%
+                  </span>
+                {% else %}
+                  0%
+                {% endif %}
+              </td>
+            </tr>
+            {% else %}
+            <tr>
+              <td colspan="3" class="text-center text-muted py-3">No search queries logged</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Tabular Summaries -->
+<div class="row g-3 mb-4">
+  <!-- Top Products -->
+  <div class="col-md-6">
+    <div class="analytics-card">
+      <div class="analytics-card-header">
+        <span><i class="bi bi-box-seam me-2 text-info"></i>Most Viewed Products</span>
+      </div>
+      <div class="p-0" style="overflow-x: auto;">
+        <table class="admin-table">
+          <thead>
+            <tr>
+              <th>Product</th>
+              <th>Views (Last 30 Days)</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for p_id, name, views in top_viewed_products %}
+            <tr>
+              <td>
+                <a href="{{ url_for('buyer_bp.product_detail', product_id=p_id) }}" class="text-decoration-none text-white fw-semibold">
+                  {{ name }}
+                </a>
+              </td>
+              <td>{{ views }} views</td>
+            </tr>
+            {% else %}
+            <tr>
+              <td colspan="2" class="text-center text-muted py-3">No views logged yet</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Top Shops -->
+  <div class="col-md-6">
+    <div class="analytics-card">
+      <div class="analytics-card-header">
+        <span><i class="bi bi-shop me-2 text-primary"></i>Most Visited Shops</span>
+      </div>
+      <div class="p-0" style="overflow-x: auto;">
+        <table class="admin-table">
+          <thead>
+            <tr>
+              <th>Shop</th>
+              <th>Views (Last 30 Days)</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for s_id, name, views in top_viewed_shops %}
+            <tr>
+              <td>
+                <a href="{{ url_for('main_bp.shop_detail', shop_id=s_id) }}" class="text-decoration-none text-white fw-semibold">
+                  {{ name }}
+                </a>
+              </td>
+              <td>{{ views }} visits</td>
+            </tr>
+            {% else %}
+            <tr>
+              <td colspan="2" class="text-center text-muted py-3">No visits logged yet</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="row g-3">
+  <!-- Failed Searches -->
+  <div class="col-md-6">
+    <div class="analytics-card" style="border-color: rgba(239, 68, 68, 0.3);">
+      <div class="analytics-card-header text-danger">
+        <span><i class="bi bi-exclamation-triangle me-2"></i>Failed Searches (Zero Hits)</span>
+      </div>
+      <div class="p-0" style="overflow-x: auto;">
+        <table class="admin-table text-danger">
+          <thead>
+            <tr>
+              <th>Query</th>
+              <th>Count</th>
+              <th>Last Searched</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for query, count, last_searched in failed_searches %}
+            <tr>
+              <td class="fw-semibold">"{{ query }}"</td>
+              <td>{{ count }} times</td>
+              <td>{{ last_searched.strftime('%Y-%m-%d %H:%M') }}</td>
+            </tr>
+            {% else %}
+            <tr>
+              <td colspan="3" class="text-center text-muted py-3">Zero failed searches recorded</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Top Active Users -->
+  <div class="col-md-6">
+    <div class="analytics-card">
+      <div class="analytics-card-header">
+        <span><i class="bi bi-person-check me-2 text-success"></i>Most Active Behavioral Users</span>
+      </div>
+      <div class="p-0" style="overflow-x: auto;">
+        <table class="admin-table">
+          <thead>
+            <tr>
+              <th>Username</th>
+              <th>Tracked Operations (30 Days)</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for u_id, username, count in top_users %}
+            <tr>
+              <td>
+                <div class="d-flex align-items-center gap-2">
+                  <div class="admin-avatar" style="width:24px;height:24px;font-size:.65rem">{{ username[0]|upper }}</div>
+                  <span class="fw-semibold text-white">{{ username }}</span>
+                </div>
+              </td>
+              <td>{{ count }} events</td>
+            </tr>
+            {% else %}
+            <tr>
+              <td colspan="2" class="text-center text-muted py-3">No active users tracked</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<!-- Chart.js library -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+  // Apply Chart.js dark/premium defaults
+  Chart.defaults.color = '#94a3b8';
+  Chart.defaults.borderColor = 'rgba(255, 255, 255, 0.08)';
+
+  // 1. Traffic Chart (Line)
+  const trafficCtx = document.getElementById('trafficChart').getContext('2d');
+  const trafficData = {{ events_chart_data | tojson }};
+  new Chart(trafficCtx, {
+    type: 'line',
+    data: {
+      labels: trafficData.labels,
+      datasets: [{
+        label: 'Daily Events',
+        data: trafficData.data,
+        borderColor: '#6366f1',
+        backgroundColor: 'rgba(99, 102, 241, 0.15)',
+        tension: 0.3,
+        fill: true,
+        borderWidth: 2,
+        pointBackgroundColor: '#6366f1'
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false }
+      },
+      scales: {
+        y: { beginAtZero: true, ticks: { precision: 0 } }
+      }
+    }
+  });
+
+  // 2. Event Breakdown Chart (Doughnut)
+  const breakdownCtx = document.getElementById('breakdownChart').getContext('2d');
+  const breakdownData = {{ breakdown_chart_data | tojson }};
+  new Chart(breakdownCtx, {
+    type: 'doughnut',
+    data: {
+      labels: breakdownData.labels.map(l => l.replace(/_/g, ' ')),
+      datasets: [{
+        data: breakdownData.data,
+        backgroundColor: [
+          '#6366f1', '#8b5cf6', '#10b981', '#f59e0b', '#ef4444', 
+          '#3b82f6', '#ec4899', '#14b8a6', '#6b7280'
+        ],
+        borderWidth: 0
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          position: 'right',
+          labels: { boxWidth: 12, padding: 10 }
+        }
+      }
+    }
+  });
+
+  // 3. Conversion Funnel (Horizontal Bar)
+  const funnelCtx = document.getElementById('funnelChart').getContext('2d');
+  const funnelData = {{ funnel_data | tojson }};
+  new Chart(funnelCtx, {
+    type: 'bar',
+    data: {
+      labels: funnelData.labels,
+      datasets: [{
+        label: 'Conversions',
+        data: funnelData.data,
+        backgroundColor: [
+          '#6366f1', '#8b5cf6', '#10b981', '#14b8a6'
+        ],
+        borderRadius: 6,
+        barThickness: 24
+      }]
+    },
+    options: {
+      indexAxis: 'y',
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false }
+      },
+      scales: {
+        x: { beginAtZero: true, ticks: { precision: 0 } }
+      }
+    }
+  });
+</script>
+{% endblock %}

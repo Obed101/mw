@@ -260,13 +260,15 @@ def _resolve_user_shops(user):
     return [single_shop] if single_shop else []
 
 
-def _resolve_owned_shop(user, shop_id=None):
+def _resolve_owned_shop(user, shop_id=None, allow_default=False):
     shops = _resolve_user_shops(user)
     if not shops:
         return None
 
     if shop_id is None:
-        return shops[0]
+        if allow_default:
+            return shops[0]
+        return None
 
     for shop in shops:
         if shop.id == shop_id:
@@ -411,6 +413,11 @@ def _serialize_template_product(product):
 @main_bp.route('/')
 def index():
     """Homepage - marketplace overview"""
+    try:
+        from ..services.analytics_service import track_event
+        track_event('homepage_visit', user=current_user)
+    except Exception:
+        pass
     # Resolve user location for proximity-aware sorting
     user_lat, user_lng = get_user_location(current_user)
     dist_expr = haversine_distance_expr(user_lat, user_lng) if user_lat is not None else None
@@ -466,10 +473,49 @@ def index():
         func.count(Product.id).desc(), Category.name.asc()
     ).limit(12).all()
 
+    # Fetch personalized grids for the homepage
+    from ..services.personalization_service import (
+        get_trending_products,
+        get_personalized_products,
+        get_fresh_listings
+    )
+
+    trending_products = get_trending_products(limit=12, user_lat=user_lat, user_lng=user_lng)
+    personalized_products = get_personalized_products(current_user, limit=12)
+    fresh_products = get_fresh_listings(limit=12, user_lat=user_lat, user_lng=user_lng)
+    
+    followed_shop_products = []
+    continue_browsing_products = []
+    
+    if current_user.is_authenticated:
+        # From followed shops
+        followed_shops = UserFollowShop.query.filter_by(user_id=current_user.id).all()
+        shop_ids = [f.shop_id for f in followed_shops]
+        if shop_ids:
+            followed_shop_products = Product.query.join(Shop).filter(
+                Product.shop_id.in_(shop_ids),
+                Product.is_active.is_(True),
+                Shop.is_active.is_(True)
+            ).order_by(Product.created_at.desc()).limit(12).all()
+            
+        # Continue browsing (recently viewed)
+        browsing_history = UserBrowsingHistory.query.filter_by(user_id=current_user.id).order_by(UserBrowsingHistory.viewed_at.desc()).limit(12).all()
+        seen_bh_ids = set()
+        for bh in browsing_history:
+            if bh.product_id and bh.product_id not in seen_bh_ids:
+                if bh.product and bh.product.is_active and bh.product.shop.is_active:
+                    continue_browsing_products.append(bh.product)
+                    seen_bh_ids.add(bh.product_id)
+
     return render_template(
         'public/index.html',
         featured_shops=featured_shops,
         featured_products=featured_products,
+        trending_products=trending_products,
+        personalized_products=personalized_products,
+        fresh_products=fresh_products,
+        followed_shop_products=followed_shop_products,
+        continue_browsing_products=continue_browsing_products,
         top_categories=category_rows,
         user_has_location=user_has_location,
     )
@@ -499,7 +545,7 @@ def add_shop():
     """Public shop onboarding page for any authenticated user."""
     requested_shop_id = request.args.get('shop_id', type=int)
     create_new = request.args.get('new', '').lower() in {'1', 'true', 'yes', 'on'}
-    shop = None if create_new else _resolve_owned_shop(current_user, requested_shop_id)
+    shop = None if create_new else _resolve_owned_shop(current_user, requested_shop_id, allow_default=True)
     map_embed_url = _build_shop_map_embed_url(shop) if shop else None
     shop_payload = _build_shop_payload(shop)
     setup_state = _build_shop_setup_state(shop)
@@ -527,11 +573,41 @@ def shop_detail(shop_id):
     directions_url = _build_shop_directions_url(shop)
     child_categories = _load_shop_categories(shop.id)
     shop_is_favorited = False
-    if current_user.is_authenticated and current_user.role == USER_ROLE_BUYER:
+    if current_user.is_authenticated:
         shop_is_favorited = UserFollowShop.query.filter_by(
             user_id=current_user.id,
             shop_id=shop.id,
         ).first() is not None
+
+    # Fetch other active shops near user/this shop
+    user_lat, user_lng = get_user_location(current_user)
+    lat, lng = user_lat, user_lng
+    if lat is None and shop.gps:
+        from ..services.personalization_service import parse_gps
+        lat, lng = parse_gps(shop.gps)
+
+    more_shops_query = Shop.query.filter(
+        Shop.is_active.is_(True),
+        Shop.id != shop.id
+    )
+
+    if lat is not None and lng is not None:
+        from sqlalchemy import nullslast
+        dist_expr = haversine_distance_expr(lat, lng)
+        more_shops_query = more_shops_query.order_by(nullslast(dist_expr.asc()))
+        more_shops = more_shops_query.limit(4).all()
+        # Annotate distance
+        for s in more_shops:
+            s_lat, s_lng = None, None
+            if s.gps:
+                from ..services.personalization_service import parse_gps
+                s_lat, s_lng = parse_gps(s.gps)
+            if s_lat is not None and s_lng is not None:
+                from ..services.personalization_service import haversine_distance
+                s._distance_km = haversine_distance(lat, lng, s_lat, s_lng)
+                s._near_you = (s._distance_km <= NEAR_YOU_KM)
+    else:
+        more_shops = more_shops_query.order_by(Shop.name.asc()).limit(4).all()
 
     return render_template(
         'buyer/shop_detail.html',
@@ -540,6 +616,7 @@ def shop_detail(shop_id):
         directions_url=directions_url,
         shop_categories=child_categories,
         shop_is_favorited=shop_is_favorited,
+        more_shops=more_shops,
     )
 
 
@@ -547,7 +624,7 @@ def shop_detail(shop_id):
 @login_required
 def seller_shop_preview():
     """Preview the current seller shop using the buyer-facing layout."""
-    shop = _resolve_owned_shop(current_user, request.args.get('shop_id', type=int))
+    shop = _resolve_owned_shop(current_user, request.args.get('shop_id', type=int), allow_default=True)
     if not shop:
         flash('Create your shop details first before previewing it.', 'warning')
         return redirect(url_for('main_bp.add_shop'))
@@ -935,6 +1012,8 @@ def oauth_authorize():
 
         if user:
             login_user(user)
+            from ..services.analytics_service import track_event
+            track_event('login', user)
             flash(f"Welcome back, {user.first_name or user.username}!", "success")
         else:
             username = email.split('@')[0]
@@ -958,6 +1037,8 @@ def oauth_authorize():
             db.session.commit()
 
             login_user(user)
+            from ..services.analytics_service import track_event
+            track_event('signup', user)
             flash(f"Welcome to Market Window, {user.first_name or user.username}!", "success")
 
         # 4. Redirect
@@ -1118,7 +1199,7 @@ def seller_shop():
     if redirect_response:
         return redirect_response
 
-    shop = _resolve_owned_shop(current_user, request.args.get('shop_id', type=int))
+    shop = _resolve_owned_shop(current_user, request.args.get('shop_id', type=int), allow_default=True)
     map_embed_url = _build_shop_map_embed_url(shop) if shop else None
     shop_payload = _build_shop_payload(shop)
     setup_state = _build_shop_setup_state(shop)

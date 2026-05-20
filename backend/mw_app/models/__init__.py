@@ -25,6 +25,7 @@ from .engagement_model import UserFavoriteProduct, Notification
 from .support_model import SupportConversation, SupportMessage, \
     CONVERSATION_STATUS_OPEN, CONVERSATION_STATUS_PENDING, CONVERSATION_STATUS_CLOSED, \
     SUPPORT_NOTIFICATION_TYPE, SUPPORT_NOTIFICATION_TYPES
+from .analytics_model import Event, SearchHistory, SavedSearch
 
 # Make these available at the package level
 __all__ = [
@@ -37,6 +38,7 @@ __all__ = [
     'Subscription',
     'UserFavoriteProduct', 'Notification',
     'SupportConversation', 'SupportMessage',
+    'Event', 'SearchHistory', 'SavedSearch',
     
     # Constants
     'USER_STATUS_ACTIVE', 'USER_STATUS_SUSPENDED', 'USER_STATUS_PENDING',

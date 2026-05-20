@@ -224,6 +224,10 @@
          class="{{ 'active' if request.endpoint == 'mw_admin_bp.dashboard' else '' }}">
         <i class="bi bi-speedometer2"></i> Dashboard
       </a>
+      <a href="{{ url_for('mw_admin_bp.analytics') }}"
+         class="{{ 'active' if request.endpoint == 'mw_admin_bp.analytics' else '' }}">
+        <i class="bi bi-bar-chart-line"></i> Analytics
+      </a>
 
       {% if current_user.is_super_admin() %}
       <div class="admin-nav-section mt-2">Access</div>

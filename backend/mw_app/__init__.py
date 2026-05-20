@@ -65,6 +65,7 @@ def create_app():
     from .routes.support_routes import support_bp
     from .routes.template_routes import main_bp, admin_bp as admin_template_bp, seller_bp as seller_template_bp, buyer_bp as buyer_template_bp, auth_bp as auth_template_bp
     from .admin.routes import mw_admin_bp
+    from .routes.analytics_routes import analytics_bp
     
     # Template routes (for HTMX)
     app.register_blueprint(main_bp)
@@ -81,6 +82,7 @@ def create_app():
     app.register_blueprint(seller_bp, url_prefix='/api/seller')
     app.register_blueprint(buyer_bp, url_prefix='/api/buyer')
     app.register_blueprint(auth_bp, url_prefix='/api/auth')
+    app.register_blueprint(analytics_bp, url_prefix='/api/analytics')
 
     # Add CORS headers to all responses
     @app.after_request

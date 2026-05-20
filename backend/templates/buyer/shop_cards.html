@@ -2,24 +2,22 @@
 {% if shops %}
     {% for shop in shops %}
     <div class="market-grid-item">
-        <div class="card border-0 shadow-sm shop-card shop-card-compact">
-            <img src="{{ shop.primary_image_url or url_for('static', filename='images/mw_logo_trans.png') }}" class="card-img-top market-card-image" alt="{{ shop.name }}">
+        <a href="{{ url_for('main_bp.shop_detail', shop_id=shop.id) }}" class="text-decoration-none">
+            <div class="card border-0 shadow-sm shop-card shop-card-compact">
+                <img src="{{ shop.primary_image_url or url_for('static', filename='images/mw_logo_trans.png') }}" class="card-img-top market-card-image" alt="{{ shop.name }}">
             <div class="card-body shop-card-body-compact">
                 <div class="d-flex justify-content-between align-items-start mb-2">
                     <h6 class="fw-bold mb-0 shop-card-title">
                         {{ shop.name }}
                         {% if shop.verification_status == 'verified' %}
-                        <span class="bi bi-patch-check text-mw" aria-label="Verified shop"></span>
+                        <span class="bi bi-patch-check text-mw small" aria-label="Verified shop"></span>
                         {% endif %}
                     </h6>
-                    <span class="badge {{ 'bg-success' if shop.verification_status == 'verified' else 'bg-secondary' }}">
-                        {{ shop.verification_status|default('unknown')|replace('_', ' ')|title }}
-                    </span>
                 </div>
                 <p class="card-text text-muted small mb-1 shop-card-location">
                     <i class="bi bi-geo-alt me-1"></i>{{ shop.town or shop.region or "Location unavailable" }}
                     {% if shop._near_you is defined and shop._near_you %}
-                    <span class="badge rounded-pill near-you-badge ms-1">
+                    <span class="badge small rounded-pill near-you-badge ms-1">
                         <i class="bi bi-geo-alt-fill me-1"></i>Near you
                         {% if shop._distance_km is defined and shop._distance_km is not none %}
                         &middot; ~{{ shop._distance_km|round(0)|int }} km
@@ -29,31 +27,13 @@
                 </p>
                 <p class="card-text text-muted mb-2 line-clamp-2 shop-card-description">{{ shop.description or 'Quality products and service' }}</p>
                 <div class="d-flex flex-column gap-2 mt-auto">
-                    <small class="text-muted shop-card-stock">
+                    <small class="text-muted shop-card-stock text-dark">
                         <i class="bi bi-box-seam me-1"></i>{{ shop.products | selectattr('is_active') | list | length }} active products
                     </small>
-                    <div class="shop-card-actions">
-                        {% if current_user.is_authenticated %}
-                        <div class="shop-favorite-slot">
-                            <button
-                                type="button"
-                                class="btn btn-sm btn-outline-primary favorite-toggle-btn"
-                                hx-post="{{ url_for('buyer_bp.follow_shop', shop_id=shop.id, text_only=True) }}"
-                                hx-target="this"
-                                hx-swap="innerHTML">
-                                {% if shop.id in favorite_shop_ids %}
-                                    Following
-                                {% else %}
-                                    Follow
-                                {% endif %}
-                            </button>
-                        </div>
-                        {% endif %}
-                        <a href="{{ url_for('main_bp.shop_detail', shop_id=shop.id) }}" class="btn btn-primary btn-sm">Visit</a>
-                    </div>
                 </div>
             </div>
         </div>
+        </a>
     </div>
     {% endfor %}
 {% elif not next_page %}

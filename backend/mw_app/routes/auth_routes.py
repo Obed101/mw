@@ -5,6 +5,7 @@ from datetime import datetime, timezone
 from sqlalchemy import func
 from ..extensions import db, token_blacklist
 from ..models.user_model import User, USER_STATUS_ACTIVE, USER_ROLE_ADMIN, USER_ROLE_SELLER, USER_ROLE_BUYER, AuthToken
+from ..services.analytics_service import track_event
 
 auth_bp = Blueprint('auth', __name__, url_prefix='/api/auth')
 
@@ -118,6 +119,7 @@ def register():
         
         # Log user in with Flask-Login for session management
         login_user(user)
+        track_event('signup', user)
         
         # Generate tokens for API usage
         access_token = create_access_token(identity=user.id)
@@ -214,6 +216,7 @@ def login():
     
     # Log user in with Flask-Login for session management
     login_user(user)
+    track_event('login', user)
     
     # Generate tokens for API usage
     access_token = create_access_token(identity=user.id)
@@ -251,6 +254,8 @@ def refresh():
 @auth_bp.route('/logout', methods=['POST'])
 def logout():
     """Logout user"""
+    if current_user and not current_user.is_anonymous:
+        track_event('logout', current_user)
     # Handle both JSON and form requests
     if request.is_json:
         # For API requests, revoke JWT token

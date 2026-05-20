@@ -13,6 +13,20 @@
         </div>
     </div>
 
+    <!-- Location Prompt Banner -->
+    <div id="location-prompt-banner" class="alert alert-info d-none align-items-center justify-content-between mb-4 border-0 shadow-sm" style="background: linear-gradient(135deg, #1e1b4b, #312e81); color: #e0e7ff; border-radius: 12px; padding: 16px 20px;">
+        <div class="d-flex align-items-center gap-3">
+            <div class="rounded-circle d-flex align-items-center justify-content-center" style="background: rgba(99, 102, 241, 0.2); width: 42px; height: 42px; flex-shrink: 0;">
+                <i class="bi bi-geo-alt-fill" style="font-size: 1.2rem; color: #a5b4fc;"></i>
+            </div>
+            <div>
+                <h6 class="mb-0 fw-semibold text-white">Find items near you</h6>
+                <p class="mb-0 small" style="color: #c7d2fe;">Allow location access to show the nearest items in your area.</p>
+            </div>
+        </div>
+        <button class="btn btn-sm btn-light fw-semibold text-primary px-3 rounded-pill" onclick="mwRequestLocationPermission()">Enable Location</button>
+    </div>
+
     <div x-data="{ showExtraCriteria: false }" class="mb-4">
         <div class="row g-3 align-items-center">
             <div class="col-md-8">
@@ -118,6 +132,7 @@
                     hx-include="[name='search'],[name='category_id'],[name='shop_id'],[name='in_stock'],[name='min_price'],[name='max_price']"
                     hx-swap="innerHTML"
                 >
+                    <option value="nearest" selected>Sort: Nearest</option>
                     <option value="name">Sort: Name</option>
                     <option value="newest">Sort: Newest</option>
                     <option value="price">Sort: Price Low-High</option>

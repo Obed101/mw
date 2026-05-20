@@ -526,3 +526,124 @@ def delete_product(product_id):
 @admin_required
 def settings():
     return render_template('admin/settings.html')
+
+
+@mw_admin_bp.route('/analytics')
+@admin_required
+def analytics():
+    from datetime import datetime, timezone, timedelta
+    from sqlalchemy import func, case
+    from ..models.analytics_model import Event, SearchHistory, SavedSearch
+    from ..models.product_model import Product
+    from ..models.shop_model import Shop
+    from ..models.user_model import User
+
+    # 1. Total events over time (last 30 days)
+    since_30d = datetime.now(timezone.utc) - timedelta(days=30)
+    events_over_time = db.session.query(
+        func.date_trunc('day', Event.created_at).label('day'),
+        func.count(Event.id).label('count')
+    ).filter(
+        Event.created_at >= since_30d
+    ).group_by('day').order_by('day').all()
+    
+    events_chart_data = {
+        'labels': [e.day.strftime('%Y-%m-%d') for e in events_over_time],
+        'data': [e.count for e in events_over_time]
+    }
+
+    # 2. Event type breakdown
+    event_breakdown = db.session.query(
+        Event.event_type,
+        func.count(Event.id).label('count')
+    ).filter(
+        Event.created_at >= since_30d
+    ).group_by(Event.event_type).order_by(func.count(Event.id).desc()).all()
+    
+    breakdown_chart_data = {
+        'labels': [eb.event_type for eb in event_breakdown],
+        'data': [eb.count for eb in event_breakdown]
+    }
+
+    # 3. Conversion Funnel (Homepage -> Product View -> Wishlist -> Contact)
+    funnel_homepage = db.session.query(func.count(Event.id)).filter(Event.event_type == 'homepage_visit', Event.created_at >= since_30d).scalar() or 0
+    funnel_views = db.session.query(func.count(Event.id)).filter(Event.event_type.in_(['product_view', 'product_click']), Event.created_at >= since_30d).scalar() or 0
+    funnel_wishlist = db.session.query(func.count(Event.id)).filter(Event.event_type == 'wishlist_add', Event.created_at >= since_30d).scalar() or 0
+    funnel_contact = db.session.query(func.count(Event.id)).filter(Event.event_type == 'product_contact', Event.created_at >= since_30d).scalar() or 0
+    
+    funnel_data = {
+        'labels': ['Homepage Visits', 'Product Views', 'Wishlist Adds', 'Contact Seller'],
+        'data': [funnel_homepage, funnel_views, funnel_wishlist, funnel_contact]
+    }
+
+    # 4. Top 10 Viewed Products
+    top_viewed_products = db.session.query(
+        Product.id,
+        Product.name,
+        func.count(Event.id).label('views')
+    ).join(Event, Event.entity_id == Product.id).filter(
+        Event.event_type == 'product_view',
+        Event.entity_type == 'product',
+        Event.created_at >= since_30d
+    ).group_by(Product.id, Product.name).order_by(func.count(Event.id).desc()).limit(10).all()
+
+    # 5. Top 10 Viewed Shops
+    top_viewed_shops = db.session.query(
+        Shop.id,
+        Shop.name,
+        func.count(Event.id).label('views')
+    ).join(Event, Event.entity_id == Shop.id).filter(
+        Event.event_type == 'shop_view',
+        Event.entity_type == 'shop',
+        Event.created_at >= since_30d
+    ).group_by(Shop.id, Shop.name).order_by(func.count(Event.id).desc()).limit(10).all()
+
+    # 6. Top Search Queries (from Event tracking payload)
+    top_searches = db.session.query(
+        Event.payload['query'].astext.label('query_text'),
+        func.count(Event.id).label('count'),
+        func.sum(case((Event.event_type == 'search', 1), else_=0)).label('success_count'),
+        func.sum(case((Event.event_type == 'failed_search', 1), else_=0)).label('failed_count')
+    ).filter(
+        Event.event_type.in_(['search', 'failed_search']),
+        Event.created_at >= since_30d
+    ).group_by(Event.payload['query'].astext).order_by(func.count(Event.id).desc()).limit(10).all()
+
+    # 7. Failed Searches (from Event tracking payload)
+    failed_searches = db.session.query(
+        Event.payload['query'].astext.label('query_text'),
+        func.count(Event.id).label('count'),
+        func.max(Event.created_at).label('last_searched')
+    ).filter(
+        Event.event_type == 'failed_search',
+        Event.created_at >= since_30d
+    ).group_by(Event.payload['query'].astext).order_by(func.count(Event.id).desc()).limit(10).all()
+
+    # 8. Top Active Users
+    top_users = db.session.query(
+        User.id,
+        User.username,
+        func.count(Event.id).label('events')
+    ).join(Event, Event.user_id == User.id).filter(
+        Event.created_at >= since_30d
+    ).group_by(User.id, User.username).order_by(func.count(Event.id).desc()).limit(10).all()
+
+    # General summaries
+    total_events = db.session.query(func.count(Event.id)).scalar() or 0
+    total_searches = db.session.query(func.count(SearchHistory.id)).scalar() or 0
+    total_saved_searches = db.session.query(func.count(SavedSearch.id)).scalar() or 0
+
+    return render_template(
+        'admin/analytics.html',
+        events_chart_data=events_chart_data,
+        breakdown_chart_data=breakdown_chart_data,
+        funnel_data=funnel_data,
+        top_viewed_products=top_viewed_products,
+        top_viewed_shops=top_viewed_shops,
+        top_searches=top_searches,
+        failed_searches=failed_searches,
+        top_users=top_users,
+        total_events=total_events,
+        total_searches=total_searches,
+        total_saved_searches=total_saved_searches
+    )

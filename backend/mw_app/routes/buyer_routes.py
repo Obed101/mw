@@ -159,7 +159,7 @@ def browse_shops():
     """Browse all shops in the marketplace"""
     try:
         search_term = request.args.get('search', '').strip()
-        sort_by = request.args.get('sort_by', 'name')
+        sort_by = request.args.get('sort_by', 'nearest')
         category_id = request.args.get('category_id', type=int) or request.args.get('category', type=int)
         user_id = _resolve_user_id(request.args.get('user_id', type=int))
         page = request.args.get('page', 1, type=int)
@@ -190,14 +190,16 @@ def browse_shops():
         query = query.distinct()
 
         # Primary sort (user choice) + location as secondary tiebreaker
-        if sort_by == 'last_updated':
+        if sort_by == 'nearest' and dist_expr is not None:
+            primary = [nullslast(dist_expr.asc()), Shop.name.asc()]
+        elif sort_by == 'last_updated':
             primary = [Shop.last_updated.desc()]
         elif sort_by == 'promoted':
             primary = [Shop.promoted.desc(), Shop.name.asc()]
         else:
             primary = [Shop.name.asc()]
 
-        if dist_expr is not None:
+        if dist_expr is not None and sort_by != 'nearest':
             query = query.order_by(*primary, nullslast(dist_expr.asc()))
         else:
             query = query.order_by(*primary)
@@ -509,7 +511,7 @@ def browse_products():
         user_id = _resolve_user_id(request.args.get('user_id', type=int))
         category_id = request.args.get('category_id', type=int)
         search_term = request.args.get('search', '').strip()
-        sort_by = request.args.get('sort_by', 'name')
+        sort_by = request.args.get('sort_by', 'nearest')
         page = request.args.get('page', 1, type=int)
         per_page = request.args.get('per_page', PRODUCTS_PER_PAGE, type=int)
 
@@ -562,7 +564,9 @@ def browse_products():
             )
 
         # Primary sort (user choice) + location as secondary tiebreaker
-        if sort_by == 'price':
+        if sort_by == 'nearest' and dist_expr is not None:
+            primary = [nullslast(dist_expr.asc()), Product.name.asc()]
+        elif sort_by == 'price':
             primary = [Product.price.asc()]
         elif sort_by == 'price_desc':
             primary = [Product.price.desc()]
@@ -573,7 +577,7 @@ def browse_products():
         else:
             primary = [Product.name.asc()]
 
-        if dist_expr is not None:
+        if dist_expr is not None and sort_by != 'nearest':
             query = query.order_by(*primary, nullslast(dist_expr.asc()))
         else:
             query = query.order_by(*primary)
@@ -619,6 +623,7 @@ def browse_products():
                 in_stock=in_stock,
                 sort_by=sort_by,
                 user_has_location=(user_lat is not None),
+                hide_load_more=(shop_id is not None),
             )
 
         products_list = []

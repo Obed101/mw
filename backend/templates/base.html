@@ -93,7 +93,7 @@
                             {% endif %}
                             {% if current_user.owned_shops %}
                                 <li><a class="dropdown-item" href="{{ url_for('manage_bp.products') }}">
-                                    <i class="bi bi-shop-window me-2"></i>Manage Shop
+                                    <i class="bi bi-shop-window me-2"></i>My Shops
                                 </a></li>
                             {% elif current_user.role == 'seller' %}
                                 <li><a class="dropdown-item" href="/seller/dashboard">
@@ -185,7 +185,7 @@
             {% if current_user.owned_shops %}
             <a href="{{ url_for('manage_bp.products') }}" class="sidebar-nav-item {{ is_active('/manage') }}">
                 <i class="bi bi-shop-window"></i>
-                <span>Manage Shop</span>
+                <span>My Shops</span>
             </a>
             {% endif %}
             <a href="/profile" class="sidebar-nav-item {{ is_active('/profile') }}">
@@ -252,7 +252,7 @@
                     {% endif %}
                     {% if current_user.owned_shops %}
                     <li><a class="dropdown-item" href="{{ url_for('manage_bp.products') }}">
-                        <i class="bi bi-shop-window me-2"></i>Manage Shop
+                        <i class="bi bi-shop-window me-2"></i>My Shops
                     </a></li>
                     {% else %}
                     <li><a class="dropdown-item" href="/shops/add">

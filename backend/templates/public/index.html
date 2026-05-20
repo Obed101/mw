@@ -15,7 +15,7 @@
                     Compare prices, find shop directions and contact info, check which shops have what you're looking for.
                 </p>
                 <div class="search-wrapper position-relative mt-4" style="z-index: 1050;">
-                    <div class="input-group input-group-lg shadow-sm rounded-pill overflow-hidden bg-white p-1">
+                    <div class="input-group input-group-lg shadow-sm bg-opacity-75 rounded-pill overflow-hidden bg-white p-1">
                         <span class="input-group-text bg-transparent border-0 text-muted ps-3">
                             <i class="bi bi-search fs-5"></i>
                         </span>
@@ -104,6 +104,151 @@
     </div>
 </section>
 
+<!-- Continue Browsing (Recently Viewed) -->
+{% if continue_browsing_products %}
+<section class="py-5 bg-light" data-track-section="browsing_history">
+    <div class="container-fluid px-3 px-lg-4">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h3 class="fw-bold mb-0"><i class="bi bi-clock-history text-secondary me-1"></i> Continue Browsing</h3>
+        </div>
+        <div class="market-grid market-grid-products">
+            {% for product in continue_browsing_products %}
+            <div class="market-grid-item">
+                <a href="{{ url_for('buyer_bp.product_detail', product_id=product.id) }}" class="text-decoration-none">
+                    <div class="card border-0 shadow-sm product-card product-card-compact">
+                        <div class="position-relative">
+                            <img src="{{ product.primary_image_url or url_for('static', filename='images/mw_logo_trans.png') }}" class="card-img-top market-card-image" alt="{{ product.name }}">
+                        </div>
+                        <div class="card-body product-card-body-compact">
+                            <h6 class="card-title fw-bold mb-1 product-card-title-compact text-dark">{{ product.name }}</h6>
+                            <p class="text-muted small mb-1">{{ product.shop.name if product.shop else "Unknown Shop" }}</p>
+                            <h6 class="text-gradient fw-bold mb-0">&#8373;{{ '%.2f'|format(product.price) }}</h6>
+                        </div>
+                    </div>
+                </a>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</section>
+{% endif %}
+
+<!-- Recommended for You -->
+{% if personalized_products %}
+<section class="py-5" data-track-section="recommendation">
+    <div class="container-fluid px-3 px-lg-4">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h3 class="fw-bold mb-0"><i class="bi bi-stars text-warning me-1"></i> Recommended for You</h3>
+        </div>
+        <div class="market-grid market-grid-products">
+            {% for product in personalized_products %}
+            <div class="market-grid-item">
+                <a href="{{ url_for('buyer_bp.product_detail', product_id=product.id) }}" class="text-decoration-none">
+                    <div class="card border-0 shadow-sm product-card product-card-compact">
+                        <div class="position-relative">
+                            <img src="{{ product.primary_image_url or url_for('static', filename='images/mw_logo_trans.png') }}" class="card-img-top market-card-image" alt="{{ product.name }}">
+                        </div>
+                        <div class="card-body product-card-body-compact">
+                            <h6 class="card-title fw-bold mb-1 product-card-title-compact text-dark">{{ product.name }}</h6>
+                            <p class="text-muted small mb-1">{{ product.shop.name if product.shop else "Unknown Shop" }}</p>
+                            <h6 class="text-gradient fw-bold mb-0">&#8373;{{ '%.2f'|format(product.price) }}</h6>
+                        </div>
+                    </div>
+                </a>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</section>
+{% endif %}
+
+<!-- Trending Near You -->
+{% if trending_products %}
+<section class="py-5 bg-light" data-track-section="trending">
+    <div class="container-fluid px-3 px-lg-4">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h3 class="fw-bold mb-0"><i class="bi bi-fire text-danger me-1"></i> Trending Near You</h3>
+        </div>
+        <div class="market-grid market-grid-products">
+            {% for product in trending_products %}
+            <div class="market-grid-item">
+                <a href="{{ url_for('buyer_bp.product_detail', product_id=product.id) }}" class="text-decoration-none">
+                    <div class="card border-0 shadow-sm product-card product-card-compact">
+                        <div class="position-relative">
+                            <img src="{{ product.primary_image_url or url_for('static', filename='images/mw_logo_trans.png') }}" class="card-img-top market-card-image" alt="{{ product.name }}">
+                        </div>
+                        <div class="card-body product-card-body-compact">
+                            <h6 class="card-title fw-bold mb-1 product-card-title-compact text-dark">{{ product.name }}</h6>
+                            <p class="text-muted small mb-1">{{ product.shop.name if product.shop else "Unknown Shop" }}</p>
+                            <h6 class="text-gradient fw-bold mb-0">&#8373;{{ '%.2f'|format(product.price) }}</h6>
+                        </div>
+                    </div>
+                </a>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</section>
+{% endif %}
+
+<!-- From Followed Shops -->
+{% if followed_shop_products %}
+<section class="py-5" data-track-section="followed_shops">
+    <div class="container-fluid px-3 px-lg-4">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h3 class="fw-bold mb-0"><i class="bi bi-shop-window text-primary me-1"></i> From Followed Shops</h3>
+        </div>
+        <div class="market-grid market-grid-products">
+            {% for product in followed_shop_products %}
+            <div class="market-grid-item">
+                <a href="{{ url_for('buyer_bp.product_detail', product_id=product.id) }}" class="text-decoration-none">
+                    <div class="card border-0 shadow-sm product-card product-card-compact">
+                        <div class="position-relative">
+                            <img src="{{ product.primary_image_url or url_for('static', filename='images/mw_logo_trans.png') }}" class="card-img-top market-card-image" alt="{{ product.name }}">
+                        </div>
+                        <div class="card-body product-card-body-compact">
+                            <h6 class="card-title fw-bold mb-1 product-card-title-compact text-dark">{{ product.name }}</h6>
+                            <p class="text-muted small mb-1">{{ product.shop.name if product.shop else "Unknown Shop" }}</p>
+                            <h6 class="text-gradient fw-bold mb-0">&#8373;{{ '%.2f'|format(product.price) }}</h6>
+                        </div>
+                    </div>
+                </a>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</section>
+{% endif %}
+
+<!-- Fresh Listings -->
+{% if fresh_products %}
+<section class="py-5 bg-light" data-track-section="fresh">
+    <div class="container-fluid px-3 px-lg-4">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h3 class="fw-bold mb-0"><i class="bi bi-patch-plus text-success me-1"></i> Fresh Listings</h3>
+        </div>
+        <div class="market-grid market-grid-products">
+            {% for product in fresh_products %}
+            <div class="market-grid-item">
+                <a href="{{ url_for('buyer_bp.product_detail', product_id=product.id) }}" class="text-decoration-none">
+                    <div class="card border-0 shadow-sm product-card product-card-compact">
+                        <div class="position-relative">
+                            <img src="{{ product.primary_image_url or url_for('static', filename='images/mw_logo_trans.png') }}" class="card-img-top market-card-image" alt="{{ product.name }}">
+                        </div>
+                        <div class="card-body product-card-body-compact">
+                            <h6 class="card-title fw-bold mb-1 product-card-title-compact text-dark">{{ product.name }}</h6>
+                            <p class="text-muted small mb-1">{{ product.shop.name if product.shop else "Unknown Shop" }}</p>
+                            <h6 class="text-gradient fw-bold mb-0">&#8373;{{ '%.2f'|format(product.price) }}</h6>
+                        </div>
+                    </div>
+                </a>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</section>
+{% endif %}
+
 <section class="py-5 bg-white">
     <div class="container-fluid px-3 px-lg-4">
         <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-3 mb-3">
@@ -148,41 +293,4 @@
 {% endblock %}
 
 {% block scripts %}
-<script>
-/**
- * Silently capture browser location and send to backend.
- * Runs once per session; fails gracefully on denial or error.
- */
-(function mwCaptureLocation() {
-    // Only run if browser supports geolocation
-    if (!navigator.geolocation) return;
-
-    // Avoid hammering the server on every page load
-    if (sessionStorage.getItem('mw_loc_sent')) return;
-
-    navigator.geolocation.getCurrentPosition(
-        function (pos) {
-            sessionStorage.setItem('mw_loc_sent', '1');
-            fetch('{{ url_for("buyer_bp.update_location") }}', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': document.querySelector('meta[name="csrf-token"]')?.content || ''
-                },
-                body: JSON.stringify({
-                    latitude:  pos.coords.latitude,
-                    longitude: pos.coords.longitude
-                })
-            }).catch(function () {
-                // Network failure — silently ignore
-            });
-        },
-        function () {
-            // Permission denied or unavailable — silently ignore
-            sessionStorage.setItem('mw_loc_sent', 'denied');
-        },
-        { timeout: 8000, maximumAge: 300000 }
-    );
-})();
-</script>
 {% endblock %}
