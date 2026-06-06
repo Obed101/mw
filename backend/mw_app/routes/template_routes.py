@@ -12,6 +12,7 @@ from flask_login import login_user, current_user, logout_user
 from urllib.parse import quote_plus
 from werkzeug.utils import secure_filename
 from ..forms import LoginForm, RegistrationForm
+from ..services.geocoding_service import reverse_geocode
 from ..utils.location import get_user_location, haversine_distance_expr, NEAR_YOU_KM
 from ..models import (
     Category,
@@ -54,7 +55,7 @@ def login_required(func):
         if not current_user.is_authenticated:
             next_link = request.url
             flash('A quick login is required first.', 'info')
-            return redirect(url_for('login', next=next_link))
+            return redirect(url_for('main_bp.login', next=next_link))
         return func(*args, **kwargs)
     return decorated_view
 
@@ -178,6 +179,51 @@ def _normalize_gps(gps_value):
     return f"{lat:.6f},{lng:.6f}"
 
 
+def _reverse_geocode_location(latitude, longitude):
+    try:
+        return reverse_geocode(latitude, longitude)
+    except Exception:
+        current_app.logger.exception(
+            'Reverse geocoding failed for latitude=%s longitude=%s',
+            latitude,
+            longitude,
+        )
+        return None
+
+
+@seller_bp.route('/shop/reverse-geocode', methods=['GET'])
+@login_required
+def reverse_geocode_shop_location():
+    """Return town/region details for a selected shop location."""
+    lat = request.args.get('lat', type=float)
+    lng = request.args.get('lng', type=float)
+
+    if lat is None or lng is None:
+        return jsonify({
+            'success': False,
+            'message': 'Latitude and longitude are required.',
+        }), 400
+
+    normalized_gps = _normalize_gps(f'{lat},{lng}')
+    if not normalized_gps:
+        return jsonify({
+            'success': False,
+            'message': 'Invalid coordinates supplied.',
+        }), 400
+
+    location_data = _reverse_geocode_location(lat, lng)
+    if not location_data:
+        return jsonify({
+            'success': False,
+            'message': 'Could not detect a location for this pin.',
+        }), 200
+
+    return jsonify({
+        'success': True,
+        'location': location_data,
+    }), 200
+
+
 def _build_shop_map_embed_url(shop):
     gps = _normalize_gps(shop.gps)
     if gps:
@@ -294,6 +340,7 @@ def _build_shop_payload(shop):
         'id': shop.id,
         'name': shop.name,
         'description': shop.description,
+        'business_type': shop.business_type,
         'phone': shop.phone,
         'email': shop.email,
         'address': shop.address,
@@ -344,12 +391,24 @@ def _next_shop_setup_step(setup_state):
     return setup_state.get('active_step', 'basic')
 
 
+def _sequential_shop_setup_step(step):
+    step_order = ['basic', 'image', 'contact', 'description']
+    try:
+        current_idx = step_order.index(step)
+    except ValueError:
+        return _next_shop_setup_step({})
+    if current_idx >= len(step_order) - 1:
+        return 'complete'
+    return step_order[current_idx + 1]
+
+
 def _build_shop_feedback_response(message, tone='success', trigger_payload=None):
     response = make_response(
         render_template(
             'seller/partials/shop_setup_feedback.html',
             message=message,
             tone=tone,
+            trigger_payload=trigger_payload,
         )
     )
     if trigger_payload:
@@ -359,14 +418,17 @@ def _build_shop_feedback_response(message, tone='success', trigger_payload=None)
 
 def _build_shop_setup_success(step, message, shop):
     setup_state = _build_shop_setup_state(shop)
+    next_step = _sequential_shop_setup_step(step)
+    setup_state['active_step'] = next_step
     return _build_shop_feedback_response(
         message=message,
         tone='success',
         trigger_payload={
             'shop-step-saved': {
                 'step': step,
-                'nextStep': _next_shop_setup_step(setup_state),
+                'nextStep': next_step,
                 'setupState': setup_state,
+                'shop_id': shop.id if shop else None,
                 'shop': _build_shop_payload(shop),
             }
         },
@@ -389,6 +451,20 @@ def _load_shop_categories(shop_id):
 
 def _requested_shop_id():
     return request.values.get('shop_id', type=int)
+
+
+def _resolve_setup_shop(user):
+    active_shop_id = session.get('active_shop_id')
+    if active_shop_id:
+        shop = _resolve_owned_shop(user, active_shop_id, allow_default=False)
+        if shop:
+            return shop
+
+    requested_shop_id = _requested_shop_id()
+    if requested_shop_id:
+        return _resolve_owned_shop(user, requested_shop_id, allow_default=False)
+
+    return None
 
 
 def _serialize_template_product(product):
@@ -749,6 +825,7 @@ def categories():
     sort_by = request.args.get('sort_by', 'name')
     with_products = request.args.get('with_products', '').lower() in ('1', 'true', 'yes', 'on')
     selected_category_id = request.args.get('category_id', type=int)
+    shop_id = request.args.get('shop_id', type=int)
 
     parent_category = aliased(Category)
 
@@ -779,6 +856,8 @@ def categories():
 
     if with_products:
         categories_data = categories_data.having(func.count(Product.id) > 0)
+    if shop_id:
+        categories_data = categories_data.filter(Shop.id == shop_id)
 
     if sort_by == 'product_count_desc':
         categories_data = categories_data.order_by(func.count(Product.id).desc(), Category.name.asc())
@@ -801,6 +880,8 @@ def categories():
         return render_template(
             'public/partials/category_cards.html',
             categories=categories_data.all(),
+            shop_id=shop_id,
+            shop=Shop.query.get(shop_id),
         )
 
     return render_template(
@@ -808,9 +889,11 @@ def categories():
         categories=categories_data.all(),
         search_term=search_term,
         sort_by=sort_by,
+        shop_id=shop_id,
         with_products=with_products,
         selected_category=selected_category,
         selected_children=selected_children,
+        shop=Shop.query.get(shop_id),
     )
 
 @main_bp.route('/profile', methods=['GET', 'POST'])
@@ -1199,7 +1282,11 @@ def seller_shop():
     if redirect_response:
         return redirect_response
 
-    shop = _resolve_owned_shop(current_user, request.args.get('shop_id', type=int), allow_default=True)
+    shop = _resolve_setup_shop(current_user) or _resolve_owned_shop(
+        current_user,
+        request.args.get('shop_id', type=int),
+        allow_default=True,
+    )
     map_embed_url = _build_shop_map_embed_url(shop) if shop else None
     shop_payload = _build_shop_payload(shop)
     setup_state = _build_shop_setup_state(shop)
@@ -1233,11 +1320,40 @@ def save_shop_basic_step():
         if not address:
             return _build_shop_feedback_response('Add a quick direction note so people can find your shop easily.', tone='danger')
 
+        business_type = str(request.form.get('business_type') or '').strip()
+        if not business_type or business_type not in ('sales', 'service', 'both'):
+            from ..utils.business_detection import is_service_name
+            if is_service_name(name):
+                business_type = 'service'
+            else:
+                business_type = 'sales'
+
+        submitted_region = str(request.form.get('region') or '').strip()
+        submitted_district = str(request.form.get('district') or '').strip()
+        submitted_town = str(request.form.get('town') or '').strip()
+
+        should_geocode = bool(normalized_gps) and (
+            not shop
+            or shop.gps != normalized_gps
+            or not (shop.region and shop.district and shop.town)
+        )
+        location_data = None
+        if should_geocode:
+            lat_text, lng_text = normalized_gps.split(',')
+            location_data = _reverse_geocode_location(float(lat_text), float(lng_text))
+
         if not shop:
+            region = submitted_region or (location_data['region'] if location_data else None)
+            district = submitted_district or (location_data['district'] if location_data else None)
+            town = submitted_town or (location_data['town'] if location_data else None)
             shop = Shop(
                 name=name,
                 gps=normalized_gps,
                 address=address,
+                business_type=business_type,
+                region=region,
+                district=district,
+                town=town,
                 is_active=True,
                 owner_id=current_user.id,
             )
@@ -1247,11 +1363,18 @@ def save_shop_basic_step():
             shop.name = name
             shop.gps = normalized_gps
             shop.address = address
-
-        if current_user.role != USER_ROLE_SELLER:
-            current_user.role = USER_ROLE_SELLER
+            shop.business_type = business_type
+            if should_geocode:
+                shop.region = submitted_region or (location_data['region'] if location_data else None)
+                shop.district = submitted_district or (location_data['district'] if location_data else None)
+                shop.town = submitted_town or (location_data['town'] if location_data else None)
+            else:
+                shop.region = submitted_region or None
+                shop.district = submitted_district or None
+                shop.town = submitted_town or None
 
         db.session.commit()
+        session['managed_shop_id'] = shop.id if shop else None
         return _build_shop_setup_success('basic', 'Basic info saved. Nice start.', shop)
 
     except ValueError as exc:

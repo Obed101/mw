@@ -528,6 +528,82 @@ def settings():
     return render_template('admin/settings.html')
 
 
+@mw_admin_bp.route('/service-keywords', methods=['GET'])
+@admin_required
+def service_keywords():
+    from ..models.service_keyword_model import ServiceKeyword
+    search = request.args.get('q', '').strip()
+    page = request.args.get('page', 1, type=int)
+    
+    query = ServiceKeyword.query
+    if search:
+        query = query.filter(ServiceKeyword.keyword.ilike(f'%{search}%'))
+        
+    pagination = paginate_query(query.order_by(ServiceKeyword.keyword.asc()), page, PER_PAGE)
+    
+    return render_template(
+        'admin/service_keywords.html',
+        pagination=pagination,
+        keywords=pagination.items,
+        search=search
+    )
+
+
+@mw_admin_bp.route('/service-keywords/add', methods=['POST'])
+@admin_required
+def add_service_keyword():
+    from ..models.service_keyword_model import ServiceKeyword
+    keyword = request.form.get('keyword', '').strip().lower()
+    if not keyword:
+        flash('Keyword cannot be empty.', 'error')
+        return redirect(url_for('mw_admin_bp.service_keywords'))
+        
+    existing = ServiceKeyword.query.filter_by(keyword=keyword).first()
+    if existing:
+        flash(f'Keyword "{keyword}" already exists.', 'error')
+        return redirect(url_for('mw_admin_bp.service_keywords'))
+        
+    try:
+        new_kw = ServiceKeyword(keyword=keyword, is_active=True)
+        db.session.add(new_kw)
+        db.session.commit()
+        flash(f'Keyword "{keyword}" added successfully.', 'success')
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error adding keyword: {str(e)}', 'error')
+        
+    return redirect(url_for('mw_admin_bp.service_keywords'))
+
+
+@mw_admin_bp.route('/service-keywords/<int:kw_id>/toggle', methods=['POST'])
+@admin_required
+def toggle_service_keyword(kw_id):
+    from ..models.service_keyword_model import ServiceKeyword
+    kw = ServiceKeyword.query.get_or_404(kw_id)
+    kw.is_active = not kw.is_active
+    db.session.commit()
+    state = 'activated' if kw.is_active else 'deactivated'
+    flash(f'Keyword "{kw.keyword}" has been {state}.', 'success')
+    return redirect(request.referrer or url_for('mw_admin_bp.service_keywords'))
+
+
+@mw_admin_bp.route('/service-keywords/<int:kw_id>/delete', methods=['POST'])
+@admin_required
+def delete_service_keyword(kw_id):
+    from ..models.service_keyword_model import ServiceKeyword
+    kw = ServiceKeyword.query.get_or_404(kw_id)
+    keyword = kw.keyword
+    try:
+        db.session.delete(kw)
+        db.session.commit()
+        flash(f'Keyword "{keyword}" has been deleted.', 'success')
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error deleting keyword: {str(e)}', 'error')
+        
+    return redirect(url_for('mw_admin_bp.service_keywords'))
+
+
 @mw_admin_bp.route('/analytics')
 @admin_required
 def analytics():

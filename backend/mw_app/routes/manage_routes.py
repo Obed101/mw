@@ -2,10 +2,14 @@ from flask import Blueprint, render_template, request, redirect, url_for, flash,
 from flask_login import login_required, current_user
 from ..extensions import db
 from ..models import Shop, Product, Category, USER_ROLE_ADMIN, CATEGORY_LEVEL_LEAF
+from ..models.product_model import ProductImage
 from ..utils.helpers import shop_owner_required, get_managed_shop
 from ..services.ai_service import AIService
 from datetime import datetime, timezone
 from flask import current_app
+from pathlib import Path
+from uuid import uuid4
+from werkzeug.utils import secure_filename
 import meilisearch
 
 manage_bp = Blueprint('manage_bp', __name__, url_prefix='/manage')
@@ -314,6 +318,98 @@ def edit_product(product_id):
         
     categories = Category.query.filter_by(is_active=True).order_by(Category.name).all()
     return render_template('manage/partials/product_row_edit.html', product=product, categories=categories)
+
+def _save_product_image(file_storage, product_id):
+    """Persist an uploaded image file and return its static URL."""
+    filename = secure_filename(file_storage.filename or '')
+    suffix   = Path(filename).suffix.lower()
+    _mime_map = {'image/jpeg': '.jpg', 'image/png': '.png',
+                 'image/webp': '.webp', 'image/gif': '.gif'}
+    if suffix not in {'.jpg', '.jpeg', '.png', '.webp', '.gif'}:
+        suffix = _mime_map.get(file_storage.mimetype or '', '.jpg')
+    upload_dir = Path(current_app.static_folder) / 'uploads' / 'products'
+    upload_dir.mkdir(parents=True, exist_ok=True)
+    stored_name = f"product-{product_id}-{uuid4().hex}{suffix}"
+    file_storage.save(upload_dir / stored_name)
+    return url_for('static', filename=f'uploads/products/{stored_name}')
+
+
+@manage_bp.route('/products/<int:product_id>/images', methods=['POST'])
+@login_required
+@shop_owner_required
+def update_product_images(product_id):
+    """HTMX: Save up to 5 images for a product via file upload.
+    """
+    shop, error = get_managed_shop(current_user)
+    product = Product.query.get_or_404(product_id)
+
+    if product.shop_id != shop.id:
+        abort(403)
+
+    incoming = []
+    upload_errors = []
+    for i in range(1, 6):
+        file         = request.files.get(f'file_{i}')
+        existing_url = request.form.get(f'existing_url_{i}', '').strip()
+        remove       = request.form.get(f'remove_{i}', '')
+
+        if file and file.filename:
+            try:
+                url = _save_product_image(file, product_id)
+                incoming.append(url)
+            except Exception as exc:
+                upload_errors.append(f'Slot {i}: {exc}')
+        elif remove == '1':
+            pass
+        elif existing_url:
+            incoming.append(existing_url)
+
+    if upload_errors:
+        return (
+            f'<div class="alert alert-danger">'
+            + '<br>'.join(upload_errors)
+            + '</div>',
+            400,
+        )
+
+    # --- Validate type-specific limit ---
+    max_allowed = 1 if product.type_ == 'service' else 5
+    if len(incoming) > max_allowed:
+        return (
+            f'<div class="alert alert-danger">'
+            f'A {product.type_} can have at most {max_allowed} image(s).</div>',
+            400,
+        )
+
+    # --- Early exit if nothing changed ---
+    if incoming == list(product.image_urls):
+        return render_template('manage/partials/product_row.html', product=product)
+
+    try:
+        existing_by_url = {rec.storage_key: rec for rec in list(product.image_records)}
+        incoming_set    = set(incoming)
+
+        for url, rec in list(existing_by_url.items()):
+            if url not in incoming_set:
+                product.image_records.remove(rec)
+
+        for idx, url in enumerate(incoming):
+            if url in existing_by_url:
+                rec            = existing_by_url[url]
+                rec.sort_order = idx
+                rec.is_primary = (idx == 0)
+            else:
+                product.image_records.append(
+                    ProductImage(storage_key=url, sort_order=idx, is_primary=(idx == 0))
+                )
+
+        product.updated_at = datetime.now(timezone.utc)
+        db.session.commit()
+    except Exception as exc:
+        db.session.rollback()
+        return f'<div class="alert alert-danger">{exc}</div>', 400
+
+    return render_template('manage/partials/product_row.html', product=product)
 
 @manage_bp.route('/products/<int:product_id>/stock', methods=['POST'])
 @login_required

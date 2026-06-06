@@ -1,10 +1,14 @@
-from flask import Blueprint, jsonify, request, render_template
+from flask import Blueprint, jsonify, request, render_template, current_app, url_for
 from flask_jwt_extended import jwt_required
+from werkzeug.utils import secure_filename
+from uuid import uuid4
+from pathlib import Path
 from ..extensions import db
 from ..models import Shop, UserFollowShop, User, Product, StockUpdate, VerificationOTP, Notification, UserFavoriteProduct, Category, USER_ROLE_ADMIN, USER_ROLE_SELLER, VERIFICATION_STATUS_VERIFIED, VERIFICATION_STATUS_UNDER_REVIEW, VERIFICATION_STATUS_PENDING
 from ..utils.helpers import seller_required
 from ..utils.threading_utils import run_in_background
 from ..services.ai_tasks import background_generate_shop_description
+from ..services.geocoding_service import reverse_geocode
 from datetime import datetime, timezone
 
 seller_bp = Blueprint('seller_bp', __name__, url_prefix='/seller')
@@ -90,6 +94,18 @@ def _normalize_gps(gps_value):
     return f"{lat:.6f},{lng:.6f}"
 
 
+def _reverse_geocode_location(latitude, longitude):
+    try:
+        return reverse_geocode(latitude, longitude)
+    except Exception:
+        current_app.logger.exception(
+            'Reverse geocoding failed for latitude=%s longitude=%s',
+            latitude,
+            longitude,
+        )
+        return None
+
+
 def _parse_bool(raw_value, default=False):
     if raw_value is None:
         return default
@@ -153,6 +169,7 @@ def _serialize_shop(shop):
         'id': shop.id,
         'name': shop.name,
         'description': shop.description,
+        'business_type': shop.business_type,
         'address': shop.address,
         'region': shop.region,
         'district': shop.district,
@@ -231,6 +248,103 @@ def _notify_buyers_for_product_stock_change(product, seller_id, old_stock, new_s
         },
     )
 
+
+def _apply_product_updates(product, data):
+    if 'name' in data:
+        name = str(data.get('name') or '').strip()
+        if not name:
+            return jsonify({
+                'success': False,
+                'message': 'Product name is required'
+            }), 400
+        product.name = name
+
+    if 'description' in data:
+        description = str(data.get('description') or '').strip()
+        product.description = description or None
+
+    if 'price' in data:
+        try:
+            price = float(data.get('price'))
+        except (TypeError, ValueError):
+            return jsonify({
+                'success': False,
+                'message': 'Price must be a number'
+            }), 400
+        if price < 0:
+            return jsonify({
+                'success': False,
+                'message': 'Price cannot be negative'
+            }), 400
+        product.price = price
+
+    if 'stock' in data:
+        try:
+            stock = int(data.get('stock'))
+        except (TypeError, ValueError):
+            return jsonify({
+                'success': False,
+                'message': 'Stock must be an integer'
+            }), 400
+        if stock < 0:
+            return jsonify({
+                'success': False,
+                'message': 'Stock cannot be negative'
+            }), 400
+        product.stock = stock
+
+    if 'category_id' in data:
+        try:
+            category_id = int(data.get('category_id'))
+        except (TypeError, ValueError):
+            return jsonify({
+                'success': False,
+                'message': 'A valid category is required'
+            }), 400
+
+        category = Category.query.filter_by(id=category_id, is_active=True).first()
+        if not category:
+            return jsonify({
+                'success': False,
+                'message': 'Category not found or inactive'
+            }), 404
+        product.category_id = category_id
+
+    if 'code' in data:
+        code = str(data.get('code') or '').strip()
+        if not code:
+            return jsonify({
+                'success': False,
+                'message': 'Code cannot be empty'
+            }), 400
+        product.code = code
+
+    if 'type_' in data:
+        product_type = str(data.get('type_') or '').strip().lower()
+        if product_type not in ('product', 'service'):
+            return jsonify({
+                'success': False,
+                'message': 'type_ must be either "product" or "service"'
+            }), 400
+        if product_type == 'service' and ('image_urls' not in data and 'image_keys' not in data):
+            del product.image_records[1:]
+        product.type_ = product_type
+
+    if 'tags' in data:
+        product.tags = _normalize_tags(data.get('tags'))
+
+    if 'is_active' in data:
+        product.is_active = _parse_bool(data.get('is_active'), default=bool(product.is_active))
+
+    if 'image_urls' in data or 'image_keys' in data:
+        raw_images = data.get('image_urls')
+        if raw_images is None:
+            raw_images = data.get('image_keys')
+        image_keys = _parse_key_list(raw_images)
+        product.replace_image_urls(image_keys)
+
+    return None
+
 @seller_bp.route("/")
 @seller_required
 def seller_dashboard():
@@ -308,6 +422,11 @@ def create_shop():
                     'message': 'GPS must use "lat,lng" format with valid coordinates'
                 }), 400
 
+        location_data = None
+        if normalized_gps:
+            lat_text, lng_text = normalized_gps.split(',')
+            location_data = _reverse_geocode_location(float(lat_text), float(lng_text))
+
         image_input = data.get('image_urls')
         if image_input is None:
             image_input = data.get('image_keys')
@@ -315,13 +434,29 @@ def create_shop():
         if not image_keys:
             image_keys = [DEFAULT_SHOP_PLACEHOLDER_IMAGE]
 
+        from ..utils.business_detection import is_service_name
+
+        business_type = data.get('business_type')
+        if not business_type or business_type not in ('sales', 'service', 'both'):
+            if is_service_name(name):
+                business_type = 'service'
+            else:
+                business_type = 'sales'
+
         shop = Shop(
             name=name,
             description=str(data.get('description') or '').strip() or None,
+            business_type=business_type,
             address=str(data.get('address') or '').strip() or None,
-            region=str(data.get('region') or '').strip() or None,
-            district=str(data.get('district') or '').strip() or None,
-            town=str(data.get('town') or '').strip() or None,
+            region=location_data['region'] if location_data else (
+                None if normalized_gps else str(data.get('region') or '').strip() or None
+            ),
+            district=location_data['district'] if location_data else (
+                None if normalized_gps else str(data.get('district') or '').strip() or None
+            ),
+            town=location_data['town'] if location_data else (
+                None if normalized_gps else str(data.get('town') or '').strip() or None
+            ),
             gps=normalized_gps,
             phone=str(data.get('phone') or '').strip() or None,
             email=str(data.get('email') or '').strip() or None,
@@ -379,6 +514,18 @@ def update_shop():
                 }), 400
             shop.name = name
 
+            if 'business_type' not in data:
+                from ..utils.business_detection import is_service_name
+                if is_service_name(name):
+                    shop.business_type = 'service'
+                else:
+                    shop.business_type = 'sales'
+
+        if 'business_type' in data:
+            business_type = str(data.get('business_type') or '').strip()
+            if business_type in ('sales', 'service', 'both'):
+                shop.business_type = business_type
+
         if 'description' in data:
             description = str(data.get('description') or '').strip()
             shop.description = description or None
@@ -395,18 +542,8 @@ def update_shop():
             address = str(data.get('address') or '').strip()
             shop.address = address or None
 
-        if 'region' in data:
-            region = str(data.get('region') or '').strip()
-            shop.region = region or None
-
-        if 'district' in data:
-            district = str(data.get('district') or '').strip()
-            shop.district = district or None
-
-        if 'town' in data:
-            town = str(data.get('town') or '').strip()
-            shop.town = town or None
-
+        should_geocode = False
+        clear_location_fields = False
         if 'gps' in data:
             raw_gps = str(data.get('gps') or '').strip()
             if raw_gps:
@@ -416,9 +553,36 @@ def update_shop():
                         'success': False,
                         'message': 'GPS must use "lat,lng" format with valid coordinates'
                     }), 400
+                should_geocode = (
+                    normalized_gps != shop.gps
+                    or not (shop.region and shop.district and shop.town)
+                )
                 shop.gps = normalized_gps
+                if should_geocode:
+                    lat_text, lng_text = normalized_gps.split(',')
+                    location_data = _reverse_geocode_location(float(lat_text), float(lng_text))
+                    shop.region = location_data['region'] if location_data else None
+                    shop.district = location_data['district'] if location_data else None
+                    shop.town = location_data['town'] if location_data else None
             else:
                 shop.gps = None
+                shop.region = None
+                shop.district = None
+                shop.town = None
+                clear_location_fields = True
+
+        if not should_geocode and not clear_location_fields:
+            if 'region' in data:
+                region = str(data.get('region') or '').strip()
+                shop.region = region or None
+
+            if 'district' in data:
+                district = str(data.get('district') or '').strip()
+                shop.district = district or None
+
+            if 'town' in data:
+                town = str(data.get('town') or '').strip()
+                shop.town = town or None
 
         if 'is_active' in data:
             shop.is_active = _parse_bool(data.get('is_active'), default=bool(shop.is_active))
@@ -739,6 +903,76 @@ def my_products():
             'error': str(e)
         }), 500
 
+@seller_bp.route("/products/upload-image", methods=["POST"])
+def upload_product_image():
+    """Upload an image file for products/services and return the relative static URL."""
+    try:
+        seller_id = request.args.get('seller_id', type=int) or request.form.get('seller_id', type=int)
+        if not seller_id:
+            return jsonify({
+                'success': False,
+                'message': 'Seller ID is required'
+            }), 400
+
+        _, shop, error_response = _load_seller_and_shop(seller_id)
+        if error_response:
+            return error_response
+
+        if 'file' not in request.files:
+            return jsonify({
+                'success': False,
+                'message': 'No file part in request'
+            }), 400
+
+        file = request.files['file']
+        if file.filename == '':
+            return jsonify({
+                'success': False,
+                'message': 'No file selected'
+            }), 400
+
+        # Validate file size (max 6MB)
+        if request.content_length and request.content_length > 6 * 1024 * 1024:
+            return jsonify({
+                'success': False,
+                'message': 'Image is too large. Use a file under 6MB.'
+            }), 400
+
+        filename = secure_filename(file.filename or '')
+        suffix = Path(filename).suffix.lower()
+        if suffix not in {'.jpg', '.jpeg', '.png', '.webp'}:
+            mime_to_suffix = {
+                'image/jpeg': '.jpg',
+                'image/png': '.png',
+                'image/webp': '.webp',
+            }
+            suffix = mime_to_suffix.get(file.mimetype or '')
+            if not suffix:
+                return jsonify({
+                    'success': False,
+                    'message': 'Invalid file type. Upload a JPG, PNG, or WEBP image.'
+                }), 400
+
+        upload_dir = Path(current_app.static_folder) / 'uploads' / 'products'
+        upload_dir.mkdir(parents=True, exist_ok=True)
+
+        stored_name = f"product-{uuid4().hex}{suffix}"
+        file.save(upload_dir / stored_name)
+
+        image_url = url_for('static', filename=f'uploads/products/{stored_name}')
+        return jsonify({
+            'success': True,
+            'image_url': image_url
+        }), 200
+
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'message': 'Error uploading image',
+            'error': str(e)
+        }), 500
+
+
 @seller_bp.route("/products", methods=["POST"])
 def add_product():
     """Add a new product to the shop"""
@@ -834,9 +1068,10 @@ def add_product():
         image_input = data.get('image_urls')
         if image_input is None:
             image_input = data.get('image_keys')
-        image_keys = _parse_key_list(image_input)
-        if not image_keys:
+        if image_input is None:
             image_keys = [DEFAULT_PRODUCT_PLACEHOLDER_IMAGE]
+        else:
+            image_keys = _parse_key_list(image_input)
         product.replace_image_urls(image_keys)
 
         db.session.add(product)
@@ -922,98 +1157,9 @@ def update_product(product_id):
                 'message': 'Product not found or does not belong to your shop'
             }), 404
 
-        if 'name' in data:
-            name = str(data.get('name') or '').strip()
-            if not name:
-                return jsonify({
-                    'success': False,
-                    'message': 'Product name is required'
-                }), 400
-            product.name = name
-
-        if 'description' in data:
-            description = str(data.get('description') or '').strip()
-            product.description = description or None
-
-        if 'price' in data:
-            try:
-                price = float(data.get('price'))
-            except (TypeError, ValueError):
-                return jsonify({
-                    'success': False,
-                    'message': 'Price must be a number'
-                }), 400
-            if price < 0:
-                return jsonify({
-                    'success': False,
-                    'message': 'Price cannot be negative'
-                }), 400
-            product.price = price
-
-        if 'stock' in data:
-            try:
-                stock = int(data.get('stock'))
-            except (TypeError, ValueError):
-                return jsonify({
-                    'success': False,
-                    'message': 'Stock must be an integer'
-                }), 400
-            if stock < 0:
-                return jsonify({
-                    'success': False,
-                    'message': 'Stock cannot be negative'
-                }), 400
-            product.stock = stock
-
-        if 'category_id' in data:
-            try:
-                category_id = int(data.get('category_id'))
-            except (TypeError, ValueError):
-                return jsonify({
-                    'success': False,
-                    'message': 'A valid category is required'
-                }), 400
-
-            category = Category.query.filter_by(id=category_id, is_active=True).first()
-            if not category:
-                return jsonify({
-                    'success': False,
-                    'message': 'Category not found or inactive'
-                }), 404
-            product.category_id = category_id
-
-        if 'code' in data:
-            code = str(data.get('code') or '').strip()
-            if not code:
-                return jsonify({
-                    'success': False,
-                    'message': 'Code cannot be empty'
-                }), 400
-            product.code = code
-
-        if 'type_' in data:
-            product_type = str(data.get('type_') or '').strip().lower()
-            if product_type not in ('product', 'service'):
-                return jsonify({
-                    'success': False,
-                    'message': 'type_ must be either "product" or "service"'
-                }), 400
-            product.type_ = product_type
-
-        if 'tags' in data:
-            product.tags = _normalize_tags(data.get('tags'))
-
-        if 'is_active' in data:
-            product.is_active = _parse_bool(data.get('is_active'), default=bool(product.is_active))
-
-        if 'image_urls' in data or 'image_keys' in data:
-            raw_images = data.get('image_urls')
-            if raw_images is None:
-                raw_images = data.get('image_keys')
-            image_keys = _parse_key_list(raw_images)
-            if not image_keys:
-                image_keys = [DEFAULT_PRODUCT_PLACEHOLDER_IMAGE]
-            product.replace_image_urls(image_keys)
+        validation_error = _apply_product_updates(product, data)
+        if validation_error:
+            return validation_error
 
         product.updated_at = datetime.now(timezone.utc)
         db.session.commit()
@@ -1035,6 +1181,58 @@ def update_product(product_id):
         return jsonify({
             'success': False,
             'message': 'Error updating product',
+            'error': str(e)
+        }), 500
+
+
+@seller_bp.route("/products/<int:product_id>", methods=["PATCH"])
+def autosave_product(product_id):
+    """Autosave one or more editable product fields."""
+    try:
+        data = _request_json()
+        seller_id = _resolve_seller_id(request.args.get('seller_id', type=int), data)
+
+        if not seller_id:
+            return jsonify({
+                'success': False,
+                'message': 'Seller ID is required'
+            }), 400
+
+        _, shop, error_response = _load_seller_and_shop(seller_id)
+        if error_response:
+            return error_response
+
+        product = Product.query.filter_by(id=product_id, shop_id=shop.id).first()
+        if not product:
+            return jsonify({
+                'success': False,
+                'message': 'Product not found or does not belong to your shop'
+            }), 404
+
+        validation_error = _apply_product_updates(product, data)
+        if validation_error:
+            return validation_error
+
+        product.updated_at = datetime.now(timezone.utc)
+        db.session.commit()
+
+        return jsonify({
+            'success': True,
+            'message': 'Product saved',
+            'product': _serialize_product(product),
+        }), 200
+
+    except ValueError as e:
+        db.session.rollback()
+        return jsonify({
+            'success': False,
+            'message': str(e)
+        }), 400
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({
+            'success': False,
+            'message': 'Error saving product',
             'error': str(e)
         }), 500
 
@@ -1876,3 +2074,12 @@ def request_verification():
         }), 500
 
 
+@seller_bp.route("/service-keywords", methods=["GET"])
+def get_active_service_keywords():
+    """Get list of active service keywords for frontend auto-detection"""
+    from ..models.service_keyword_model import ServiceKeyword
+    keywords = [kw.keyword for kw in ServiceKeyword.query.filter_by(is_active=True).all()]
+    return jsonify({
+        'success': True,
+        'keywords': keywords
+    }), 200

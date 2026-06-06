@@ -151,3 +151,8 @@
     </div>
 </div>
 {% endblock %}
+
+{% block scripts %}
+{{ super() }}
+{% block manage_scripts %}{% endblock %}
+{% endblock %}

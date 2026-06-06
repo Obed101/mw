@@ -1,22 +1,38 @@
+
+
+
 <tr id="product-row-{{ product.id }}">
     <td class="ps-4">
         {% if product.primary_image_url %}
-        <img src="{{ product.primary_image_url }}" class="product-row-img" alt="">
+        <div class="product-row-img-wrap has-image"
+             data-image-urls='{{ product.image_urls | tojson }}'>
+            <img src="{{ product.primary_image_url }}" class="product-row-img" alt="">
+            <div class="product-row-img-edit-overlay" style="cursor:pointer" title="Edit images">
+                <i class="bi bi-pencil-fill"></i>
+            </div>
+        </div>
         {% else %}
-        <div class="product-row-img d-flex align-items-center justify-content-center text-muted">
-            <i class="bi bi-image"></i>
+        <div class="product-row-img-wrap no-image"
+             data-image-urls='[]'>
+            <div class="product-row-img d-flex align-items-center justify-content-center text-muted">
+                <i class="bi bi-image"></i>
+            </div>
+            <div class="product-row-img-edit-overlay always-visible" style="cursor:pointer" title="Add images">
+                <i class="bi bi-pencil-fill"></i>
+            </div>
         </div>
         {% endif %}
     </td>
     <td>
-        <div class="fw-bold">{{ product.name }}</div>
-        <div class="d-flex align-items-center gap-2 mt-1">
+        <div class="fw-bold">{{ product.name }}
             {% if product.is_active %}
-            <span class="badge bg-success-subtle text-success small">Active</span>
+            <i class="bi bi-check-circle text-success"></i>
             {% else %}
-            <span class="badge bg-secondary-subtle text-secondary small">Inactive</span>
+            <i class="bi bi-x-circle text-warning"></i>
             {% endif %}
-            <span class="text-muted small">#{{ product.code or 'No Code' }}</span>
+        </div>
+        <div class="d-flex align-items-center gap-2 mt-1">
+            <span class="text-muted rounded-pill badge bg-body-secondary small">{{ product.code or 'No Code' }}</span>
         </div>
     </td>
     <td class="text-center fw-semibold">

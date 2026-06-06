@@ -128,3 +128,33 @@ def get_dashboard_stats():
 def paginate_query(query, page, per_page=20):
     """Return a SQLAlchemy pagination object."""
     return query.paginate(page=page, per_page=per_page, error_out=False)
+
+
+def ensure_service_keywords_seeded():
+    """
+    Called on startup: seeds the service keywords database if empty.
+    """
+    from ..models.service_keyword_model import ServiceKeyword
+    if ServiceKeyword.query.first():
+        return  # Already seeded
+
+    keywords = [
+        "school", "academy", "university", "college", "bank", "microfinance",
+        "finance", "insurance", "repair", "mechanic", "barber", "salon",
+        "spa", "washing bay", "filling station", "fuel station", "pharmacy",
+        "clinic", "hospital", "dental", "hotel", "hostel", "restaurant",
+        "cafe", "printing", "tailoring", "tailor", "sewing", "church",
+        "mosque", "welding", "electrician", "plumbing", "laundry", "transport",
+        "delivery", "internet cafe", "mobile money", "momo", "consultancy",
+        "agency", "studio", "gym", "fitness", "coaching", "driving school",
+        "computer training", "repair center", "service center", "forex",
+        "forex bureau", "lodge", "event center", "decoration", "photography",
+        "videography", "car wash", "vulcanizer", "tire service", "alignment",
+        "diagnostics", "towing", "software", "cyber cafe"
+    ]
+    
+    for kw in keywords:
+        existing = ServiceKeyword.query.filter_by(keyword=kw).first()
+        if not existing:
+            db.session.add(ServiceKeyword(keyword=kw, is_active=True))
+    db.session.commit()

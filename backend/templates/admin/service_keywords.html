@@ -1,0 +1,125 @@
+{% extends "admin/base_admin.html" %}
+{% block admin_title %}Service Keywords{% endblock %}
+
+{% block admin_content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <h5 class="fw-bold mb-0" style="color:var(--admin-text)">Service Keywords</h5>
+</div>
+
+<div class="row g-4">
+  <!-- Add Keyword Card -->
+  <div class="col-md-4">
+    <div class="admin-card">
+      <div class="admin-card-header">
+        <span>Add New Keyword</span>
+      </div>
+      <div class="admin-card-body">
+        <form action="{{ url_for('mw_admin_bp.add_service_keyword') }}" method="POST">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <div class="admin-form-group">
+            <label for="keywordInput">Keyword</label>
+            <input type="text" class="admin-form-control" id="keywordInput" name="keyword" placeholder="e.g. laundry" required>
+          </div>
+          <button type="submit" class="btn-admin-primary w-100 justify-content-center">
+            <i class="bi bi-plus-lg"></i> Add Keyword
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Keywords List Card -->
+  <div class="col-md-8">
+    <div class="admin-card mb-4">
+      <div class="admin-card-header d-flex flex-column flex-sm-row gap-2 align-items-sm-center justify-content-between">
+        <span>Manage Keywords</span>
+        
+        <form method="GET" class="admin-search-bar" style="max-width: 250px;">
+          <i class="bi bi-search" style="color:var(--admin-muted)"></i>
+          <input type="text" name="q" value="{{ search or '' }}" placeholder="Search keywords...">
+        </form>
+      </div>
+      
+      <div class="admin-card-body p-0">
+        <div class="table-responsive">
+          <table class="admin-table">
+            <thead>
+              <tr>
+                <th>Keyword</th>
+                <th>Status</th>
+                <th class="text-end">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for kw in keywords %}
+              <tr>
+                <td class="fw-semibold">{{ kw.keyword }}</td>
+                <td>
+                  {% if kw.is_active %}
+                  <span class="status-badge status-active">Active</span>
+                  {% else %}
+                  <span class="status-badge status-inactive">Inactive</span>
+                  {% endif %}
+                </td>
+                <td class="text-end">
+                  <div class="d-flex gap-2 justify-content-end">
+                    <form action="{{ url_for('mw_admin_bp.toggle_service_keyword', kw_id=kw.id) }}" method="POST" style="display:inline;">
+                      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                      <button type="submit" class="btn-admin-sm {{ 'btn-admin-success' if not kw.is_active else '' }}">
+                        {% if kw.is_active %}
+                        <i class="bi bi-toggle-on"></i> Disable
+                        {% else %}
+                        <i class="bi bi-toggle-off"></i> Enable
+                        {% endif %}
+                      </button>
+                    </form>
+                    
+                    <form action="{{ url_for('mw_admin_bp.delete_service_keyword', kw_id=kw.id) }}" method="POST" style="display:inline;">
+                      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                      <button type="button" class="btn-admin-sm btn-admin-danger"
+                              data-confirm="Are you sure you want to delete the keyword '{{ kw.keyword }}'?"
+                              data-confirm-title="Delete Keyword"
+                              data-confirm-btn="Delete"
+                              data-confirm-action="{{ url_for('mw_admin_bp.delete_service_keyword', kw_id=kw.id) }}">
+                        <i class="bi bi-trash"></i> Delete
+                      </button>
+                    </form>
+                  </div>
+                </td>
+              </tr>
+              {% else %}
+              <tr>
+                <td colspan="3" class="text-center py-4" style="color:var(--admin-muted)">
+                  No keywords found.
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+      
+      {% if pagination and pagination.pages > 1 %}
+      <div class="admin-card-footer border-top p-3 d-flex justify-content-between align-items-center" style="border-color:var(--admin-border) !important;">
+        <span style="font-size: .8rem; color: var(--admin-muted)">
+          Page {{ pagination.page }} of {{ pagination.pages }}
+        </span>
+        <div class="admin-pagination">
+          {% if pagination.has_prev %}
+          <a href="{{ url_for('mw_admin_bp.service_keywords', page=pagination.prev_num, q=search) }}">&laquo; Prev</a>
+          {% else %}
+          <span class="disabled">&laquo; Prev</span>
+          {% endif %}
+          
+          {% if pagination.has_next %}
+          <a href="{{ url_for('mw_admin_bp.service_keywords', page=pagination.next_num, q=search) }}">Next &raquo;</a>
+          {% else %}
+          <span class="disabled">Next &raquo;</span>
+          {% endif %}
+        </div>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}

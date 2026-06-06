@@ -84,8 +84,9 @@ class Product(db.Model):
 
     @validates("image_records")
     def _validate_image_records(self, key, image_record):
-        if image_record not in self.image_records and len(self.image_records) >= MAX_PRODUCT_IMAGES:
-            raise ValueError(f"A product can have at most {MAX_PRODUCT_IMAGES} images")
+        max_allowed = 1 if self.type_ == 'service' else 5
+        if image_record not in self.image_records and len(self.image_records) >= max_allowed:
+            raise ValueError(f"A {self.type_} can have at most {max_allowed} images")
         return image_record
 
     @property
@@ -101,8 +102,9 @@ class Product(db.Model):
 
     def replace_image_urls(self, image_keys):
         normalized = _normalize_image_keys(image_keys)
-        if len(normalized) > MAX_PRODUCT_IMAGES:
-            raise ValueError(f"A product can have at most {MAX_PRODUCT_IMAGES} images")
+        max_allowed = 1 if self.type_ == 'service' else 5
+        if len(normalized) > max_allowed:
+            raise ValueError(f"A {self.type_} can have at most {max_allowed} images")
 
         self.image_records.clear()
         for idx, image_key in enumerate(normalized):
@@ -120,8 +122,9 @@ class Product(db.Model):
             raise ValueError("Image value cannot be empty")
         if normalized[0] in self.image_urls:
             return
-        if len(self.image_records) >= MAX_PRODUCT_IMAGES:
-            raise ValueError(f"A product can have at most {MAX_PRODUCT_IMAGES} images")
+        max_allowed = 1 if self.type_ == 'service' else 5
+        if len(self.image_records) >= max_allowed:
+            raise ValueError(f"A {self.type_} can have at most {max_allowed} images")
 
         self.image_records.append(
             ProductImage(

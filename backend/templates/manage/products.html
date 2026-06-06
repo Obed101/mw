@@ -9,6 +9,37 @@
         border-radius: 8px;
         background: #f3f4f6;
     }
+    /* Wrapper needed for the overlay positioning */
+    .product-row-img-wrap {
+        position: relative;
+        display: inline-block;
+        border-radius: 8px;
+        overflow: hidden;
+        line-height: 0;
+    }
+    /* The pen overlay */
+    .product-row-img-edit-overlay {
+        position: absolute;
+        inset: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: rgba(0, 0, 0, 0.35);
+        color: #fff;
+        font-size: 1rem;
+        border-radius: 8px;
+        cursor: pointer;
+        transition: opacity 0.18s ease;
+        pointer-events: auto;
+    }
+    /* Always show pen when there is no image */
+    .product-row-img-wrap.no-image .product-row-img-edit-overlay.always-visible {
+        opacity: 1;
+    }
+    /* Show pen on row hover only when an image exists */
+    tr:hover .product-row-img-wrap.has-image .product-row-img-edit-overlay {
+        opacity: 1;
+    }
     .stock-control {
         display: flex;
         align-items: center;
@@ -41,6 +72,77 @@
     .add-panel.show {
         display: block;
     }
+
+    /* Image modal cards */
+    .img-slot-card {
+        background: #fff;
+        border: 1.5px solid #e5e7eb;
+        border-radius: 12px;
+        padding: 0.75rem 1rem;
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        transition: border-color 0.18s, box-shadow 0.18s;
+    }
+    .img-slot-card:has(.img-slot-file:focus) {
+        border-color: #6366f1;
+        box-shadow: 0 0 0 3px rgba(99,102,241,0.12);
+    }
+    .img-slot-number {
+        width: 28px;
+        height: 28px;
+        border-radius: 50%;
+        background: #f3f4f6;
+        color: #6b7280;
+        font-size: 0.75rem;
+        font-weight: 700;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+    }
+    .img-slot-card.is-primary .img-slot-number {
+        background: linear-gradient(135deg,#6366f1,#818cf8);
+        color: #fff;
+    }
+    .img-slot-preview {
+        width: 56px;
+        height: 56px;
+        border-radius: 10px;
+        object-fit: cover;
+        background: #f9fafb;
+        border: 1px solid #e5e7eb;
+        display: none;
+        flex-shrink: 0;
+    }
+    .img-slot-preview.visible { display: block; }
+    .img-slot-meta {
+        flex: 1;
+        min-width: 0;
+    }
+    .img-slot-status {
+        font-size: 0.75rem;
+        color: #6b7280;
+        margin-bottom: 0.35rem;
+    }
+    .img-slot-file {
+        font-size: 0.875rem;
+    }
+    .img-slot-clear {
+        background: none;
+        border: none;
+        color: #d1d5db;
+        padding: 0;
+        line-height: 1;
+        width: 24px;
+        height: 24px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        transition: color 0.15s;
+    }
+    .img-slot-clear:hover { color: #ef4444; }
 </style>
 {% endblock %}
 
@@ -85,8 +187,8 @@
         <table class="table table-hover align-middle mb-0">
             <thead class="bg-light">
                 <tr>
-                    <th class="ps-4 py-3 text-muted small fw-bold" style="width: 50px;">Item</th>
-                    <th class="py-3 text-muted small fw-bold">Name & Status</th>
+                    <th class="ps-4 py-3 text-muted small fw-bold" style="width: 50px;"></th>
+                    <th class="py-3 text-muted small fw-bold">Item</th>
                     <th class="py-3 text-muted small fw-bold text-center" style="width: 120px;">Price</th>
                     <th class="py-3 text-muted small fw-bold text-center" style="width: 150px;">Stock</th>
                     <th class="pe-4 py-3 text-muted small fw-bold text-end" style="width: 150px;">Actions</th>
@@ -104,4 +206,228 @@
         </table>
     </div>
 </div>
+{% endblock %}
+
+{% block manage_scripts %}
+<!-- Image Gallery Modal -->
+<div class="modal fade" id="imageModal" tabindex="-1" aria-labelledby="imageModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered" style="max-width:520px">
+    <div class="modal-content border-0 shadow-lg rounded-4 overflow-hidden">
+
+      <div class="modal-header border-0 pb-0 px-4 pt-4">
+        <div>
+          <h5 class="modal-title fw-bold mb-0" id="imageModalLabel">Product Images</h5>
+          <p class="text-muted small mb-0">Upload up to 5 image files. The first slot becomes the primary image.</p>
+        </div>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+
+      <div class="modal-body px-4 pt-3 pb-2">
+        <form id="imageModalForm" enctype="multipart/form-data">
+          <input type="hidden" name="csrf_token" id="imageModalCsrf" value="">
+          <div id="imageModalError" class="alert alert-danger d-none small py-2"></div>
+
+          <div class="d-flex flex-column gap-2">
+            {% for slot in [1,2,3,4,5] %}
+            <div class="img-slot-card {% if slot == 1 %}is-primary{% endif %}" id="slot-{{ slot }}">
+              <div class="img-slot-number">{{ slot }}</div>
+              {% if slot == 1 %}
+              <span class="badge px-2 py-1 rounded-pill" style="background:linear-gradient(135deg,#6366f1,#818cf8);font-size:.65rem;white-space:nowrap">Primary</span>
+              {% endif %}
+              <img class="img-slot-preview" id="preview-{{ slot }}" src="" alt="">
+              <div class="img-slot-meta">
+                <div class="img-slot-status" id="status-{{ slot }}">No image selected</div>
+                <input type="hidden" name="existing_url_{{ slot }}" id="existing-url-{{ slot }}" value="">
+                <input type="hidden" name="remove_{{ slot }}" id="remove-{{ slot }}" value="">
+                <input
+                  class="form-control form-control-sm img-slot-file"
+                  type="file"
+                  name="file_{{ slot }}"
+                  id="file-{{ slot }}"
+                  accept="image/*"
+                >
+              </div>
+              <button type="button" class="img-slot-clear" onclick="clearSlot({{ slot }})" title="Clear">
+                <i class="bi bi-x-circle-fill"></i>
+              </button>
+            </div>
+            {% endfor %}
+          </div>
+        </form>
+      </div>
+
+      <div class="modal-footer border-0 px-4 pb-4 pt-2 d-flex gap-2">
+        <button type="button" class="btn btn-light btn-sm px-3" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-primary btn-sm px-4 ms-auto" id="imageModalSaveBtn" onclick="saveProductImages()">
+          <span id="imageModalSpinner" class="spinner-border spinner-border-sm me-1 d-none"></span>
+          Save Uploads
+        </button>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+    let _productId  = null;
+    let _rowSelector = null;
+    const _slotObjectUrls = {};
+
+    function getSlotNodes(slot) {
+        return {
+            fileInput: document.getElementById('file-' + slot),
+            existingInput: document.getElementById('existing-url-' + slot),
+            removeInput: document.getElementById('remove-' + slot),
+            preview: document.getElementById('preview-' + slot),
+            status: document.getElementById('status-' + slot),
+        };
+    }
+
+    function clearObjectUrl(slot) {
+        if (_slotObjectUrls[slot]) {
+            URL.revokeObjectURL(_slotObjectUrls[slot]);
+            delete _slotObjectUrls[slot];
+        }
+    }
+
+    function renderSlot(slot) {
+        const nodes = getSlotNodes(slot);
+        if (!nodes.fileInput || !nodes.existingInput || !nodes.removeInput || !nodes.preview || !nodes.status) {
+            return;
+        }
+
+        const file = nodes.fileInput.files && nodes.fileInput.files[0];
+        nodes.preview.onerror = null;
+
+        if (file) {
+            clearObjectUrl(slot);
+            const objectUrl = URL.createObjectURL(file);
+            _slotObjectUrls[slot] = objectUrl;
+            nodes.preview.src = objectUrl;
+            nodes.preview.classList.add('visible');
+            nodes.status.textContent = 'Selected: ' + file.name;
+            nodes.removeInput.value = '';
+            return;
+        }
+
+        clearObjectUrl(slot);
+
+        if (nodes.removeInput.value === '1' || !nodes.existingInput.value) {
+            nodes.preview.src = '';
+            nodes.preview.classList.remove('visible');
+            nodes.status.textContent = 'No image selected';
+            return;
+        }
+
+        nodes.preview.src = nodes.existingInput.value;
+        nodes.preview.classList.add('visible');
+        nodes.status.textContent = 'Current image';
+        nodes.preview.onerror = function () {
+            nodes.preview.src = '';
+            nodes.preview.classList.remove('visible');
+            nodes.status.textContent = 'Image unavailable';
+        };
+    }
+
+    /* Open the modal when any pen overlay is clicked */
+    document.addEventListener('click', function (e) {
+        const overlay = e.target.closest('.product-row-img-edit-overlay');
+        if (!overlay) return;
+
+        const row = overlay.closest('tr');
+        if (!row || !row.id) return;
+
+        _productId = row.id.replace('product-row-', '');
+        _rowSelector = '#' + row.id;
+
+        /* Read existing URLs from a data attribute on the wrap element */
+        const wrap = overlay.closest('.product-row-img-wrap');
+        const existing = wrap ? JSON.parse(wrap.dataset.imageUrls || '[]') : [];
+
+        for (let i = 1; i <= 5; i++) {
+            const val = existing[i - 1] || '';
+            const existingInput = document.getElementById('existing-url-' + i);
+            const removeInput = document.getElementById('remove-' + i);
+            const fileInput = document.getElementById('file-' + i);
+            if (existingInput) existingInput.value = val;
+            if (removeInput) removeInput.value = '';
+            if (fileInput) fileInput.value = '';
+            renderSlot(i);
+        }
+
+        document.getElementById('imageModalCsrf').value =
+            document.querySelector('meta[name="csrf-token"]')?.content || '';
+        document.getElementById('imageModalError').classList.add('d-none');
+
+        new bootstrap.Modal(document.getElementById('imageModal')).show();
+    });
+
+    /* Live preview as files are selected */
+    for (let i = 1; i <= 5; i++) {
+        const input = document.getElementById('file-' + i);
+        if (input) input.addEventListener('change', () => renderSlot(i));
+    }
+
+    window.clearSlot = function (slot) {
+        const nodes = getSlotNodes(slot);
+        if (!nodes.fileInput || !nodes.existingInput || !nodes.removeInput) {
+            return;
+        }
+
+        if (nodes.fileInput.files && nodes.fileInput.files.length) {
+            nodes.fileInput.value = '';
+            nodes.removeInput.value = '';
+            renderSlot(slot);
+            return;
+        }
+
+        if (nodes.existingInput.value) {
+            nodes.existingInput.value = '';
+            nodes.removeInput.value = '1';
+            renderSlot(slot);
+        }
+    };
+
+    window.saveProductImages = async function () {
+        if (!_productId) return;
+
+        const btn     = document.getElementById('imageModalSaveBtn');
+        const spinner = document.getElementById('imageModalSpinner');
+        const errDiv  = document.getElementById('imageModalError');
+        btn.disabled  = true;
+        spinner.classList.remove('d-none');
+        errDiv.classList.add('d-none');
+
+        try {
+            const form   = document.getElementById('imageModalForm');
+            const data   = new FormData(form);
+            const res    = await fetch('/manage/products/' + _productId + '/images', {
+                method: 'POST', body: data
+            });
+            const html   = await res.text();
+
+            if (!res.ok) {
+                errDiv.innerHTML = html;
+                errDiv.classList.remove('d-none');
+                return;
+            }
+
+            const target = document.querySelector(_rowSelector);
+            if (target) {
+                target.outerHTML = html;
+                if (window.htmx) htmx.process(document.body);
+            }
+
+            bootstrap.Modal.getInstance(document.getElementById('imageModal'))?.hide();
+        } catch (err) {
+            errDiv.textContent = 'Network error - please try again.';
+            errDiv.classList.remove('d-none');
+        } finally {
+            btn.disabled = false;
+            spinner.classList.add('d-none');
+        }
+    };
+}());
+</script>
 {% endblock %}

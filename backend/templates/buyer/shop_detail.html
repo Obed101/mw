@@ -48,7 +48,7 @@
                     {% if shop_categories %}
                     <div class="shop-category-scroll mt-2">
                         {% for category in shop_categories %}
-                        <a href="{{ url_for('main_bp.categories', category_id=category.id) }}"
+                        <a href="{{ url_for('main_bp.categories', shop_id=shop.id, category_id=category.id) }}"
                            class="badge rounded-pill text-decoration-none shop-category-pill">
                             {{ category.name }}
                         </a>
@@ -91,7 +91,7 @@
                     <i class="bi bi-sign-turn-right-fill"></i>
                 </span>
                 <span>
-                    <span class="shop-directions-button__eyebrow">Navigate</span>
+                    <span class="shop-directions-button__eyebrow">{{shop.town}}</span>
                     <span class="shop-directions-button__label">Follow directions to shop</span>
                 </span>
                 <i class="bi bi-box-arrow-up-right shop-directions-button__arrow"></i>

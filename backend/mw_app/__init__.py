@@ -56,6 +56,9 @@ def create_app():
         }
     })
     
+    # Import all models to ensure they are registered with SQLAlchemy
+    from . import models
+
     # Initialize Flask-Migrate
     migrate = Migrate()
     migrate.init_app(app, db)
@@ -92,11 +95,12 @@ def create_app():
         response.headers.add('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,OPTIONS')
         return response
 
-    # Seed: ensure user id=1 is super_admin (runs once per startup inside app context)
+    # Seed: ensure user id=1 is super_admin and keywords are seeded
     with app.app_context():
         try:
-            from .admin.services import ensure_super_admin_exists
+            from .admin.services import ensure_super_admin_exists, ensure_service_keywords_seeded
             ensure_super_admin_exists()
+            ensure_service_keywords_seeded()
         except Exception:
             pass  # Tables may not exist yet during first migration
 

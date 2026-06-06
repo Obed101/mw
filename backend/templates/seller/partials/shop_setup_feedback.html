@@ -4,3 +4,10 @@
         <span>{{ message }}</span>
     </div>
 </div>
+{% if trigger_payload and trigger_payload.get('shop-step-saved') %}
+<script>
+    window.dispatchEvent(new CustomEvent('shop-step-saved', {
+        detail: {{ trigger_payload.get('shop-step-saved')|tojson }}
+    }));
+</script>
+{% endif %}

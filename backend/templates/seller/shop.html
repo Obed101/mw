@@ -541,9 +541,7 @@
                     :class="{
                         'is-active': activeStep === step,
                         'is-complete': isComplete(step),
-                        'is-locked': !canOpenStep(step) && activeStep !== step
                     }"
-                    :disabled="!canOpenStep(step) && activeStep !== step"
                     @click="goToStep(step)"
                 >
                     <span class="step-chip__count">
@@ -703,7 +701,7 @@
             </form>
         </template>
 
-        <template x-if="activeStep === 'image'">
+        <div x-show="activeStep === 'image'">
             <form
                 hx-post="{{ url_for('seller_template_bp.save_shop_image_step') }}"
                 hx-target="#shop-feedback"
@@ -783,11 +781,19 @@
                     >
                         Continue without changing it
                     </button>
+                    <button
+                        type="button"
+                        class="btn btn-link ghost-link"
+                        x-cloak
+                        @click="goToStep('contact', true)"
+                    >
+                        Skip for now
+                    </button>
                 </div>
             </form>
-        </template>
+        </div>
 
-        <template x-if="activeStep === 'contact'">
+        <div x-show="activeStep === 'contact'">
             <form
                 hx-post="{{ url_for('seller_template_bp.save_shop_contact_step') }}"
                 hx-target="#shop-feedback"
@@ -841,9 +847,9 @@
                     </button>
                 </div>
             </form>
-        </template>
+        </div>
 
-        <template x-if="activeStep === 'description'">
+        <div x-show="activeStep === 'description'">
             <form
                 hx-post="{{ url_for('seller_template_bp.save_shop_description_step') }}"
                 hx-target="#shop-feedback"
@@ -886,7 +892,7 @@
                     </button>
                 </div>
             </form>
-        </template>
+        </div>
 
         <template x-if="activeStep === 'complete'">
             <div class="completion-card">
@@ -944,9 +950,9 @@
                             <i class="bi bi-shield-check me-2"></i>
                             <span x-text="requestingVerification ? 'Sending...' : 'Request Verification Review'"></span>
                         </button>
-                        <button type="button" class="btn btn-outline-primary btn-pill" @click="goToStep('basic')">
-                            Edit Setup Again
-                        </button>
+                        <a href="{{ url_for('manage_bp.products', shop_id=shop.id) }}" class="btn btn-outline-primary btn-pill">
+                            Add Products to Shop
+                        </a>
                     </div>
                 </div>
             </div>
@@ -1149,20 +1155,11 @@
                 return !!this.stepState[step + '_complete'];
             },
 
-            canOpenStep(step) {
-                const stepIdx = this.stepIndex(step);
-                if (stepIdx <= 0) {
-                    return true;
-                }
-                return this.isComplete(step) || this.isComplete(this.stepOrder[stepIdx - 1]);
-            },
-
             goToStep(step) {
-                if (step === 'complete' || this.canOpenStep(step) || this.isComplete(step)) {
-                    this.activeStep = step;
-                    if (step === 'basic') {
-                        this.$nextTick(() => this.refreshMap());
-                    }
+                console.log('Switching to step:', step);
+                this.activeStep = step;
+                if (step === 'basic') {
+                    this.$nextTick(() => this.refreshMap());
                 }
             },
 

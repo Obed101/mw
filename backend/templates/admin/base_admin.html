@@ -252,6 +252,10 @@
       </a>
 
       <div class="admin-nav-section mt-2">System</div>
+      <a href="{{ url_for('mw_admin_bp.service_keywords') }}"
+         class="{{ 'active' if request.endpoint == 'mw_admin_bp.service_keywords' else '' }}">
+        <i class="bi bi-tag"></i> Service Keywords
+      </a>
       <a href="{{ url_for('mw_admin_bp.settings') }}"
          class="{{ 'active' if request.endpoint == 'mw_admin_bp.settings' else '' }}">
         <i class="bi bi-gear"></i> Settings
