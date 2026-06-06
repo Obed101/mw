@@ -336,7 +336,7 @@
 
     .seller-setup-shell .summary-grid {
         display: grid;
-        grid-template-columns: repeat(4, minmax(0, 1fr));
+        grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
         gap: 0.75rem;
     }
 
@@ -359,6 +359,31 @@
         color: var(--setup-ink);
         font-weight: 700;
         margin-top: 0.35rem;
+    }
+
+    .seller-setup-shell .summary-business-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+        border-radius: 999px;
+        padding: 0.25rem 0.55rem;
+        font-size: 0.78rem;
+        font-weight: 800;
+    }
+
+    .seller-setup-shell .summary-business-badge.sales {
+        background: #eff6ff;
+        color: #1d4ed8;
+    }
+
+    .seller-setup-shell .summary-business-badge.service {
+        background: #ecfdf5;
+        color: #047857;
+    }
+
+    .seller-setup-shell .summary-business-badge.both {
+        background: #fff7ed;
+        color: #c2410c;
     }
 
     .seller-setup-shell .completion-card {
@@ -573,10 +598,46 @@
                     >
                 </div>
 
+                <div class="mt-4">
+                    <label class="form-label">Business Type</label>
+                    <div class="d-flex flex-column flex-sm-row gap-3">
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="business_type" id="bt-sales" value="sales" x-model="form.basic.business_type" @change="userSelectedBusinessType = true">
+                            <label class="form-check-label text-dark fw-semibold" for="bt-sales">
+                                Product Seller (Sales)
+                            </label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="business_type" id="bt-service" value="service" x-model="form.basic.business_type" @change="userSelectedBusinessType = true">
+                            <label class="form-check-label text-dark fw-semibold" for="bt-service">
+                                Service Provider
+                            </label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="business_type" id="bt-both" value="both" x-model="form.basic.business_type" @change="userSelectedBusinessType = true">
+                            <label class="form-check-label text-dark fw-semibold" for="bt-both">
+                                Both (Sales &amp; Service)
+                            </label>
+                        </div>
+                    </div>
+                    <div class="text-muted small mt-2">
+                        <template x-if="!userSelectedBusinessType && form.basic.name && serviceKeywords.length > 0">
+                            <span class="text-primary">
+                                <i class="bi bi-magic"></i> Auto-detecting business type based on shop name...
+                            </span>
+                        </template>
+                    </div>
+                </div>
+
                 <div class="d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3 mt-4">
                     <div class="location-pill" :class="{ 'is-set': !!form.basic.gps }">
                         <i class="bi" :class="form.basic.gps ? 'bi-geo-alt-fill' : 'bi-crosshair'"></i>
-                        <span x-text="form.basic.gps || 'Tap the map to pick your location'"></span>
+                        <div>
+                            <div class="fw-semibold" x-text="form.basic.town || form.basic.district || form.basic.region || (locationLookupLoading ? 'Detecting location...' : 'Tap the map to pick your location')"></div>
+                            <div class="small text-muted" x-show="detectedLocationText" x-cloak>
+                                <span x-text="detectedLocationText"></span>
+                            </div>
+                        </div>
                     </div>
                     <div class="map-action-row">
                         <button type="button" class="btn btn-outline-primary btn-pill" @click="useCurrentLocation()" :disabled="locating">
@@ -591,6 +652,35 @@
 
                 <div class="map-picker mt-3" x-ref="locationMap"></div>
                 <p class="text-muted small mt-3 mb-0">Tap anywhere on the map to place your shop pin.</p>
+
+                <div class="mt-4">
+                    <div class="d-flex flex-column flex-sm-row justify-content-between gap-2 align-items-sm-center mb-2">
+                        <label class="form-label mb-0">Detected location</label>
+                        <span class="text-muted small">Auto-filled from the pin. Edit only if needed.</span>
+                    </div>
+                    <div class="row g-3">
+                        <div class="col-12 col-md-4">
+                            <label class="form-label small fw-bold" for="shop-region">Region</label>
+                            <input id="shop-region" type="text" name="region" class="form-control" x-model="form.basic.region" placeholder="Auto-filled">
+                        </div>
+                        <div class="col-12 col-md-4">
+                            <label class="form-label small fw-bold" for="shop-district">District</label>
+                            <input id="shop-district" type="text" name="district" class="form-control" x-model="form.basic.district" placeholder="Auto-filled">
+                        </div>
+                        <div class="col-12 col-md-4">
+                            <label class="form-label small fw-bold" for="shop-town">Town / City</label>
+                            <input id="shop-town" type="text" name="town" class="form-control" x-model="form.basic.town" placeholder="Auto-filled">
+                        </div>
+                    </div>
+                    <div class="text-muted small mt-2" x-show="locationLookupLoading || locationLookupError" x-cloak>
+                        <template x-if="locationLookupLoading">
+                            <span><i class="bi bi-arrow-repeat me-1"></i>Detecting nearby town and district...</span>
+                        </template>
+                        <template x-if="!locationLookupLoading && locationLookupError">
+                            <span class="text-warning" x-text="locationLookupError"></span>
+                        </template>
+                    </div>
+                </div>
 
                 <div class="direction-card mt-4">
                     <label class="form-label" for="shop-address">Direct people to your shop</label>
@@ -870,6 +960,10 @@
                 <div class="text-muted small">A quick view of what buyers will notice first.</div>
             </div>
             <div class="d-flex flex-wrap gap-2">
+                <span class="mini-badge" x-show="shop?.business_type" x-cloak>
+                    <i class="bi" :class="businessTypeIcon(shop?.business_type)"></i>
+                    <span x-text="businessTypeLabel(shop?.business_type)"></span>
+                </span>
                 <span class="mini-badge" x-show="shop?.gps" x-cloak>
                     <i class="bi bi-geo-alt"></i>
                     Location saved
@@ -885,6 +979,18 @@
             <div class="summary-tile">
                 <div class="summary-tile__label">Shop</div>
                 <div class="summary-tile__value" x-text="shop?.name || 'Not set yet'"></div>
+            </div>
+            <div class="summary-tile">
+                <div class="summary-tile__label">Business Type</div>
+                <div class="summary-tile__value">
+                    <span
+                        class="summary-business-badge"
+                        :class="shop?.business_type || 'sales'"
+                    >
+                        <i class="bi" :class="businessTypeIcon(shop?.business_type)"></i>
+                        <span x-text="businessTypeLabel(shop?.business_type)"></span>
+                    </span>
+                </div>
             </div>
             <div class="summary-tile">
                 <div class="summary-tile__label">Phone</div>
@@ -932,6 +1038,10 @@
             currentShopId: config.shop?.id || null,
             locating: false,
             requestingVerification: false,
+            locationLookupLoading: false,
+            locationLookupError: '',
+            locationLookupRequestId: 0,
+            detectedLocationText: '',
             selectedImageName: '',
             imagePreviewUrl: '',
             map: null,
@@ -939,8 +1049,12 @@
             form: {
                 basic: {
                     name: config.shop?.name || '',
+                    business_type: config.shop?.business_type || 'sales',
                     gps: config.shop?.gps || '',
                     address: config.shop?.address || '',
+                    region: config.shop?.region || '',
+                    district: config.shop?.district || '',
+                    town: config.shop?.town || '',
                 },
                 contact: {
                     email: config.shop?.email || '',
@@ -948,10 +1062,30 @@
                 },
                 description: config.shop?.description || '',
             },
+            serviceKeywords: [],
+            userSelectedBusinessType: !!config.shop?.business_type,
 
-            init() {
+            async init() {
                 const initialPreview = config.shop?.primary_image_url || '';
                 this.imagePreviewUrl = initialPreview && initialPreview !== this.placeholderImage ? initialPreview : '';
+
+                try {
+                    const resp = await fetch('/seller/service-keywords');
+                    const d = await resp.json();
+                    if (d.success) {
+                        this.serviceKeywords = d.keywords;
+                    }
+                } catch (e) {
+                    console.error("Error loading service keywords:", e);
+                }
+
+                this.$watch('form.basic.name', (val) => {
+                    this.detectBusinessType();
+                });
+                this.$watch('form.basic.region', () => this.syncDetectedLocationText());
+                this.$watch('form.basic.district', () => this.syncDetectedLocationText());
+                this.$watch('form.basic.town', () => this.syncDetectedLocationText());
+                this.syncDetectedLocationText();
 
                 this.$nextTick(() => {
                     this.initMap();
@@ -961,6 +1095,35 @@
                         this.refreshMap();
                     }
                 });
+            },
+
+            detectBusinessType() {
+                if (this.userSelectedBusinessType) return;
+                const name = (this.form.basic.name || '').toLowerCase();
+                if (!name) {
+                    this.form.basic.business_type = 'sales';
+                    return;
+                }
+                let isService = false;
+                for (const kw of this.serviceKeywords) {
+                    if (name.includes(kw.toLowerCase())) {
+                        isService = true;
+                        break;
+                    }
+                }
+                this.form.basic.business_type = isService ? 'service' : 'sales';
+            },
+
+            businessTypeLabel(type) {
+                if (type === 'service') return 'Service Provider';
+                if (type === 'both') return 'Sales & Service';
+                return 'Product Seller';
+            },
+
+            businessTypeIcon(type) {
+                if (type === 'service') return 'bi-tools';
+                if (type === 'both') return 'bi-shop-window';
+                return 'bi-box-seam';
             },
 
             completedCount() {
@@ -1010,18 +1173,59 @@
                 return this.previewUrl + '?shop_id=' + encodeURIComponent(this.currentShopId);
             },
 
+            nextStepAfter(step) {
+                const idx = this.stepOrder.indexOf(step);
+                if (idx < 0) {
+                    return this.activeStep;
+                }
+                return idx >= this.stepOrder.length - 1 ? 'complete' : this.stepOrder[idx + 1];
+            },
+
+            normalizeStepSavedDetail(detail) {
+                let payload = detail || {};
+                if (typeof payload === 'string') {
+                    try {
+                        payload = JSON.parse(payload);
+                    } catch (e) {
+                        return {};
+                    }
+                }
+                if (payload && Object.prototype.hasOwnProperty.call(payload, 'value')) {
+                    payload = payload.value;
+                    if (typeof payload === 'string') {
+                        try {
+                            payload = JSON.parse(payload);
+                        } catch (e) {
+                            return {};
+                        }
+                    }
+                }
+                if (payload && payload['shop-step-saved']) {
+                    payload = payload['shop-step-saved'];
+                }
+                return payload || {};
+            },
+
             handleStepSaved(detail) {
-                detail = detail && detail.value ? detail.value : (detail || {});
+                detail = detail?.["shop-step-saved"] || detail;
+                if (!detail) return;
+                if (!detail.step && !detail.nextStep && !detail.setupState && !detail.shop) {
+                    return;
+                }
                 if (detail.setupState) {
                     this.stepState = detail.setupState;
                 }
 
                 if (detail.shop) {
                     this.shop = detail.shop;
-                    this.currentShopId = detail.shop.id || null;
+                    this.currentShopId = detail.shop?.id || detail.shop_id || this.currentShopId;
                     this.form.basic.name = detail.shop.name || '';
+                    this.form.basic.business_type = detail.shop.business_type || 'sales';
                     this.form.basic.gps = detail.shop.gps || '';
                     this.form.basic.address = detail.shop.address || '';
+                    this.form.basic.region = detail.shop.region || '';
+                    this.form.basic.district = detail.shop.district || '';
+                    this.form.basic.town = detail.shop.town || '';
                     this.form.contact.email = detail.shop.email || '';
                     this.form.contact.phone = detail.shop.phone || '';
                     this.form.description = detail.shop.description || '';
@@ -1033,12 +1237,14 @@
                 this.selectedImageName = '';
                 this.resetImageInput();
 
-                const nextStep = detail.nextStep || this.stepState.active_step || this.activeStep;
+                const nextStep = detail.nextStep || this.stepState?.active_step || this.activeStep;
                 this.activeStep = nextStep;
+                this.stepState.active_step = nextStep;
 
                 if (this.form.basic.gps) {
                     this.$nextTick(() => this.placeMarkerFromValue(this.form.basic.gps));
                 }
+                this.syncDetectedLocationText();
                 if (this.activeStep === 'basic') {
                     this.$nextTick(() => this.refreshMap());
                 }
@@ -1091,6 +1297,61 @@
                 return [lat, lng];
             },
 
+            syncDetectedLocationText() {
+                const pieces = [this.form.basic.district, this.form.basic.region]
+                    .map((part) => String(part || '').trim())
+                    .filter(Boolean);
+                this.detectedLocationText = pieces.length ? pieces.join(', ') : '';
+            },
+
+            async lookupLocationFromGps(gpsValue) {
+                const parsed = this.parseGps(gpsValue);
+                if (!parsed) {
+                    return;
+                }
+
+                const requestId = ++this.locationLookupRequestId;
+                this.locationLookupLoading = true;
+                this.locationLookupError = '';
+                this.form.basic.region = '';
+                this.form.basic.district = '';
+                this.form.basic.town = '';
+                this.syncDetectedLocationText();
+
+                try {
+                    const url = new URL('{{ url_for("seller_template_bp.reverse_geocode_shop_location") }}', window.location.origin);
+                    url.searchParams.set('lat', parsed[0].toFixed(6));
+                    url.searchParams.set('lng', parsed[1].toFixed(6));
+
+                    const response = await fetch(url.toString(), {
+                        headers: { 'Accept': 'application/json' },
+                    });
+                    const data = await response.json();
+
+                    if (requestId !== this.locationLookupRequestId) {
+                        return;
+                    }
+
+                    if (!response.ok || !data.success) {
+                        throw new Error(data.message || 'Could not detect location.');
+                    }
+
+                    const location = data.location || {};
+                    this.form.basic.region = location.region || '';
+                    this.form.basic.district = location.district || '';
+                    this.form.basic.town = location.town || '';
+                    this.syncDetectedLocationText();
+                } catch (error) {
+                    if (requestId === this.locationLookupRequestId) {
+                        this.locationLookupError = error?.message || 'Could not detect location.';
+                    }
+                } finally {
+                    if (requestId === this.locationLookupRequestId) {
+                        this.locationLookupLoading = false;
+                    }
+                }
+            },
+
             placeMarkerFromValue(rawValue) {
                 const parsed = this.parseGps(rawValue);
                 if (!parsed || !this.map) {
@@ -1113,12 +1374,14 @@
                     this.marker.on('dragend', () => {
                         const point = this.marker.getLatLng();
                         this.setGps(point.lat, point.lng, false);
+                        this.lookupLocationFromGps(this.form.basic.gps);
                     });
                 } else {
                     this.marker.setLatLng([normalizedLat, normalizedLng]);
                 }
 
                 this.setGps(normalizedLat, normalizedLng, centerMap);
+                this.lookupLocationFromGps(this.form.basic.gps);
             },
 
             setGps(lat, lng, centerMap) {
@@ -1130,6 +1393,13 @@
 
             clearLocation() {
                 this.form.basic.gps = '';
+                this.form.basic.region = '';
+                this.form.basic.district = '';
+                this.form.basic.town = '';
+                this.detectedLocationText = '';
+                this.locationLookupError = '';
+                this.locationLookupRequestId += 1;
+                this.locationLookupLoading = false;
                 if (this.map && this.marker) {
                     this.map.removeLayer(this.marker);
                     this.marker = null;
