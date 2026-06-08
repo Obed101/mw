@@ -3,6 +3,7 @@
 {% block title %}{{ product.name }} - Market Window{% endblock %}
 
 {% block styles %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/photoswipe@5.4.4/dist/photoswipe.css">
 <style>
     /* TikTok-style Media Section */
     .product-media-container {
@@ -26,9 +27,24 @@
     }
 
     .carousel-item img {
+        display: block;
         height: 100%;
         width: 100%;
         object-fit: contain;
+    }
+
+    .product-gallery-link {
+        display: block;
+        width: 100%;
+        height: 100%;
+        cursor: zoom-in;
+        -webkit-tap-highlight-color: transparent;
+        touch-action: manipulation;
+    }
+
+    .product-gallery-link img {
+        display: block;
+        pointer-events: none;
     }
 
     /* Floating Action Buttons (TikTok Style) */
@@ -120,7 +136,7 @@
         width: 40px;
         height: 40px;
         border-radius: 50%;
-        background: var(--light-mauve);
+        background-color: var(--light-mauve);
         display: flex;
         align-items: center;
         justify-content: center;
@@ -270,12 +286,24 @@
         <!-- Media Section (TikTok Style) -->
         <div class="col-12 col-lg-6">
             <div class="product-media-container" x-data="{ activeIndex: 0 }">
-                <div id="productCarousel" class="carousel slide product-media-carousel" data-bs-ride="false">
+                <div id="productCarousel" class="carousel slide product-media-carousel" data-bs-ride="false" data-bs-touch="true">
                     <div class="carousel-inner h-100">
                         {% if product.image_urls %}
                             {% for url in product.image_urls %}
                             <div class="carousel-item h-100 {% if loop.first %}active{% endif %}">
-                                <img src="{{ url }}" alt="{{ product.name }}" data-track-event="product_image_expand" data-entity-type="product" data-entity-id="{{ product.id }}">
+                                <a
+                                    href="{{ url }}"
+                                    class="product-gallery-link"
+                                    data-track-event="product_image_expand"
+                                    data-entity-type="product"
+                                    data-entity-id="{{ product.id }}"
+                                    data-image-index="{{ loop.index0 }}"
+                                    data-pswp-width="1600"
+                                    data-pswp-height="2000"
+                                    aria-label="Open image {{ loop.index }} of {{ product.image_urls|length }}"
+                                >
+                                    <img src="{{ url }}" alt="{{ product.name }}">
+                                </a>
                             </div>
                             {% endfor %}
                         {% else %}
@@ -313,12 +341,14 @@
                         </button>
                         <span class="action-label">Share</span>
                     </div>
-
+                    {% if product.image_urls|length > 0 %}
                     <div class="action-btn-wrapper">
-                        <button class="action-btn" onclick="window.open('https://wa.me/{{ shop.phone }}', '_blank')" data-track-event="product_contact" data-entity-type="product" data-entity-id="{{ product.id }}" data-payload='{"method": "whatsapp"}'>
-                            <i class="bi bi-whatsapp"></i>
+                        <button class="action-btn" onclick="downloadImage('{{ product.image_urls[0] }}')" data-track-event="product_download" data-entity-type="product" data-entity-id="{{ product.id }}">
+                            <i class="bi bi-download"></i>
                         </button>
+                        <span class="action-label">Save</span>
                     </div>
+                    {% endif %}
                 </div>
             </div>
         </div>
@@ -329,29 +359,24 @@
                 <div class="price-tag">GH₵ {{ "%.2f"|format(product.price) }}</div>
                 <h1 class="product-title">{{ product.name }}</h1>
 
-                <!-- Shop Card -->
+                <!-- Shop Card - Make this whole card a link to the shop detail page -->
+                <a href="{{ url_for('main_bp.shop_detail', shop_id=shop.id) }}" class="text-decoration-none text-dark">
                 <div class="shop-card-mini" id="shop-follow-wrapper-{{ shop.id }}">
+                    <!-- Change this to a business icon from bootstrap -->
                     <div class="shop-logo-mini">
-                        {{ shop.name[0]|upper }}
+                        <i class="bi bi-buildings"></i>
                     </div>
                     <div class="shop-info-mini">
                         <h3 class="shop-name-mini">
-                            <a href="{{ url_for('main_bp.shop_detail', shop_id=shop.id) }}" class="text-decoration-none text-dark">
-                                {{ shop.name }}
-                            </a>
+                            {{ shop.name }}
                             {% if shop.verification_status == 'verified' %}
                             <i class="bi bi-patch-check-fill text-primary ms-1"></i>
                             {% endif %}
                         </h3>
-                        <p class="shop-meta-mini">{{ shop.town }}, {{ shop.region }}</p>
+                        <p class="shop-meta-mini">{{ shop.town or "Ghana" }}, {{ shop.region or "" }}</p>
                     </div>
-                    <button class="btn btn-sm btn-primary rounded-pill px-3"
-                            hx-post="{{ url_for('buyer_bp.follow_shop', shop_id=shop.id, text_only=True) }}"
-                            hx-target="this"
-                            hx-swap="innerHTML">
-                        {% if is_following %}Following{% else %}Follow{% endif %}
-                    </button>
                 </div>
+                </a>
 
                 <!-- Contact Buttons -->
                 <div class="d-flex gap-2 mb-4">
@@ -435,6 +460,16 @@
 
 {% block scripts %}
 <script>
+    const productCarouselEl = document.getElementById('productCarousel');
+    if (productCarouselEl && window.bootstrap?.Carousel) {
+        window.bootstrap.Carousel.getOrCreateInstance(productCarouselEl, {
+            interval: false,
+            ride: false,
+            touch: true,
+            wrap: true,
+        });
+    }
+
     function shareProduct() {
         if (navigator.share) {
             navigator.share({
@@ -462,12 +497,84 @@
         }
     }
 
-    // Handle HTMX response for favorite button
+    // favorite button
     document.body.addEventListener('htmx:afterSwap', function(evt) {
         if (evt.detail.target.id.startsWith('fav-btn-')) {
-            // Optional: Add a little animation
             evt.detail.target.classList.add('animate__animated', 'animate__heartBeat');
         }
     });
+    // Download product image
+    function downloadImage(url) {
+        const endpoint = "{{ url_for('buyer_bp.download_watermarked') }}";
+        const a = document.createElement('a');
+        a.href = `${endpoint}?img=${encodeURIComponent(url)}`;
+        a.click();
+    }
 </script>
+{% if product.image_urls %}
+<script type="module">
+    import PhotoSwipeLightbox from 'https://cdn.jsdelivr.net/npm/photoswipe@5.4.4/dist/photoswipe-lightbox.esm.js';
+
+    const lightbox = new PhotoSwipeLightbox({
+        gallery: '#productCarousel',
+        children: '.product-gallery-link',
+        pswpModule: () => import('https://cdn.jsdelivr.net/npm/photoswipe@5.4.4/dist/photoswipe.esm.js'),
+        tapAction: 'close'
+    });
+
+    lightbox.on('uiRegister', function() {
+        lightbox.pswp.ui.registerElement({
+            name: 'download-button',
+            order: 8,
+            isButton: true,
+            ariaLabel: 'Download image',
+            html: {
+                isCustomSVG: true,
+                inner: '<path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/>',
+                outlineID: 'pswp__icn-download'
+            },
+            onClick: (event, el, pswp) => {
+                const image = pswp.currSlide?.data?.src || pswp.currSlide?.data?.element?.href;
+                if (!image) {
+                    return;
+                }
+
+                const downloadUrl = `{{ url_for('buyer_bp.download_watermarked') }}?img=${encodeURIComponent(image)}`;
+                const anchor = document.createElement('a');
+                anchor.href = downloadUrl;
+                anchor.download = 'market-window.png';
+                anchor.rel = 'noopener';
+                document.body.appendChild(anchor);
+                anchor.click();
+                anchor.remove();
+            }
+        });
+    });
+
+    const updateSlideDimensions = () => {
+        document.querySelectorAll('#productCarousel .product-gallery-link').forEach((link) => {
+            const img = link.querySelector('img');
+            if (!img) {
+                return;
+            }
+
+            const setDimensions = () => {
+                if (img.naturalWidth && img.naturalHeight) {
+                    link.dataset.pswpWidth = String(img.naturalWidth);
+                    link.dataset.pswpHeight = String(img.naturalHeight);
+                }
+            };
+
+            if (img.complete) {
+                setDimensions();
+            } else {
+                img.addEventListener('load', setDimensions, { once: true });
+            }
+        });
+    };
+
+    updateSlideDimensions();
+    lightbox.init();
+</script>
+{% endif %}
 {% endblock %}

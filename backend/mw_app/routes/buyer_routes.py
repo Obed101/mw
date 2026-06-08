@@ -1,6 +1,12 @@
+from io import BytesIO
+from urllib.parse import urljoin, urlparse
+
+import requests
 import meilisearch
-from flask import Blueprint, jsonify, request, render_template, current_app, session
+from PIL import Image, ImageDraw, ImageFont
+from flask import Blueprint, jsonify, request, render_template, current_app, session, send_file, flash, redirect, url_for
 from flask_login import current_user
+# pyrefly: ignore [missing-import]
 from sqlalchemy import or_, nullslast
 from ..extensions import db
 from ..models import (
@@ -9,7 +15,6 @@ from ..models import (
     User,
     UserBrowsingHistory,
     USER_ROLE_ADMIN,
-    USER_ROLE_BUYER,
     Product,
     Shop,
     UserFavoriteProduct,
@@ -38,6 +43,104 @@ def _resolve_user_id(raw_user_id=None, body=None):
     if current_user.is_authenticated:
         return current_user.id
     return None
+
+
+def _resolve_image_url(raw_url):
+    if not raw_url:
+        return None
+
+    resolved = urljoin(request.host_url, raw_url.strip())
+    parsed = urlparse(resolved)
+    if parsed.scheme not in {'http', 'https'} or not parsed.netloc:
+        return None
+
+    return resolved
+
+
+@buyer_bp.route('/download-watermarked')
+def download_watermarked():
+    """Download image with centered transparent Market Window watermark."""
+
+    image_url = _resolve_image_url(request.args.get("img"))
+    if not image_url:
+        return jsonify({"success": False, "message": "A valid image URL is required."}), 400
+
+    try:
+        response = requests.get(
+            image_url,
+            timeout=12,
+            headers={
+                "User-Agent": "Market Window Image Downloader",
+                "Accept": "image/*,*/*;q=0.8",
+            },
+        )
+        response.raise_for_status()
+
+        content_type = (response.headers.get("content-type") or "").lower()
+        if not content_type.startswith("image/"):
+            return jsonify({"success": False, "message": "The selected file is not an image."}), 400
+
+        img = Image.open(BytesIO(response.content)).convert("RGBA")
+
+        overlay = Image.new("RGBA", img.size, (0, 0, 0, 0))
+        draw = ImageDraw.Draw(overlay)
+
+        # Small, subtle font
+        try:
+            font = ImageFont.truetype("arial.ttf", 25)
+        except IOError:
+            font = ImageFont.load_default()
+
+        text = "Posted on Market Window"
+
+        # Measure text
+        try:
+            bbox = draw.textbbox((0, 0), text, font=font)
+            text_width = bbox[2] - bbox[0]
+            text_height = bbox[3] - bbox[1]
+        except Exception:
+            text_width, text_height = draw.textsize(text, font=font)
+
+        # Center position
+        x = (img.width - text_width) / 2
+        y = (img.height - text_height) / 2
+
+        # Transparent watermark text (no background box)
+        draw.text(
+            (x, y),
+            text,
+            font=font,
+            fill=(255, 255, 255, 150)  # standard opacity = watermark feel
+        )
+
+        final_img = Image.alpha_composite(img, overlay)
+
+        output = BytesIO()
+        final_img.save(output, format="PNG")
+        output.seek(0)
+
+        response = send_file(
+            output,
+            mimetype="image/png",
+            as_attachment=True,
+            download_name="market-window.png",
+            max_age=0,
+        )
+        response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
+        response.headers["Pragma"] = "no-cache"
+        response.headers["Expires"] = "0"
+
+        flash('Image prepared successfully', 'success')
+        return response
+
+    except requests.RequestException:
+        flash('This image appears to be missing.', 'error')
+        return redirect(request.referrer or url_for('main_bp.index'))
+
+    except Exception as exc:
+        current_app.logger.exception(exc)
+        flash('Unable to prepare the download.', 'error')
+        return redirect(request.referrer or url_for('main_bp.index'))
 
 
 def _load_buyer_user(user_id):

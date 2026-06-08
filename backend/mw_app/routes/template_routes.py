@@ -1,4 +1,5 @@
 # Template routes for HTMX frontend
+from ..services.analytics_service import track_event
 import json
 from pathlib import Path
 from uuid import uuid4
@@ -53,9 +54,9 @@ def login_required(func):
     @wraps(func)
     def decorated_view(*args, **kwargs):
         if not current_user.is_authenticated:
-            next_link = request.url
+            session['prev'] = request.url
             flash('A quick login is required first.', 'info')
-            return redirect(url_for('main_bp.login', next=next_link))
+            return redirect(url_for('main_bp.login'))
         return func(*args, **kwargs)
     return decorated_view
 
@@ -598,8 +599,11 @@ def index():
 
 @main_bp.route('/login')
 def login():
-    """Login page"""
     form = LoginForm()
+
+    if request.referrer and '/login' not in request.referrer:
+        session['prev'] = request.referrer
+
     return render_template('auth/login.html', form=form)
 
 @main_bp.route('/register')
@@ -1047,9 +1051,14 @@ def register_post():
 @auth_bp.route('/logout')
 def logout():
     """Logout user"""
+    if current_user and (not current_user.is_anonymous):
+        track_event('logout', current_user)
+
     logout_user()
     flash('You have been logged out successfully.', 'success')
-    return redirect(url_for('main_bp.index'))
+
+    next_page = request.referrer
+    return redirect(next_page or url_for('main_bp.index'))
 
 ###################################
 ####################################
@@ -1060,6 +1069,7 @@ def oauth_login():
 
 @main_bp.route('/oauth/authorize')
 def oauth_authorize():
+    """Logs in a user using Google OAuth. Redirect to the previous page or dashboard if not found"""
     try:
         # 1. Exchange code for token
         token = oauth.google.authorize_access_token()
@@ -1124,7 +1134,10 @@ def oauth_authorize():
             track_event('signup', user)
             flash(f"Welcome to Market Window, {user.first_name or user.username}!", "success")
 
-        # 4. Redirect
+        # 4. Redirect to the previous page or dashboard if not found
+        next_page = session.pop('prev', None)
+        if next_page:
+            return redirect(next_page)
         if user.role == 'admin':
             return redirect(url_for('admin_template_bp.admin_dashboard'))
         elif user.role == 'seller':

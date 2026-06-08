@@ -18,3 +18,4 @@ bleach==6.0.0
 meilisearch==0.31.1
 google-generativeai==0.3.2
 tenacity==8.2.3
+Pillow>=10.0.0

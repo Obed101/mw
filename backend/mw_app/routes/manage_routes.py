@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, request, redirect, url_for, flash, session, abort
+from flask import Blueprint, render_template, request, redirect, url_for, flash, session, abort, make_response
 from flask_login import login_required, current_user
 from ..extensions import db
 from ..models import Shop, Product, Category, USER_ROLE_ADMIN, CATEGORY_LEVEL_LEAF
@@ -140,6 +140,108 @@ def product_list():
     
     return render_template('manage/partials/product_list.html', products=products)
 
+def _apply_product_form_data(product, form):
+    """Helper function - Apply product form data to a Product instance."""
+
+    name = form.get('name', '').strip()
+    category_name = form.get('category_name', '').strip()
+    category_id = form.get('category_id')
+
+    if not name:
+        raise ValueError('Product name is required.')
+
+    if not category_name and category_id:
+        cat = Category.query.get(category_id)
+        if cat:
+            category_name = cat.name
+
+    if not category_name:
+        raise ValueError('Category is required.')
+
+    price_raw = form.get('price', '0').strip()
+    stock_raw = form.get('stock', '0').strip()
+
+    try:
+        price = float(price_raw) if price_raw else 0.0
+        stock = int(stock_raw) if stock_raw else 0
+    except ValueError as exc:
+        raise ValueError(f'Invalid numeric value: {exc}')
+
+    # Resolve category
+    resolved_category = None
+
+    try:
+        client = get_ms_client()
+        ms_res = client.index('categories').search(category_name, {'limit': 1})
+
+        if ms_res.get('hits'):
+            hit = ms_res['hits'][0]
+            resolved_category = Category.query.filter_by(
+                name=hit['name']
+            ).first()
+
+    except Exception as ms_err:
+        current_app.logger.warning(
+            f'Meilisearch category resolution failed: {ms_err}'
+        )
+
+    if not resolved_category:
+        try:
+            ai_service = AIService()
+
+            corrected = ai_service.generate_text(
+                f"""
+                Check if "{category_name}" contains spelling mistakes.
+                Return only the corrected category name.
+                If correct already, return it unchanged.
+                """
+            ).strip().replace('"', '').replace("'", '')
+
+            category_name = corrected
+
+        except Exception:
+            pass
+
+        resolved_category = Category.query.filter(
+            Category.name.ilike(category_name)
+        ).first()
+
+        if not resolved_category:
+            resolved_category = Category(
+                name=category_name,
+                level=CATEGORY_LEVEL_LEAF,
+                is_active=True,
+            )
+            db.session.add(resolved_category)
+            db.session.flush()
+
+    product.name = name
+    product.category_id = resolved_category.id
+    product.price = price
+    product.stock = stock
+    product.description = form.get('description', '').strip()
+    product.type_ = form.get('type_', 'product')
+
+    return product
+
+@manage_bp.route('/products/draft', methods=['POST'])
+@login_required
+@shop_owner_required
+def save_product_draft():
+    session['product_draft'] = {
+        'name': request.form.get('name', ''),
+        'category_name': request.form.get('category_name', ''),
+        'price': request.form.get('price', ''),
+        'stock': request.form.get('stock', ''),
+        'description': request.form.get('description', ''),
+        'type_': request.form.get('type_', 'product'),
+    }
+
+    session.modified = True
+
+    return '', 204
+
+
 @manage_bp.route('/products/new', methods=['GET', 'POST'])
 @login_required
 @shop_owner_required
@@ -153,85 +255,24 @@ def add_product():
         print(f"DEBUG: add_product POST request data: {request.form}")
         try:
             # Simple implementation for now, mirroring seller_bp logic
-            name = request.form.get('name', '').strip()
-            category_name = request.form.get('category_name', '').strip()
-            category_id = request.form.get('category_id')
             
-            # Fallback: If category_name is empty but category_id is present, resolve name
-            if not category_name and category_id:
-                cat = Category.query.get(category_id)
-                if cat:
-                    category_name = cat.name
-            
-            price_raw = request.form.get('price', '0').strip()
-            stock_raw = request.form.get('stock', '0').strip()
-            
-            if not name or not category_name:
-                print(f"DEBUG: Missing name or category_name. name='{name}', category_name='{category_name}', category_id='{category_id}'")
-                return f'<div class="alert alert-danger">Name (got "{name}") and category (got "{category_name}") are required.</div>', 400
-                
-            try:
-                price = float(price_raw) if price_raw else 0.0
-                stock = int(stock_raw) if stock_raw else 0
-            except ValueError as e:
-                return f'<div class="alert alert-danger">Invalid numeric value: {str(e)}</div>', 400
-
-            # 1. Resolve category using Meilisearch (Typo tolerance)
-            resolved_category = None
-            try:
-                client = get_ms_client()
-                ms_res = client.index('categories').search(category_name, {'limit': 1})
-                if ms_res.get('hits'):
-                    hit = ms_res['hits'][0]
-                    # Only accept if it's a very close match (Meilisearch handles this well)
-                    resolved_category = Category.query.filter_by(name=hit['name']).first()
-            except Exception as ms_err:
-                print(f"Meilisearch Resolution Error: {ms_err}")
-
-            if not resolved_category:
-                # 2. Fallback to AI for spelling check ONLY if Meilisearch missed it
-                try:
-                    ai_service = AIService()
-                    correction_prompt = (
-                        f"Check if '{category_name}' is a correctly spelled category name. "
-                        "If it has obvious typos, return the corrected version. If it's correct or a new category, return it as is. "
-                        "Return only the name."
-                    )
-                    category_name = ai_service.generate_text(correction_prompt).strip().replace('"', '').replace("'", "")
-                except:
-                    pass
-                
-                # Check DB one last time after AI correction
-                resolved_category = Category.query.filter(Category.name.ilike(category_name)).first()
-                
-                if not resolved_category:
-                    # 3. Create new category
-                    resolved_category = Category(
-                        name=category_name,
-                        level=CATEGORY_LEVEL_LEAF,
-                        is_active=True
-                    )
-                    db.session.add(resolved_category)
-                    db.session.flush()
-
             product = Product(
-                name=name,
                 shop_id=shop.id,
-                category_id=resolved_category.id,
-                price=price,
-                stock=stock,
-                description=request.form.get('description', ''),
-                type_=request.form.get('type_', 'product'),
                 is_active=True
             )
-            # Note: product.code is automatically generated in Product.__init__
+
+            _apply_product_form_data(product, request.form)
+
             db.session.add(product)
             db.session.commit()
+
+            session.pop('product_draft', None)
             
             # If HTMX, return updated list or just success message
             if request.headers.get('HX-Request'):
-                 # Trigger a refresh of the list
-                 return '<div hx-get="' + url_for('manage_bp.product_list') + '" hx-trigger="load" hx-target="#product-list-container"></div>'
+                response = make_response('', 200)
+                response.headers['HX-Trigger'] = 'product-added'
+                return response
             
             return redirect(url_for('manage_bp.products'))
             
@@ -264,54 +305,16 @@ def edit_product(product_id):
         if not name:
             print("DEBUG: Product name is required.")
             return '<div class="alert alert-danger">Product name is required.</div>', 400
-            
         try:
-            product.name = name
-            product.price = float(price_raw) if price_raw else product.price
-            product.stock = int(stock_raw) if stock_raw else product.stock
-        except Exception as e:
-            print(f"DEBUG: ValueError in edit_product. price_raw='{price_raw}', stock_raw='{stock_raw}'")
-            return f'<div class="alert alert-danger">Invalid numeric value: {str(e)}</div>', 400
-        
+            _apply_product_form_data(product, request.form)
+        except ValueError as exc:
+            return (
+                f'<div class="alert alert-danger">{str(exc)}</div>',
+                400
+            )
         product.is_active = 'is_active' in request.form
-        
-        category_name = request.form.get('category_name', '').strip()
-        if category_name:
-            resolved_category = None
-            # 1. Resolve category using Meilisearch (Typo tolerance)
-            try:
-                client = get_ms_client()
-                ms_res = client.index('categories').search(category_name, {'limit': 1})
-                if ms_res.get('hits'):
-                    hit = ms_res['hits'][0]
-                    resolved_category = Category.query.filter_by(name=hit['name']).first()
-            except Exception as ms_err:
-                print(f"Meilisearch Resolution Error in edit_product: {ms_err}")
-
-            if not resolved_category:
-                # 2. Fallback to AI for spelling check
-                try:
-                    ai_service = AIService()
-                    category_name = ai_service.generate_text(f"Fix spelling for category: '{category_name}'. Return only the name.").strip().replace('"', '').replace("'", "")
-                except:
-                    pass
-                
-                # Check DB after correction
-                resolved_category = Category.query.filter(Category.name.ilike(category_name)).first()
-                
-                if not resolved_category:
-                    # 3. Create new category
-                    resolved_category = Category(
-                        name=category_name,
-                        level=CATEGORY_LEVEL_LEAF,
-                        is_active=True
-                    )
-                    db.session.add(resolved_category)
-                    db.session.flush()
-            
-            product.category_id = resolved_category.id
-
         product.updated_at = datetime.now(timezone.utc)
+
         db.session.commit()
         
         return render_template('manage/partials/product_row.html', product=product)

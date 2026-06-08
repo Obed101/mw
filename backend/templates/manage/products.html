@@ -194,7 +194,9 @@
                     <th class="pe-4 py-3 text-muted small fw-bold text-end" style="width: 150px;">Actions</th>
                 </tr>
             </thead>
-            <tbody id="product-list-container" hx-get="{{ url_for('manage_bp.product_list') }}" hx-trigger="load">
+            <tbody id="product-list-container"
+                   hx-get="{{ url_for('manage_bp.product_list') }}"
+                   hx-trigger="load, product-added from:body">
                 <!-- HTMX loaded content -->
                 <tr>
                     <td colspan="5" class="text-center py-5">

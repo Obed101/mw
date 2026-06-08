@@ -1,4 +1,4 @@
-from flask import request, jsonify, url_for, redirect, flash, Blueprint
+from flask import request, jsonify, url_for, redirect, flash, Blueprint, session
 from flask_jwt_extended import create_access_token, create_refresh_token, jwt_required, get_jwt_identity, get_jwt
 from flask_login import login_user, logout_user, current_user
 from datetime import datetime, timezone
@@ -215,7 +215,7 @@ def login():
     user.update_last_login()
     
     # Log user in with Flask-Login for session management
-    login_user(user)
+    login_user(user, remember=True)
     track_event('login', user)
     
     # Generate tokens for API usage
@@ -235,11 +235,9 @@ def login():
         # For form submissions, flash message and redirect to appropriate dashboard
         flash(f'Welcome back! {user.first_name} {user.last_name}', 'success')
         
-        # Redirect based on user role
-        if user.role == 'admin':
-            return redirect(url_for('admin_template_bp.admin_dashboard'))
-        elif user.role == 'seller':
-            return redirect(url_for('seller_template_bp.seller_dashboard'))
+        next_page = session.pop('prev', None)
+        if next_page:
+            return redirect(next_page)
         else:
             return redirect(url_for('main_bp.index'))
 
@@ -256,17 +254,17 @@ def logout():
     """Logout user"""
     if current_user and not current_user.is_anonymous:
         track_event('logout', current_user)
-    # Handle both JSON and form requests
+
     if request.is_json:
-        # For API requests, revoke JWT token
         jti = get_jwt()['jti']
         token_blacklist.add(jti)
         return jsonify({"message": "Successfully logged out"}), 200
-    else:
-        # For form requests, use Flask-Login logout
-        logout_user()
-        flash('You have been logged out successfully.', 'success')
-        return redirect(url_for('main_bp.index'))
+
+    logout_user()
+    flash('You have been logged out successfully.', 'success')
+
+    next_page = request.referrer
+    return redirect(next_page or url_for('main_bp.index'))
 
 @auth_bp.route('/revoke', methods=['POST'])
 @jwt_required()

@@ -1,7 +1,40 @@
-<form hx-post="{{ url_for('manage_bp.add_product') }}" 
-      hx-target="#product-list-container"
-      hx-on::after-request="if(event.detail.successful && event.detail.requestConfig.method === 'post') { this.reset(); document.getElementById('add-product-panel').classList.remove('show'); }">
+<form id="add-product-form"
+      hx-post="{{ url_for('manage_bp.add_product') }}"
+      hx-swap="none"
+      hx-on::before-request="
+        const feedback = document.getElementById('add-product-feedback');
+        if (feedback) {
+            feedback.innerHTML = '';
+            feedback.classList.add('d-none');
+        }
+        const submitBtn = document.getElementById('add-product-submit');
+        if (submitBtn) {
+            submitBtn.dataset.defaultLabel = submitBtn.dataset.defaultLabel || submitBtn.textContent.trim();
+            submitBtn.textContent = 'Saving...';
+            submitBtn.disabled = true;
+        }
+      "
+      hx-on::after-request="
+        const submitBtn = document.getElementById('add-product-submit');
+        if (submitBtn) {
+            submitBtn.textContent = submitBtn.dataset.defaultLabel || 'Done';
+            submitBtn.disabled = false;
+        }
+
+        const feedback = document.getElementById('add-product-feedback');
+        if (event.detail.successful && event.detail.xhr.responseURL.includes('/products/new')) {
+            this.reset();
+            document.getElementById('add-product-panel')?.classList.remove('show');
+            return;
+        }
+
+        if (feedback) {
+            feedback.innerHTML = event.detail.xhr?.responseText || '<div class=\'alert alert-danger mb-0\'>Could not save the product. Please try again.</div>';
+            feedback.classList.remove('d-none');
+        }
+      ">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div id="add-product-feedback" class="d-none mb-3"></div>
     <div class="row g-3">
         <div class="col-12 col-md-4">
             <label class="form-label small fw-bold">Product Name</label>
@@ -29,7 +62,18 @@
             <input type="number" name="stock" class="form-control form-control-sm" value="0">
         </div>
         <div class="col-6 col-md-2 d-flex align-items-end">
-            <button type="submit" class="btn btn-primary btn-sm w-100">Save</button>
+            <button type="submit" id="add-product-submit" class="btn btn-primary btn-sm w-100">Done</button>
         </div>
     </div>
 </form>
+
+<script>
+document.querySelectorAll('#add-product-form input, #add-product-form select').forEach(el => {
+    el.addEventListener('input', debounce(() => {
+        htmx.ajax('POST', '/products/draft', {
+            source: document.getElementById('add-product-form'),
+            swap: 'none'
+        });
+    }, 800));
+});
+</script>
