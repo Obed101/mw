@@ -68,12 +68,20 @@ class Shop(db.Model):
     
     # Foreign key: Shop is owned by a User (seller)
     owner_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
+    is_claimed = db.Column(db.Boolean, default=False, server_default='0', nullable=False)
+    creator_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=True)
     
     # Explicit relationships to avoid AmbiguousForeignKeysError
     owner = db.relationship(
         "User",
         foreign_keys=[owner_id],
         back_populates="owned_shops"
+    )
+    
+    creator = db.relationship(
+        "User",
+        foreign_keys=[creator_id],
+        backref="created_shops"
     )
     
     verifier = db.relationship(

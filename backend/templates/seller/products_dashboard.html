@@ -1,0 +1,450 @@
+{% extends "base.html" %}
+
+{% block title %}Seller Products Dashboard - Market Window{% endblock %}
+
+{% block styles %}
+<style>
+    /* Premium Dashboard Styles */
+    :root {
+        --dash-primary: #8b5cf6;
+        --dash-primary-hover: #7c3aed;
+        --dash-bg: #0b0f19;
+        --dash-card-bg: rgba(17, 24, 39, 0.7);
+        --dash-border: rgba(255, 255, 255, 0.08);
+        --dash-text-muted: #9ca3af;
+    }
+
+    body {
+        background-color: var(--dash-bg);
+        color: #f3f4f6;
+    }
+
+    .glass-card {
+        background: var(--dash-card-bg);
+        backdrop-filter: blur(16px);
+        border: 1px solid var(--dash-border);
+        border-radius: 20px;
+        box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+
+    .glass-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 12px 40px 0 rgba(139, 92, 246, 0.15);
+    }
+
+    .gradient-text {
+        background: linear-gradient(135deg, #a78bfa 0%, #8b5cf6 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+    }
+
+    .gradient-btn {
+        background: linear-gradient(135deg, #a78bfa 0%, #8b5cf6 100%);
+        border: none;
+        color: white;
+        font-weight: 600;
+        transition: opacity 0.2s;
+    }
+
+    .gradient-btn:hover {
+        opacity: 0.9;
+        color: white;
+    }
+
+    .badge-premium {
+        background: rgba(139, 92, 246, 0.15);
+        color: #a78bfa;
+        border: 1px solid rgba(139, 92, 246, 0.3);
+        padding: 0.4em 0.8em;
+        border-radius: 99px;
+    }
+
+    .checklist-item {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 10px 0;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    .checklist-item:last-child {
+        border-bottom: none;
+    }
+
+    .checklist-icon {
+        width: 24px;
+        height: 24px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.85rem;
+    }
+
+    .checklist-icon.completed {
+        background: rgba(16, 185, 129, 0.15);
+        color: #10b981;
+        border: 1px solid rgba(16, 185, 129, 0.3);
+    }
+
+    .checklist-icon.pending {
+        background: rgba(245, 158, 11, 0.15);
+        color: #f59e0b;
+        border: 1px solid rgba(245, 158, 11, 0.3);
+    }
+
+    /* Activity Feed styling */
+    .activity-feed-container {
+        max-height: 400px;
+        overflow-y: auto;
+        padding-right: 8px;
+    }
+
+    .activity-feed-container::-webkit-scrollbar {
+        width: 6px;
+    }
+
+    .activity-feed-container::-webkit-scrollbar-thumb {
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 99px;
+    }
+
+    .activity-item {
+        border-left: 2px solid var(--dash-primary);
+        padding-left: 16px;
+        margin-bottom: 20px;
+        position: relative;
+    }
+
+    .activity-item::before {
+        content: '';
+        position: absolute;
+        left: -6px;
+        top: 4px;
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        background: #a78bfa;
+        border: 2px solid var(--dash-bg);
+    }
+
+    .table-dark-custom {
+        background: transparent;
+        color: #f3f4f6;
+    }
+
+    .table-dark-custom th {
+        background: rgba(255, 255, 255, 0.03);
+        border-bottom: 1px solid var(--dash-border);
+        color: var(--dash-text-muted);
+        font-weight: 500;
+    }
+
+    .table-dark-custom td {
+        border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        vertical-align: middle;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-5">
+        <div>
+            <h1 class="gradient-text fw-bold mb-1">{{ shop.name }}</h1>
+            <p class="text-muted mb-0">Unified Product and Operations Dashboard</p>
+        </div>
+        <div class="d-flex gap-3">
+            <a href="{{ url_for('seller_template_bp.seller_dashboard') }}" class="btn btn-outline-light rounded-pill px-4">
+                <i class="bi bi-arrow-left me-2"></i>Overview
+            </a>
+            <button class="btn gradient-btn rounded-pill px-4" data-bs-toggle="modal" data-bs-target="#addProductModal">
+                <i class="bi bi-plus-lg me-2"></i>Add Product
+            </button>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <!-- Main Product List Area -->
+        <div class="col-lg-8">
+            <div class="glass-card p-4 mb-4">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h5 class="fw-bold mb-0">Your Products</h5>
+                    <!-- Inline Search Bar -->
+                    <div class="input-group" style="max-width: 300px;">
+                        <span class="input-group-text bg-transparent border-end-0 border-secondary text-muted">
+                            <i class="bi bi-search"></i>
+                        </span>
+                        <input type="text" id="dashboardSearch" class="form-control bg-transparent border-start-0 border-secondary text-white" placeholder="Search products..." onkeyup="filterProducts()">
+                    </div>
+                </div>
+
+                <div class="table-responsive">
+                    <table class="table table-dark-custom" id="productsTable">
+                        <thead>
+                            <tr>
+                                <th>Product</th>
+                                <th>Type</th>
+                                <th>Price</th>
+                                <th>Stock</th>
+                                <th>Status</th>
+                                <th class="text-end">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for product in products %}
+                            <tr class="product-row" data-name="{{ product.name | lower }}" data-code="{{ (product.code or '') | lower }}">
+                                <td>
+                                    <div class="d-flex align-items-center gap-3">
+                                        <img src="{{ product.primary_image_url or '/static/images/mw_logo_trans.png' }}" alt="{{ product.name }}" class="rounded" style="width: 48px; height: 48px; object-fit: cover;">
+                                        <div>
+                                            <div class="fw-semibold text-white">{{ product.name }}</div>
+                                            <small class="text-muted">Code: {{ product.code or 'N/A' }}</small>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td><span class="badge bg-secondary">{{ product.type_ | capitalize }}</span></td>
+                                <td class="fw-semibold">${{ "%.2f" | format(product.price or 0) }}</td>
+                                <td>
+                                    {% if product.stock is none %}
+                                    <span class="text-muted">Unlimited</span>
+                                    {% elif product.stock <= 0 %}
+                                    <span class="text-danger fw-bold">Out of stock</span>
+                                    {% elif product.stock <= 10 %}
+                                    <span class="text-warning fw-semibold">{{ product.stock }} left</span>
+                                    {% else %}
+                                    <span class="text-success">{{ product.stock }}</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if product.is_active %}
+                                    <span class="badge bg-success-subtle text-success">Active</span>
+                                    {% else %}
+                                    <span class="badge bg-danger-subtle text-danger">Inactive</span>
+                                    {% endif %}
+                                </td>
+                                <td class="text-end">
+                                    <div class="d-flex justify-content-end gap-2">
+                                        <button class="btn btn-sm btn-outline-info rounded-circle" onclick="duplicateProduct({{ product.id }})" title="Duplicate Product">
+                                            <i class="bi bi-copy"></i>
+                                        </button>
+                                        <a href="{{ url_for('manage_bp.edit_product', product_id=product.id) }}" class="btn btn-sm btn-outline-light rounded-circle" title="Edit">
+                                            <i class="bi bi-pencil"></i>
+                                        </a>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% else %}
+                            <tr>
+                                <td colspan="6" class="text-center py-4 text-muted">No products found. Click "Add Product" to create one.</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sidebar (Checklist & Activity Feed) -->
+        <div class="col-lg-4">
+            <!-- Progress Checklist Card -->
+            <div class="glass-card p-4 mb-4">
+                <h5 class="fw-bold mb-4">Shop Onboarding Progress</h5>
+                <div class="checklist">
+                    <div class="checklist-item">
+                        <div class="checklist-icon completed"><i class="bi bi-check-lg"></i></div>
+                        <div>
+                            <div class="fw-semibold">Shop Created</div>
+                            <small class="text-muted">Register your business profile.</small>
+                        </div>
+                    </div>
+                    <div class="checklist-item">
+                        <div class="checklist-icon {% if progress.image_uploaded %}completed{% else %}pending{% endif %}">
+                            <i class="bi {% if progress.image_uploaded %}bi-check-lg{% else %}bi-circle{% endif %}"></i>
+                        </div>
+                        <div>
+                            <div class="fw-semibold">Cover Image Uploaded</div>
+                            <small class="text-muted">Add a shop header banner image.</small>
+                        </div>
+                    </div>
+                    <div class="checklist-item">
+                        <div class="checklist-icon {% if progress.has_min_products %}completed{% else %}pending{% endif %}">
+                            <i class="bi {% if progress.has_min_products %}bi-check-lg{% else %}bi-circle{% endif %}"></i>
+                        </div>
+                        <div>
+                            <div class="fw-semibold">List at least 5 Products</div>
+                            <small class="text-muted">Currently: {{ products | length }} / 5</small>
+                        </div>
+                    </div>
+                    <div class="checklist-item">
+                        <div class="checklist-icon {% if shop.verification_status == 'verified' %}completed{% else %}pending{% endif %}">
+                            <i class="bi {% if shop.verification_status == 'verified' %}bi-check-lg{% else %}bi-circle{% endif %}"></i>
+                        </div>
+                        <div>
+                            <div class="fw-semibold">Shop Verified</div>
+                            <small class="text-muted">Verification Status: {{ shop.verification_status | capitalize }}</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Activity Feed Card (with Infinite Scroll) -->
+            <div class="glass-card p-4">
+                <h5 class="fw-bold mb-4">Recent Activity</h5>
+                <div class="activity-feed-container" id="activityFeed" onscroll="handleActivityScroll()">
+                    <div id="activityList">
+                        <!-- Loaded dynamically via AJAX -->
+                    </div>
+                    <div id="activityLoader" class="text-center py-2 text-muted small" style="display: none;">
+                        <div class="spinner-border spinner-border-sm text-primary me-2" role="status"></div>
+                        Loading activities...
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Add Product Modal -->
+<div class="modal fade" id="addProductModal" tabindex="-1" aria-labelledby="addProductModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content bg-dark text-white border-secondary">
+            <div class="modal-header border-secondary">
+                <h5 class="modal-title" id="addProductModalLabel">Add New Product</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form action="{{ url_for('manage_bp.add_product') }}" method="POST">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <div class="modal-body">
+                    <p class="text-muted">Quickly redirect to standard product creation.</p>
+                </div>
+                <div class="modal-footer border-secondary">
+                    <button type="button" class="btn btn-outline-light" data-bs-dismiss="modal">Cancel</button>
+                    <a href="{{ url_for('manage_bp.add_product') }}" class="btn gradient-btn px-4">Continue to Form</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Inline Search Filtering
+    function filterProducts() {
+        const query = document.getElementById('dashboardSearch').value.toLowerCase().trim();
+        const rows = document.querySelectorAll('.product-row');
+        rows.forEach(row => {
+            const name = row.getAttribute('data-name');
+            const code = row.getAttribute('data-code');
+            if (name.includes(query) || code.includes(query)) {
+                row.style.display = '';
+            } else {
+                row.style.display = 'none';
+            }
+        });
+    }
+
+    // Duplicate Product AJAX Call
+    function duplicateProduct(productId) {
+        if (!confirm('Are you sure you want to duplicate this product?')) return;
+        
+        fetch(`/api/seller/products/${productId}/duplicate`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert('Product duplicated successfully!');
+                window.location.reload();
+            } else {
+                alert('Error: ' + data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Failed to duplicate product.');
+        });
+    }
+
+    // Activity Feed Pagination / Infinite Scroll
+    let activityOffset = 0;
+    const activityLimit = 20;
+    let loadingActivities = false;
+    let hasMoreActivities = true;
+    const shopId = {{ shop.id }};
+
+    function loadMoreActivities() {
+        if (loadingActivities || !hasMoreActivities) return;
+        loadingActivities = true;
+        document.getElementById('activityLoader').style.display = 'block';
+
+        fetch(`/api/seller/shop/${shopId}/activity-feed?offset=${activityOffset}&limit=${activityLimit}`)
+        .then(response => response.json())
+        .then(data => {
+            loadingActivities = false;
+            document.getElementById('activityLoader').style.display = 'none';
+
+            if (data.success) {
+                const events = data.events;
+                if (events.length === 0) {
+                    hasMoreActivities = false;
+                    if (activityOffset === 0) {
+                        document.getElementById('activityList').innerHTML = '<div class="text-muted small py-3">No recent activities found.</div>';
+                    }
+                    return;
+                }
+                
+                const list = document.getElementById('activityList');
+                events.forEach(event => {
+                    const item = document.createElement('div');
+                    item.className = 'activity-item';
+                    
+                    const time = new Date(event.created_at).toLocaleString();
+                    let metadataStr = '';
+                    if (event.metadata && Object.keys(event.metadata).length > 0) {
+                        metadataStr = `<br><small class="text-muted">${JSON.stringify(event.metadata)}</small>`;
+                    }
+
+                    item.innerHTML = `
+                        <div class="fw-semibold text-white">${formatEventType(event.event_type)}</div>
+                        <small class="text-muted d-block" style="font-size: 0.75rem;">${time}</small>
+                        ${metadataStr}
+                    `;
+                    list.appendChild(item);
+                });
+                
+                activityOffset = data.next_offset;
+                if (events.length < activityLimit) {
+                    hasMoreActivities = false;
+                }
+            }
+        })
+        .catch(err => {
+            console.error('Error loading activities:', err);
+            loadingActivities = false;
+            document.getElementById('activityLoader').style.display = 'none';
+        });
+    }
+
+    function formatEventType(type) {
+        return type.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+    }
+
+    function handleActivityScroll() {
+        const container = document.getElementById('activityFeed');
+        if (container.scrollHeight - container.scrollTop <= container.clientHeight + 20) {
+            loadMoreActivities();
+        }
+    }
+
+    // Initial Load
+    document.addEventListener('DOMContentLoaded', () => {
+        loadMoreActivities();
+    });
+</script>
+{% endblock %}

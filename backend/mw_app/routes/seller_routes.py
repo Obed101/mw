@@ -1,12 +1,13 @@
 from flask import Blueprint, jsonify, request, render_template, current_app, url_for
 from flask_jwt_extended import jwt_required
+from flask_login import current_user, login_required
 from werkzeug.utils import secure_filename
 from uuid import uuid4
 from pathlib import Path
 from ..extensions import db
 from ..models import Shop, UserFollowShop, User, Product, StockUpdate, VerificationOTP, Notification, UserFavoriteProduct, Category, USER_ROLE_ADMIN, USER_ROLE_SELLER, VERIFICATION_STATUS_VERIFIED, VERIFICATION_STATUS_UNDER_REVIEW, VERIFICATION_STATUS_PENDING
-from ..utils.helpers import seller_required
 from ..utils.threading_utils import run_in_background
+from ..utils.tracking import track_event_async
 from ..services.ai_tasks import background_generate_shop_description
 from ..services.geocoding_service import reverse_geocode
 from datetime import datetime, timezone
@@ -227,6 +228,25 @@ def _load_seller_and_shop(seller_id):
     return seller, shop, None
 
 
+def _json_error(message, status_code):
+    return jsonify({
+        'success': False,
+        'message': message,
+    }), status_code
+
+
+def _require_authenticated_shop_owner(shop_id):
+    if not current_user.is_authenticated:
+        return None, _json_error('Authentication required', 401)
+
+    shop = Shop.query.get_or_404(shop_id)
+    is_admin = getattr(current_user, 'can_access_admin', lambda: False)()
+    if shop.owner_id != current_user.id and not is_admin:
+        return None, _json_error('Unauthorized', 403)
+
+    return shop, None
+
+
 def _notify_buyers_for_product_stock_change(product, seller_id, old_stock, new_stock):
     favorite_rows = UserFavoriteProduct.query.filter_by(product_id=product.id).all()
     buyer_ids = [row.user_id for row in favorite_rows]
@@ -346,10 +366,11 @@ def _apply_product_updates(product, data):
     return None
 
 @seller_bp.route("/")
-@seller_required
+@login_required
 def seller_dashboard():
     """Seller dashboard with shop overview and product statistics"""
-    # return jsonify({"message": "Seller dashboard"})
+    if current_user.role != USER_ROLE_SELLER and not getattr(current_user, 'can_access_admin', lambda: False)():
+        return jsonify({'success': False, 'message': 'Seller access required'}), 403
     return render_template("seller/seller_dashboard.html")
 
 @seller_bp.route("/shop")
@@ -462,6 +483,8 @@ def create_shop():
             email=str(data.get('email') or '').strip() or None,
             is_active=_parse_bool(data.get('is_active'), default=True),
             owner_id=owner.id,
+            is_claimed=_parse_bool(data.get('is_claimed'), default=False),
+            creator_id=owner.id,
         )
         shop.replace_image_urls(image_keys)
 
@@ -621,13 +644,12 @@ def update_shop():
 
 
 @seller_bp.route("/shops/<int:shop_id>/generate-ai-description", methods=["POST"])
-@seller_required
+@login_required
 def generate_ai_description(shop_id):
     """Trigger AI description generation for a shop"""
     try:
-        # seller_id comes from token usually, but here we use a helper or request param
-        # The seller_required decorator ensures the user is a seller
-        # We need to verify ownership
+        if current_user.role != USER_ROLE_SELLER and not getattr(current_user, 'can_access_admin', lambda: False)():
+            return jsonify({'success': False, 'message': 'Seller access required'}), 403
         data = _request_json()
         seller_id = _resolve_seller_id(request.args.get('seller_id', type=int), data)
         
@@ -2082,4 +2104,232 @@ def get_active_service_keywords():
     return jsonify({
         'success': True,
         'keywords': keywords
+    }), 200
+
+
+# ---------- Seller API Enhancements ----------
+
+@seller_bp.route('/products/<int:product_id>/duplicate', methods=['POST'])
+def duplicate_product(product_id):
+    """Create a shallow copy of a product (including images)."""
+    if not current_user.is_authenticated:
+        return _json_error('Authentication required', 401)
+
+    orig = Product.query.get_or_404(product_id)
+    shop, error_response = _require_authenticated_shop_owner(orig.shop_id)
+    if error_response:
+        return error_response
+
+    copy = Product(
+        shop_id=shop.id,
+        name=f"{orig.name} (copy)",
+        code=Product.generate_code(),
+        description=orig.description,
+        price=orig.price,
+        stock=orig.stock,
+        category_id=orig.category_id,
+        type_=orig.type_,
+        tags=orig.tags,
+        is_active=orig.is_active,
+    )
+    db.session.add(copy)
+    db.session.flush()
+
+    copy.replace_image_urls([img.storage_key for img in orig.image_records])
+    db.session.commit()
+
+    track_event_async(
+        'product_duplicate',
+        user=current_user._get_current_object(),
+        entity_type='product',
+        entity_id=copy.id,
+        payload={
+            'original_id': orig.id,
+            'shop_id': shop.id,
+        }
+    )
+
+    return jsonify({'success': True, 'message': 'Product duplicated', 'product': _serialize_product(copy)}), 201
+
+
+@seller_bp.route('/shop/<int:shop_id>/search')
+def shop_search(shop_id):
+    """Search products within a specific shop. Records a search event."""
+    if not current_user.is_authenticated:
+        return _json_error('Authentication required', 401)
+
+    shop, error_response = _require_authenticated_shop_owner(shop_id)
+    if error_response:
+        return error_response
+
+    query = request.args.get('q', '').strip()
+    from ..search import search_service as search_backend
+
+    products = search_backend.search_in_shop(shop.id, query) if search_backend else []
+    if not products:
+        products_query = Product.query.filter(
+            Product.shop_id == shop.id,
+            Product.is_active.is_(True),
+        )
+        if query:
+            products_query = products_query.filter(
+                db.or_(
+                    Product.name.ilike(f'%{query}%'),
+                    Product.description.ilike(f'%{query}%'),
+                    Product.tags.ilike(f'%{query}%'),
+                )
+            )
+        products = products_query.order_by(Product.updated_at.desc()).limit(20).all()
+
+    if query:
+        track_event_async(
+            'search_in_shop',
+            user=current_user._get_current_object(),
+            entity_type='shop',
+            entity_id=shop_id,
+            payload={
+                'query': query,
+                'result_count': len(products),
+                'source': 'seller_api',
+            }
+        )
+
+    return jsonify({
+        'success': True,
+        'results': [_serialize_product(p) for p in products]
+    })
+
+
+@seller_bp.route('/shop/<int:shop_id>/activity-feed')
+def shop_activity_feed(shop_id):
+    """Return latest activity entries for a shop (infinite scroll)."""
+    if not current_user.is_authenticated:
+        return _json_error('Authentication required', 401)
+
+    shop, error_response = _require_authenticated_shop_owner(shop_id)
+    if error_response:
+        return error_response
+
+    from ..models.analytics_model import Event
+
+    offset = request.args.get('offset', 0, type=int)
+    limit = min(request.args.get('limit', 20, type=int), 100)
+
+    product_ids = [p.id for p in Product.query.filter_by(shop_id=shop_id).all()]
+
+    events_query = Event.query.filter(
+        db.or_(
+            db.and_(Event.entity_type == 'shop', Event.entity_id == shop_id),
+            db.and_(Event.entity_type == 'product', Event.entity_id.in_(product_ids))
+        ) if product_ids else db.and_(Event.entity_type == 'shop', Event.entity_id == shop_id)
+    ).order_by(Event.created_at.desc())
+
+    events = events_query.offset(offset).limit(limit).all()
+
+    return jsonify({
+        'success': True,
+        'events': [
+            {
+                'id': e.id,
+                'event_type': e.event_type,
+                'entity_type': e.entity_type,
+                'entity_id': e.entity_id,
+                'metadata': e.payload,
+                'created_at': e.created_at.isoformat()
+            } for e in events
+        ],
+        'next_offset': offset + len(events)
+    })
+
+
+@seller_bp.route('/shop/<int:shop_id>/analytics/popular-searches')
+def popular_searches(shop_id):
+    """Top search queries for a shop."""
+    if not current_user.is_authenticated:
+        return _json_error('Authentication required', 401)
+
+    shop, error_response = _require_authenticated_shop_owner(shop_id)
+    if error_response:
+        return error_response
+
+    from sqlalchemy import func
+    from ..models.analytics_model import Event
+
+    results = db.session.query(
+        Event.payload['query'].astext.label('query'),
+        func.count(Event.id).label('cnt')
+    ).filter(
+        Event.event_type == 'search_in_shop',
+        Event.entity_type == 'shop',
+        Event.entity_id == shop_id
+    ).group_by(
+        Event.payload['query'].astext
+    ).order_by(
+        func.count(Event.id).desc()
+    ).limit(10).all()
+    
+    return jsonify({
+        'success': True,
+        'popular': [{"query": r.query, "count": r.cnt} for r in results]
+    })
+
+
+@seller_bp.route('/shop/<int:shop_id>/analytics/unsuccessful-searches')
+def unsuccessful_searches(shop_id):
+    """Search queries that returned zero products."""
+    if not current_user.is_authenticated:
+        return _json_error('Authentication required', 401)
+
+    shop, error_response = _require_authenticated_shop_owner(shop_id)
+    if error_response:
+        return error_response
+
+    from ..models.analytics_model import Event
+
+    results = db.session.query(
+        Event.payload['query'].astext.label('query')
+    ).filter(
+        Event.event_type == 'search_in_shop',
+        Event.entity_type == 'shop',
+        Event.entity_id == shop_id,
+        Event.payload['result_count'].astext == '0'
+    ).group_by(
+        Event.payload['query'].astext
+    ).limit(20).all()
+    
+    return jsonify({
+        'success': True,
+        'unsuccessful': [r.query for r in results]
+    })
+
+
+@seller_bp.route('/shop/<int:shop_id>/claim', methods=['POST'])
+def claim_shop(shop_id):
+    """Claim an unclaimed shop for the current user."""
+    if not current_user.is_authenticated:
+        return _json_error('Authentication required', 401)
+
+    shop = Shop.query.get_or_404(shop_id)
+    if shop.is_claimed and shop.owner_id != current_user.id:
+        return jsonify({'success': False, 'message': 'This shop has already been claimed'}), 400
+
+    user = current_user
+    previous_owner_id = shop.owner_id
+
+    shop.owner_id = user.id
+    shop.is_claimed = True
+    db.session.commit()
+
+    track_event_async(
+        'shop_claim',
+        user=current_user._get_current_object(),
+        entity_type='shop',
+        entity_id=shop.id,
+        payload={'previous_owner_id': previous_owner_id}
+    )
+
+    return jsonify({
+        'success': True,
+        'message': f'Shop "{shop.name}" has been successfully claimed by {user.name}',
+        'shop': _serialize_shop(shop)
     }), 200

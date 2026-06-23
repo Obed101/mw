@@ -63,20 +63,22 @@
         flex-direction: column;
         align-items: center;
         color: white;
-        text-shadow: 0 2px 4px rgba(0,0,0,0.5);
     }
 
-    .action-btn {
+    .action-btn { /*add shadows to make the buttons more visible*/
+        box-shadow: 0 0 8px rgba(0,0,0,0.5);
+        text-shadow: 0 0 6px #00000080;
         width: 45px;
         height: 45px;
         border-radius: 50%;
-        background: rgba(255, 255, 255, 0.2);
+        background: #ffffff67;
         backdrop-filter: blur(10px);
-        border: 1px solid rgba(255, 255, 255, 0.3);
+        border: 1px solid #ffffff8b;
         display: flex;
         align-items: center;
         justify-content: center;
         font-size: 1.2rem;
+
         color: white;
         transition: all 0.3s ease;
         cursor: pointer;
@@ -87,13 +89,14 @@
     }
 
     .action-btn.active {
-        color: #ff3b5c; /* TikTok Red */
+        color: #d037ff; /* TikTok Red */
     }
 
     .action-label {
         font-size: 0.75rem;
         margin-top: 4px;
         font-weight: 600;
+        text-shadow: 0 0 8px #00000080;
     }
 
     /* Temu-style Content Section */
@@ -161,8 +164,6 @@
     }
 
     /* Sticky Bottom Bar (Temu Style) removed */
-
-
     .btn-contact {
         flex: 1;
         background: var(--gradient-primary);
@@ -325,6 +326,7 @@
 
                 <!-- Floating Actions -->
                 <div class="floating-actions">
+                    {% if current_user.is_authenticated %}
                     <div class="action-btn-wrapper" id="fav-wrapper-{{ product.id }}">
                         <button class="action-btn {% if is_favorited %}active{% endif %}" 
                                 hx-post="{{ url_for('buyer_bp.favorite_product', product_id=product.id, product_detail=True) }}"
@@ -334,6 +336,7 @@
                         </button>
                         <span class="action-label">{{ 'Liked' if is_favorited else 'Like' }}</span>
                     </div>
+                    {% endif %}
                     
                     <div class="action-btn-wrapper">
                         <button class="action-btn" onclick="shareProduct()" data-track-event="product_share" data-entity-type="product" data-entity-id="{{ product.id }}">

@@ -35,6 +35,36 @@
                         </div>
                     </div>
 
+                    <div class="mb-3">
+                        {% if current_user.is_authenticated and shop_is_owner %}
+                        <div class="alert alert-success border-0 py-2 px-3 mb-0">
+                            <i class="bi bi-check-circle me-1"></i>You own this shop.
+                        </div>
+                        {% elif not shop.is_claimed %}
+                        <div id="shop-claim-banner" class="alert alert-warning border-0 d-flex flex-wrap justify-content-between align-items-center gap-2 py-2 px-3 mb-0">
+                            <div>
+                                <strong>Unclaimed shop.</strong>
+                                {% if current_user.is_authenticated %}
+                                Claim it to manage the listing.
+                                {% else %}
+                                Log in to claim this shop.
+                                {% endif %}
+                            </div>
+                            {% if current_user.is_authenticated %}
+                            <button type="button" class="btn btn-sm btn-dark" id="claim-shop-btn" data-claim-url="{{ url_for('seller_bp.claim_shop', shop_id=shop.id) }}">
+                                Claim shop
+                            </button>
+                            {% else %}
+                            <a href="{{ url_for('main_bp.login') }}" class="btn btn-sm btn-dark">Log in</a>
+                            {% endif %}
+                        </div>
+                        {% else %}
+                        <div class="alert alert-light border py-2 px-3 mb-0">
+                            <i class="bi bi-shop me-1"></i>This shop has already been claimed.
+                        </div>
+                        {% endif %}
+                    </div>
+
                     <p class="text-muted mb-3">{{ shop.description or "Shop with listed products." }}</p>
 
                     <div class="d-flex flex-wrap gap-2 mb-3">
@@ -109,6 +139,26 @@
         <div class="d-flex justify-content-between align-items-center mb-3">
             <h2 class="h5 fw-bold mb-0">Products in {{ shop.name }}</h2>
             <a href="{{ url_for('main_bp.products', shop_id=shop.id) }}" class="btn btn-sm btn-outline-primary">Open Full Product Browser</a>
+        </div>
+
+        <div class="card border-0 shadow-sm mb-3">
+            <div class="card-body">
+                <label for="shop-search-input" class="form-label fw-semibold mb-2">Search in this shop</label>
+                <input
+                    type="search"
+                    id="shop-search-input"
+                    name="q"
+                    class="form-control"
+                    placeholder="Search products, tags, or descriptions"
+                    autocomplete="off"
+                    hx-get="{{ url_for('main_bp.shop_detail_search', shop_id=shop.id) }}"
+                    hx-trigger="keyup changed delay:300ms, search"
+                    hx-target="#shop-products-container"
+                    hx-swap="innerHTML"
+                    hx-indicator="#shop-search-indicator"
+                >
+                <div id="shop-search-indicator" class="htmx-indicator small text-muted mt-2">Searching this shop...</div>
+            </div>
         </div>
 
         <div
@@ -269,4 +319,45 @@
         font-weight: 600;
     }
 </style>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    const claimButton = document.getElementById('claim-shop-btn');
+    if (claimButton) {
+        claimButton.addEventListener('click', async () => {
+            claimButton.disabled = true;
+            const claimUrl = claimButton.dataset.claimUrl;
+
+            try {
+                const response = await fetch(claimUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+                    },
+                    credentials: 'same-origin',
+                    body: JSON.stringify({}),
+                });
+                const data = await response.json();
+
+                if (!data.success) {
+                    alert(data.message || 'Unable to claim this shop.');
+                    return;
+                }
+
+                const banner = document.getElementById('shop-claim-banner');
+                if (banner) {
+                    banner.className = 'alert alert-success border-0 py-2 px-3 mb-0';
+                    banner.innerHTML = '<i class="bi bi-check-circle me-1"></i>You own this shop.';
+                }
+                claimButton.remove();
+            } catch (error) {
+                alert('Unable to claim this shop right now.');
+            } finally {
+                claimButton.disabled = false;
+            }
+        });
+    }
+</script>
 {% endblock %}

@@ -2,12 +2,12 @@ from io import BytesIO
 from urllib.parse import urljoin, urlparse
 
 import requests
-import meilisearch
+from ..search import search_service
 from PIL import Image, ImageDraw, ImageFont
 from flask import Blueprint, jsonify, request, render_template, current_app, session, send_file, flash, redirect, url_for
 from flask_login import current_user
-# pyrefly: ignore [missing-import]
 from sqlalchemy import or_, nullslast
+from ..admin.decorators import login_required
 from ..extensions import db
 from ..models import (
     Category,
@@ -275,14 +275,32 @@ def browse_shops():
         query = Shop.query.filter(Shop.is_active.is_(True))
 
         if search_term:
-            query = query.filter(
-                or_(
-                    Shop.name.ilike(f'%{search_term}%'),
-                    Shop.description.ilike(f'%{search_term}%'),
-                    Shop.region.ilike(f'%{search_term}%'),
-                    Shop.town.ilike(f'%{search_term}%'),
+            try:
+                # Use Meilisearch for shop name/description search with typo tolerance
+                res = search_service.search('shops', search_term, {'limit': per_page * page})
+                hit_ids = [hit['id'] for hit in res.get('hits', [])]
+                if hit_ids:
+                    query = query.filter(Shop.id.in_(hit_ids))
+                else:
+                    # Fallback to DB filtering if no hits
+                    query = query.filter(
+                        or_(
+                            Shop.name.ilike(f'%{search_term}%'),
+                            Shop.description.ilike(f'%{search_term}%'),
+                            Shop.region.ilike(f'%{search_term}%'),
+                            Shop.town.ilike(f'%{search_term}%'),
+                        )
+                    )
+            except Exception as ms_err:
+                current_app.logger.warning(f'Shop search via Meilisearch failed: {ms_err}')
+                query = query.filter(
+                    or_(
+                        Shop.name.ilike(f'%{search_term}%'),
+                        Shop.description.ilike(f'%{search_term}%'),
+                        Shop.region.ilike(f'%{search_term}%'),
+                        Shop.town.ilike(f'%{search_term}%'),
+                    )
                 )
-            )
 
         if category_id:
             query = query.join(Product).filter(
@@ -658,13 +676,29 @@ def browse_products():
             query = query.filter(Product.stock > 0)
 
         if search_term:
-            query = query.filter(
-                or_(
-                    Product.name.ilike(f'%{search_term}%'),
-                    Product.description.ilike(f'%{search_term}%'),
-                    Shop.name.ilike(f'%{search_term}%'),
+            try:
+                # Use Meilisearch for product search with typo tolerance
+                res = search_service.search('products', search_term, {'limit': per_page * page})
+                prod_ids = [hit['id'] for hit in res.get('hits', [])]
+                if prod_ids:
+                    query = query.filter(Product.id.in_(prod_ids))
+                else:
+                    query = query.filter(
+                        or_(
+                            Product.name.ilike(f'%{search_term}%'),
+                            Product.description.ilike(f'%{search_term}%'),
+                            Shop.name.ilike(f'%{search_term}%'),
+                        )
+                    )
+            except Exception as ms_err:
+                current_app.logger.warning(f'Product search via Meilisearch failed: {ms_err}')
+                query = query.filter(
+                    or_(
+                        Product.name.ilike(f'%{search_term}%'),
+                        Product.description.ilike(f'%{search_term}%'),
+                        Shop.name.ilike(f'%{search_term}%'),
+                    )
                 )
-            )
 
         # Primary sort (user choice) + location as secondary tiebreaker
         if sort_by == 'nearest' and dist_expr is not None:

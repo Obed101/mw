@@ -30,6 +30,11 @@ def create_app():
 
 
     
+    # Initialize Search Service
+    from .search import init_search
+    init_search(app)
+
+
     # Initialize extensions
     db.init_app(app)
     jwt.init_app(app)

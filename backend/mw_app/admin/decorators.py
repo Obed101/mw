@@ -3,20 +3,20 @@ Admin route decorators with strong backend permission checks.
 These are the ONLY guards for admin access — never rely on frontend hiding alone.
 """
 from functools import wraps
-from flask import redirect, url_for, flash, abort
+from flask import redirect, url_for, flash, session, request
 from flask_login import current_user
 
 
 def login_required(func):
-    """Redirect unauthenticated users to login."""
+    """Overwrites the flask_login's login_required"""
     @wraps(func)
-    def decorated(*args, **kwargs):
+    def decorated_view(*args, **kwargs):
         if not current_user.is_authenticated:
-            flash('Please sign in to access that page.', 'info')
+            session['prev'] = request.url
+            flash('A quick login is required first.', 'info')
             return redirect(url_for('main_bp.login'))
         return func(*args, **kwargs)
-    return decorated
-
+    return decorated_view
 
 def admin_required(func):
     """

@@ -653,6 +653,7 @@ def shop_detail(shop_id):
     directions_url = _build_shop_directions_url(shop)
     child_categories = _load_shop_categories(shop.id)
     shop_is_favorited = False
+    shop_is_owner = current_user.is_authenticated and shop.owner_id == current_user.id
     if current_user.is_authenticated:
         shop_is_favorited = UserFollowShop.query.filter_by(
             user_id=current_user.id,
@@ -696,7 +697,62 @@ def shop_detail(shop_id):
         directions_url=directions_url,
         shop_categories=child_categories,
         shop_is_favorited=shop_is_favorited,
+        shop_is_owner=shop_is_owner,
         more_shops=more_shops,
+    )
+
+
+@main_bp.route('/shops/<int:shop_id>/search')
+def shop_detail_search(shop_id):
+    """Search products within a specific shop and return a product-card fragment."""
+    shop = Shop.query.filter(
+        Shop.id == shop_id,
+        Shop.is_active.is_(True),
+    ).first_or_404()
+
+    query = request.args.get('q', '').strip()
+    from ..search import search_service as search_backend
+
+    if search_backend is not None:
+        products = search_backend.search_in_shop(shop.id, query)
+    else:
+        products_query = Product.query.filter(
+            Product.shop_id == shop.id,
+            Product.is_active.is_(True),
+        )
+        if query:
+            products_query = products_query.filter(
+                or_(
+                    Product.name.ilike(f'%{query}%'),
+                    Product.description.ilike(f'%{query}%'),
+                    Product.tags.ilike(f'%{query}%'),
+                )
+            )
+        products = products_query.order_by(Product.updated_at.desc()).limit(20).all()
+
+    from ..utils.tracking import track_event_async
+
+    if query:
+        track_event_async(
+            'search_in_shop',
+            user=current_user._get_current_object() if current_user.is_authenticated else None,
+            entity_type='shop',
+            entity_id=shop.id,
+            payload={
+                'query': query,
+                'result_count': len(products),
+                'source': 'shop_detail',
+            },
+        )
+
+    return render_template(
+        'buyer/product_cards.html',
+        products=products,
+        hide_load_more=True,
+        next_page=None,
+        has_next=False,
+        search_term=query,
+        shop_id=shop.id,
     )
 
 
@@ -1148,6 +1204,31 @@ def oauth_authorize():
         flash('Authentication failed', 'error')
         current_app.logger.exception(e)
         return redirect(url_for('main_bp.login'))
+
+@seller_bp.route('/dashboard/products')
+@login_required
+def seller_products_dashboard():
+    """Render the unified product dashboard for sellers."""
+    redirect_response = _seller_guard_redirect()
+    if redirect_response:
+        return redirect_response
+
+    shop = _resolve_user_shop(current_user)
+    if not shop:
+        flash("Please create a shop first to access the product dashboard.", "warning")
+        return redirect(url_for('seller_template_bp.seller_dashboard'))
+
+    products = Product.query.filter_by(shop_id=shop.id).order_by(Product.name.asc()).all()
+
+    from ..utils.progress import get_shop_progress
+    progress = get_shop_progress(shop)
+
+    return render_template(
+        'seller/products_dashboard.html',
+        shop=shop,
+        products=products,
+        progress=progress
+    )
 
 # Seller template routes
 @seller_bp.route('/dashboard')

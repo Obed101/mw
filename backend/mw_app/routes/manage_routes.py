@@ -10,14 +10,17 @@ from flask import current_app
 from pathlib import Path
 from uuid import uuid4
 from werkzeug.utils import secure_filename
-import meilisearch
+# import meilisearch (deprecated)
 
 manage_bp = Blueprint('manage_bp', __name__, url_prefix='/manage')
 
 def get_ms_client():
-    ms_url = current_app.config.get('MEILISEARCH_URL', 'http://127.0.0.1:7700')
-    ms_key = current_app.config.get('MEILISEARCH_KEY', 'masterKey')
-    return meilisearch.Client(ms_url, ms_key)
+    # Deprecated: use global search_service
+    return None
+
+# Use search_service from app.search
+from ..search import search_service
+
 
 @manage_bp.route('/search-categories')
 @login_required
@@ -30,14 +33,11 @@ def search_categories():
         return ""
         
     try:
-        client = get_ms_client()
-        res = client.index('categories').search(q, {'limit': 8})
+        res = search_service.search('categories', q, {'limit': 8})
         hits = res.get('hits', [])
-        print(f"DEBUG: Category search query='{q}', hits={len(hits)}")
         return render_template('manage/partials/category_options.html', hits=hits)
     except Exception as e:
-        print(f"Meilisearch Category Search Error: {e}")
-        # Fallback to DB
+        current_app.logger.warning(f'Category search failed: {e}')
         cats = Category.query.filter(Category.name.ilike(f"%{q}%")).limit(8).all()
         return render_template('manage/partials/category_options.html', hits=[{'name': c.name} for c in cats])
 
@@ -171,20 +171,12 @@ def _apply_product_form_data(product, form):
     resolved_category = None
 
     try:
-        client = get_ms_client()
-        ms_res = client.index('categories').search(category_name, {'limit': 1})
-
-        if ms_res.get('hits'):
-            hit = ms_res['hits'][0]
-            resolved_category = Category.query.filter_by(
-                name=hit['name']
-            ).first()
-
+        res = search_service.search('categories', category_name, {'limit': 1})
+        if res.get('hits'):
+            hit = res['hits'][0]
+            resolved_category = Category.query.filter_by(name=hit['name']).first()
     except Exception as ms_err:
-        current_app.logger.warning(
-            f'Meilisearch category resolution failed: {ms_err}'
-        )
-
+        current_app.logger.warning(f'Category resolution via search failed: {ms_err}')
     if not resolved_category:
         try:
             ai_service = AIService()
