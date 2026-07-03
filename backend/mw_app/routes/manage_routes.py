@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, request, redirect, url_for, flash, session, abort, make_response
+from flask import Blueprint, render_template, request, redirect, url_for, flash, session, abort, make_response, jsonify
 from flask_login import login_required, current_user
 from ..extensions import db
 from ..models import Shop, Product, Category, USER_ROLE_ADMIN, CATEGORY_LEVEL_LEAF
@@ -441,12 +441,53 @@ def delete_product(product_id):
     # Return empty content to remove the row from DOM
     return ""
 
+@manage_bp.route('/products/<int:product_id>/description', methods=['POST'])
+@login_required
+@shop_owner_required
+def autosave_product_description(product_id):
+    """Autosave product description"""
+    shop, error = get_managed_shop(current_user)
+    product = Product.query.get_or_404(product_id)
+
+    if product.shop_id != shop.id:
+        abort(403)
+
+    data = request.get_json(silent=True) or {}
+    description = data.get('description', '').strip()
+
+    product.description = description
+    product.updated_at = datetime.now(timezone.utc)
+    db.session.commit()
+
+    return jsonify({'success': True, 'message': 'Saved'})
+
+@manage_bp.route('/products/<int:product_id>/specifications', methods=['POST'])
+@login_required
+@shop_owner_required
+def autosave_product_specifications(product_id):
+    """Autosave product specifications"""
+    shop, error = get_managed_shop(current_user)
+    product = Product.query.get_or_404(product_id)
+
+    if product.shop_id != shop.id:
+        abort(403)
+
+    data = request.get_json(silent=True) or {}
+    specifications = data.get('specifications', {})
+
+    product.set_specifications(specifications)
+    product.updated_at = datetime.now(timezone.utc)
+    db.session.commit()
+
+    return jsonify({'success': True, 'message': 'Saved'})
+
 @manage_bp.route('/shop', methods=['GET', 'POST'])
 @login_required
 @shop_owner_required
 def edit_shop_page():
     """Shop management/editing page"""
-    shop, error = get_managed_shop(current_user)
+    requested_shop_id = request.args.get('shop_id', type=int) or request.form.get('shop_id', type=int)
+    shop, error = get_managed_shop(current_user, requested_shop_id)
     if error:
         flash(error, "danger")
         return redirect(url_for('main_bp.index'))
@@ -463,6 +504,67 @@ def edit_shop_page():
         shop.last_updated = datetime.now(timezone.utc)
         db.session.commit()
         flash("Shop profile updated successfully.", "success")
-        return redirect(url_for('manage_bp.edit_shop_page'))
+        return redirect(url_for('manage_bp.edit_shop_page', shop_id=shop.id))
     
     return render_template('manage/shop_edit.html', shop=shop)
+
+
+@manage_bp.route('/shop/autosave', methods=['POST'])
+@login_required
+@shop_owner_required
+def autosave_shop_field():
+    """Autosave one shop field from the dashboard."""
+    shop, error = get_managed_shop(current_user)
+    if error:
+        return jsonify({'success': False, 'message': error}), 400
+
+    data = request.get_json(silent=True) or request.form or {}
+    field = str(data.get('field') or '').strip()
+    value = data.get('value')
+
+    allowed_fields = {
+        'name',
+        'phone',
+        'email',
+        'town',
+        'address',
+        'description',
+        'business_type',
+        'is_active',
+    }
+    if field not in allowed_fields:
+        return jsonify({'success': False, 'message': 'Unsupported field'}), 400
+
+    if field == 'is_active':
+        if isinstance(value, str):
+            value = value.strip().lower() in {'1', 'true', 'yes', 'on'}
+        else:
+            value = bool(value)
+        shop.is_active = value
+    else:
+        value = ('' if value is None else str(value)).strip()
+        if field == 'name' and not value:
+            return jsonify({'success': False, 'message': 'Shop name is required'}), 400
+        if field == 'business_type' and value not in {'sales', 'service', 'both'}:
+            return jsonify({'success': False, 'message': 'Invalid business type'}), 400
+        setattr(shop, field, value or None)
+
+    shop.last_updated = datetime.now(timezone.utc)
+    db.session.commit()
+
+    return jsonify({
+        'success': True,
+        'message': 'Saved',
+        'shop': {
+            'id': shop.id,
+            'name': shop.name,
+            'phone': shop.phone,
+            'email': shop.email,
+            'town': shop.town,
+            'address': shop.address,
+            'description': shop.description,
+            'business_type': shop.business_type,
+            'is_active': bool(shop.is_active),
+            'last_updated': shop.last_updated.isoformat() if shop.last_updated else None,
+        },
+    })

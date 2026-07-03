@@ -1,450 +1,511 @@
-{% extends "base.html" %}
+{% extends "manage/base_manage.html" %}
 
-{% block title %}Seller Products Dashboard - Market Window{% endblock %}
+{% block title %}Shop Dashboard - Market Window{% endblock %}
 
-{% block styles %}
+{% block manage_styles %}
 <style>
-    /* Premium Dashboard Styles */
-    :root {
-        --dash-primary: #8b5cf6;
-        --dash-primary-hover: #7c3aed;
-        --dash-bg: #0b0f19;
-        --dash-card-bg: rgba(17, 24, 39, 0.7);
-        --dash-border: rgba(255, 255, 255, 0.08);
-        --dash-text-muted: #9ca3af;
+    .shop-dashboard {
+        color: #111827;
     }
 
-    body {
-        background-color: var(--dash-bg);
-        color: #f3f4f6;
+    .dashboard-card {
+        background: #ffffff;
+        border: 1px solid #e5e7eb;
+        border-radius: 16px;
+        box-shadow: 0 1px 3px rgba(15, 23, 42, 0.06);
     }
 
-    .glass-card {
-        background: var(--dash-card-bg);
-        backdrop-filter: blur(16px);
-        border: 1px solid var(--dash-border);
-        border-radius: 20px;
-        box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
-        transition: transform 0.3s ease, box-shadow 0.3s ease;
+    .dashboard-card-header {
+        padding: 1rem 1.25rem;
+        border-bottom: 1px solid #e5e7eb;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 1rem;
     }
 
-    .glass-card:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 12px 40px 0 rgba(139, 92, 246, 0.15);
+    .dashboard-card-body {
+        padding: 1.25rem;
     }
 
-    .gradient-text {
-        background: linear-gradient(135deg, #a78bfa 0%, #8b5cf6 100%);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
+    .shop-hero {
+        display: grid;
+        grid-template-columns: 140px 1fr;
+        gap: 1rem;
+        align-items: start;
     }
 
-    .gradient-btn {
-        background: linear-gradient(135deg, #a78bfa 0%, #8b5cf6 100%);
-        border: none;
-        color: white;
+    .shop-hero__image,
+    .shop-hero__logo {
+        width: 140px;
+        height: 140px;
+        border-radius: 18px;
+        object-fit: cover;
+        background: #f3f4f6;
+        border: 1px solid #e5e7eb;
+    }
+
+    .shop-hero__logo {
+        border-radius: 999px;
+        width: 72px;
+        height: 72px;
+    }
+
+    .shop-hero__meta {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+        margin-top: 0.75rem;
+    }
+
+    .soft-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.4rem;
+        padding: 0.45rem 0.75rem;
+        border-radius: 999px;
+        background: #f9fafb;
+        border: 1px solid #e5e7eb;
+        color: #374151;
+        font-size: 0.875rem;
         font-weight: 600;
-        transition: opacity 0.2s;
     }
 
-    .gradient-btn:hover {
-        opacity: 0.9;
-        color: white;
-    }
-
-    .badge-premium {
-        background: rgba(139, 92, 246, 0.15);
-        color: #a78bfa;
-        border: 1px solid rgba(139, 92, 246, 0.3);
-        padding: 0.4em 0.8em;
-        border-radius: 99px;
-    }
-
-    .checklist-item {
-        display: flex;
+    .status-chip {
+        display: inline-flex;
         align-items: center;
-        gap: 12px;
-        padding: 10px 0;
-        border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        gap: 0.4rem;
+        padding: 0.4rem 0.75rem;
+        border-radius: 999px;
+        font-size: 0.8rem;
+        font-weight: 700;
+        background: #eef2ff;
+        color: #4338ca;
     }
 
-    .checklist-item:last-child {
-        border-bottom: none;
+    .status-chip.success {
+        background: #ecfdf5;
+        color: #047857;
     }
 
-    .checklist-icon {
-        width: 24px;
-        height: 24px;
-        border-radius: 50%;
+    .status-chip.warning {
+        background: #fffbeb;
+        color: #b45309;
+    }
+
+    .section-title {
+        font-size: 1rem;
+        font-weight: 800;
+        color: #111827;
+        margin-bottom: 0.25rem;
+    }
+
+    .section-copy {
+        color: #6b7280;
+        font-size: 0.875rem;
+        margin-bottom: 0;
+    }
+
+    .progress-list {
+        display: grid;
+        gap: 0.75rem;
+    }
+
+    .progress-item {
         display: flex;
-        align-items: center;
-        justify-content: center;
+        justify-content: space-between;
+        gap: 1rem;
+        padding: 0.9rem 1rem;
+        border-radius: 12px;
+        background: #f9fafb;
+        border: 1px solid #e5e7eb;
+    }
+
+    .progress-item__label {
+        font-weight: 700;
+        color: #111827;
+    }
+
+    .progress-item__meta {
+        color: #6b7280;
         font-size: 0.85rem;
     }
 
-    .checklist-icon.completed {
-        background: rgba(16, 185, 129, 0.15);
-        color: #10b981;
-        border: 1px solid rgba(16, 185, 129, 0.3);
-    }
-
-    .checklist-icon.pending {
-        background: rgba(245, 158, 11, 0.15);
-        color: #f59e0b;
-        border: 1px solid rgba(245, 158, 11, 0.3);
-    }
-
-    /* Activity Feed styling */
-    .activity-feed-container {
-        max-height: 400px;
-        overflow-y: auto;
-        padding-right: 8px;
-    }
-
-    .activity-feed-container::-webkit-scrollbar {
-        width: 6px;
-    }
-
-    .activity-feed-container::-webkit-scrollbar-thumb {
-        background: rgba(255, 255, 255, 0.1);
-        border-radius: 99px;
+    .activity-feed {
+        max-height: 360px;
+        overflow: auto;
+        padding-right: 0.25rem;
     }
 
     .activity-item {
-        border-left: 2px solid var(--dash-primary);
-        padding-left: 16px;
-        margin-bottom: 20px;
-        position: relative;
+        padding: 0.9rem 0;
+        border-bottom: 1px solid #eef2f7;
     }
 
-    .activity-item::before {
-        content: '';
-        position: absolute;
-        left: -6px;
-        top: 4px;
-        width: 10px;
-        height: 10px;
-        border-radius: 50%;
-        background: #a78bfa;
-        border: 2px solid var(--dash-bg);
+    .activity-item:last-child {
+        border-bottom: none;
     }
 
-    .table-dark-custom {
-        background: transparent;
-        color: #f3f4f6;
+    .activity-title {
+        font-weight: 700;
+        color: #111827;
     }
 
-    .table-dark-custom th {
-        background: rgba(255, 255, 255, 0.03);
-        border-bottom: 1px solid var(--dash-border);
-        color: var(--dash-text-muted);
-        font-weight: 500;
+    .activity-meta {
+        font-size: 0.8rem;
+        color: #6b7280;
     }
 
-    .table-dark-custom td {
-        border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-        vertical-align: middle;
+    .search-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.4rem;
+        padding: 0.45rem 0.7rem;
+        border-radius: 999px;
+        background: #f9fafb;
+        border: 1px solid #e5e7eb;
+        color: #374151;
+        font-size: 0.85rem;
+        margin: 0 0.35rem 0.35rem 0;
+    }
+
+    .dashboard-anchor {
+        scroll-margin-top: 120px;
+    }
+
+    .autosave-note {
+        font-size: 0.8rem;
+        color: #6b7280;
+        min-height: 1rem;
+    }
+
+    .inline-edit {
+        background: #fff;
+        border: 1px solid #d1d5db;
+    }
+
+    .circle-action-btn {
+        width: 2.25rem;
+        height: 2.25rem;
+        border-radius: 999px;
+        border: none;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+        color: #fff;
+        box-shadow: 0 6px 14px rgba(37, 99, 235, 0.18);
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .circle-action-btn:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 8px 18px rgba(37, 99, 235, 0.24);
+        color: #fff;
+    }
+
+    .circle-action-btn--soft {
+        background: #eef2ff;
+        color: #4338ca;
+        box-shadow: none;
+    }
+
+    .dashboard-link-btn {
+        border-radius: 999px;
+        padding: 0.55rem 0.9rem;
+        font-weight: 700;
+    }
+
+    @media (max-width: 991px) {
+        .shop-hero {
+            grid-template-columns: 1fr;
+        }
+
+        .shop-hero__image {
+            width: 100%;
+            height: 220px;
+        }
+
+    }
+
+    @media (max-width: 576px) {
+        .dashboard-card-header,
+        .dashboard-card-body {
+            padding: 1rem;
+        }
     }
 </style>
 {% endblock %}
 
-{% block content %}
-<div class="container py-5">
-    <!-- Header -->
-    <div class="d-flex justify-content-between align-items-center mb-5">
-        <div>
-            <h1 class="gradient-text fw-bold mb-1">{{ shop.name }}</h1>
-            <p class="text-muted mb-0">Unified Product and Operations Dashboard</p>
-        </div>
-        <div class="d-flex gap-3">
-            <a href="{{ url_for('seller_template_bp.seller_dashboard') }}" class="btn btn-outline-light rounded-pill px-4">
-                <i class="bi bi-arrow-left me-2"></i>Overview
-            </a>
-            <button class="btn gradient-btn rounded-pill px-4" data-bs-toggle="modal" data-bs-target="#addProductModal">
-                <i class="bi bi-plus-lg me-2"></i>Add Product
-            </button>
-        </div>
-    </div>
-
-    <div class="row g-4">
-        <!-- Main Product List Area -->
-        <div class="col-lg-8">
-            <div class="glass-card p-4 mb-4">
-                <div class="d-flex justify-content-between align-items-center mb-4">
-                    <h5 class="fw-bold mb-0">Your Products</h5>
-                    <!-- Inline Search Bar -->
-                    <div class="input-group" style="max-width: 300px;">
-                        <span class="input-group-text bg-transparent border-end-0 border-secondary text-muted">
-                            <i class="bi bi-search"></i>
+{% block manage_content %}
+<div class="shop-dashboard">
+    <div id="shop-overview" class="dashboard-anchor row g-4 mb-4">
+        <div class="col-12 col-xl-8">
+            <div class="dashboard-card h-100">
+                <div class="dashboard-card-header">
+                    <div> 
+                        <div class="section-title mb-1">Shop Overview & Progress</div>
+                        <p class="section-copy">Identity, contact details, and setup status in one place.</p>
+                    </div>
+                    <div class="d-flex flex-wrap gap-2">
+                        <span class="status-chip {% if shop.is_active %}success{% else %}warning{% endif %}">
+                            <i class="bi {% if shop.is_active %}bi-check-circle{% else %}bi-pause-circle{% endif %}"></i>
+                            {% if shop.is_active %}Active{% else %}Inactive{% endif %}
                         </span>
-                        <input type="text" id="dashboardSearch" class="form-control bg-transparent border-start-0 border-secondary text-white" placeholder="Search products..." onkeyup="filterProducts()">
+                        <span class="status-chip {% if shop.verification_status == 'verified' %}success{% elif shop.verification_status == 'under_review' %}warning{% endif %}">
+                            <i class="bi bi-shield-check"></i>{{ shop.verification_status|replace('_', ' ')|title }}
+                        </span>
                     </div>
                 </div>
+                <div class="dashboard-card-body">
+                    <div class="row g-4 align-items-start">
+                        <div class="col-12 col-lg-4 text-center text-lg-start">
+                            <img src="{{ shop.primary_image_url or url_for('static', filename='images/mw_logo_trans.png') }}" alt="{{ shop.name }}" class="shop-hero__image mb-3">
+                            <div class="d-flex justify-content-center justify-content-lg-start align-items-center gap-2 mb-3">
+                                <span class="shop-hero__logo d-inline-flex align-items-center justify-content-center">
+                                    {% if logo_image_url %}
+                                    <img src="{{ logo_image_url }}" alt="{{ shop.name }} logo" class="shop-hero__logo">
+                                    {% else %}
+                                    <span class="fw-bold text-secondary fs-4">{{ shop.name[:1]|upper }}</span>
+                                    {% endif %}
+                                </span>
+                            </div>
+                            <h1 class="h3 fw-bold mb-1">{{ shop.name }}</h1>
+                            <p class="text-muted mb-2">
+                                <i class="bi bi-geo-alt me-1"></i>
+                                {{ shop.town or shop.district or shop.region or 'Location unavailable' }}
+                            </p>
+                            <div class="d-flex flex-wrap justify-content-center justify-content-lg-start gap-2">
+                                <span class="soft-pill"><i class="bi bi-people"></i>{{ follower_count }} followers</span>
+                                <span class="soft-pill"><i class="bi bi-images"></i>{{ shop.image_urls|length }} images</span>
+                            </div>
+                        </div>
 
-                <div class="table-responsive">
-                    <table class="table table-dark-custom" id="productsTable">
-                        <thead>
-                            <tr>
-                                <th>Product</th>
-                                <th>Type</th>
-                                <th>Price</th>
-                                <th>Stock</th>
-                                <th>Status</th>
-                                <th class="text-end">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for product in products %}
-                            <tr class="product-row" data-name="{{ product.name | lower }}" data-code="{{ (product.code or '') | lower }}">
-                                <td>
-                                    <div class="d-flex align-items-center gap-3">
-                                        <img src="{{ product.primary_image_url or '/static/images/mw_logo_trans.png' }}" alt="{{ product.name }}" class="rounded" style="width: 48px; height: 48px; object-fit: cover;">
-                                        <div>
-                                            <div class="fw-semibold text-white">{{ product.name }}</div>
-                                            <small class="text-muted">Code: {{ product.code or 'N/A' }}</small>
-                                        </div>
+                        <div class="col-12 col-lg-8">
+                            <div class="progress-list">
+                                <div class="progress-item">
+                                    <div>
+                                        <div class="progress-item__label">Front image</div>
+                                        <div class="progress-item__meta">Main shop image shown to shoppers.</div>
                                     </div>
-                                </td>
-                                <td><span class="badge bg-secondary">{{ product.type_ | capitalize }}</span></td>
-                                <td class="fw-semibold">${{ "%.2f" | format(product.price or 0) }}</td>
-                                <td>
-                                    {% if product.stock is none %}
-                                    <span class="text-muted">Unlimited</span>
-                                    {% elif product.stock <= 0 %}
-                                    <span class="text-danger fw-bold">Out of stock</span>
-                                    {% elif product.stock <= 10 %}
-                                    <span class="text-warning fw-semibold">{{ product.stock }} left</span>
+                                    {% if shop_progress.front_image_added %}
+                                    <span class="status-chip success"><i class="bi bi-check-lg"></i>Added</span>
                                     {% else %}
-                                    <span class="text-success">{{ product.stock }}</span>
+                                    <button type="button" class="circle-action-btn" onclick="scrollToShopOverview();" title="Add front image">
+                                        <i class="bi bi-plus-lg"></i>
+                                    </button>
                                     {% endif %}
-                                </td>
-                                <td>
-                                    {% if product.is_active %}
-                                    <span class="badge bg-success-subtle text-success">Active</span>
+                                </div>
+                                <div class="progress-item">
+                                    <div>
+                                        <div class="progress-item__label">Logo</div>
+                                        <div class="progress-item__meta">Brand mark or profile image for the shop.</div>
+                                    </div>
+                                    {% if shop_progress.logo_added %}
+                                    <span class="status-chip success"><i class="bi bi-check-lg"></i>Added</span>
                                     {% else %}
-                                    <span class="badge bg-danger-subtle text-danger">Inactive</span>
+                                    <button type="button" class="circle-action-btn" onclick="scrollToShopOverview();" title="Add logo">
+                                        <i class="bi bi-plus-lg"></i>
+                                    </button>
                                     {% endif %}
-                                </td>
-                                <td class="text-end">
-                                    <div class="d-flex justify-content-end gap-2">
-                                        <button class="btn btn-sm btn-outline-info rounded-circle" onclick="duplicateProduct({{ product.id }})" title="Duplicate Product">
-                                            <i class="bi bi-copy"></i>
-                                        </button>
-                                        <a href="{{ url_for('manage_bp.edit_product', product_id=product.id) }}" class="btn btn-sm btn-outline-light rounded-circle" title="Edit">
-                                            <i class="bi bi-pencil"></i>
+                                </div>
+                                <div class="progress-item">
+                                    <div>
+                                        <div class="progress-item__label">Shop status</div>
+                                        <div class="progress-item__meta">Keep it active for people to see it.</div>
+                                    </div>
+                                    {% if shop.is_active %}
+                                    <span class="status-chip success"><i class="bi bi-check-lg"></i>Active</span>
+                                    {% else %}
+                                    <button type="button" class="circle-action-btn circle-action-btn--soft" onclick="toggleShopActive();" title="Activate shop">
+                                        <i class="bi bi-play-fill"></i>
+                                    </button>
+                                    {% endif %}
+                                </div>
+                                <div class="progress-item">
+                                    <div>
+                                        <div class="progress-item__label">Verification</div>
+                                        <div class="progress-item__meta">Current review state for this shop.</div>
+                                    </div>
+                                    {% if shop.verification_status == 'verified' %}
+                                    <span class="status-chip success"><i class="bi bi-check-lg"></i>Verified</span>
+                                    {% elif shop.verification_status == 'under_review' %}
+                                    <span class="status-chip warning"><i class="bi bi-hourglass-split"></i>Under review</span>
+                                    {% else %}
+                                    <button type="button" class="circle-action-btn circle-action-btn--soft" onclick="requestVerification();" title="Request verification">
+                                        <i class="bi bi-shield-plus"></i>
+                                    </button>
+                                    {% endif %}
+                                </div>
+                            </div>
+
+                            <div class="mt-3 p-3 rounded-4 bg-light border">
+                                <div class="row g-3">
+                                    <div class="col-12 col-md-6">
+                                        <label class="form-label small fw-bold mb-1">Shop name</label>
+                                        <input type="text" class="form-control inline-edit" value="{{ shop.name }}" data-autosave-field="name">
+                                    </div>
+                                    <div class="col-12 col-md-6">
+                                        <label class="form-label small fw-bold mb-1">Town</label>
+                                        <input type="text" class="form-control inline-edit" value="{{ shop.town or '' }}" data-autosave-field="town" placeholder="Town / city">
+                                    </div>
+                                    <div class="col-12 col-md-6">
+                                        <label class="form-label small fw-bold mb-1">Phone</label>
+                                        <input type="tel" class="form-control inline-edit" value="{{ shop.phone or '' }}" data-autosave-field="phone" placeholder="+233 ...">
+                                    </div>
+                                    <div class="col-12 col-md-6">
+                                        <label class="form-label small fw-bold mb-1">Email</label>
+                                        <input type="email" class="form-control inline-edit" value="{{ shop.email or '' }}" data-autosave-field="email" placeholder="shop@example.com">
+                                    </div>
+                                    <div class="col-12">
+                                        <label class="form-label small fw-bold mb-1">Address</label>
+                                        <input type="text" class="form-control inline-edit" value="{{ shop.address or '' }}" data-autosave-field="address" placeholder="Landmark or street address">
+                                    </div>
+                                    <div class="col-12">
+                                        <label class="form-label small fw-bold mb-1">Description</label>
+                                        <textarea class="form-control inline-edit" rows="3" data-autosave-field="description" placeholder="Describe the shop">{{ shop.description or '' }}</textarea>
+                                    </div>
+                                    <div class="col-12 d-flex align-items-center justify-content-between gap-2 flex-wrap">
+                                        <div class="form-check form-switch m-0">
+                                            <input class="form-check-input" type="checkbox" id="shop-active-toggle" data-autosave-field="is_active" {% if shop.is_active %}checked{% endif %}>
+                                            <label class="form-check-label fw-bold" for="shop-active-toggle">Shop active</label>
+                                        </div>
+                                        <div id="autosave-status" class="autosave-note">Autosaves instantly.</div>
+                                    </div>
+                                    <div class="col-12 d-flex justify-content-end">
+                                        <a href="{{ url_for('manage_bp.edit_shop_page', shop_id=shop.id) }}" class="btn btn-outline-primary btn-sm">
+                                            <i class="bi bi-pencil-square me-1"></i>More Edits
                                         </a>
                                     </div>
-                                </td>
-                            </tr>
-                            {% else %}
-                            <tr>
-                                <td colspan="6" class="text-center py-4 text-muted">No products found. Click "Add Product" to create one.</td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-
-        <!-- Sidebar (Checklist & Activity Feed) -->
-        <div class="col-lg-4">
-            <!-- Progress Checklist Card -->
-            <div class="glass-card p-4 mb-4">
-                <h5 class="fw-bold mb-4">Shop Onboarding Progress</h5>
-                <div class="checklist">
-                    <div class="checklist-item">
-                        <div class="checklist-icon completed"><i class="bi bi-check-lg"></i></div>
-                        <div>
-                            <div class="fw-semibold">Shop Created</div>
-                            <small class="text-muted">Register your business profile.</small>
+                                </div>
+                            </div>
                         </div>
-                    </div>
-                    <div class="checklist-item">
-                        <div class="checklist-icon {% if progress.image_uploaded %}completed{% else %}pending{% endif %}">
-                            <i class="bi {% if progress.image_uploaded %}bi-check-lg{% else %}bi-circle{% endif %}"></i>
-                        </div>
-                        <div>
-                            <div class="fw-semibold">Cover Image Uploaded</div>
-                            <small class="text-muted">Add a shop header banner image.</small>
-                        </div>
-                    </div>
-                    <div class="checklist-item">
-                        <div class="checklist-icon {% if progress.has_min_products %}completed{% else %}pending{% endif %}">
-                            <i class="bi {% if progress.has_min_products %}bi-check-lg{% else %}bi-circle{% endif %}"></i>
-                        </div>
-                        <div>
-                            <div class="fw-semibold">List at least 5 Products</div>
-                            <small class="text-muted">Currently: {{ products | length }} / 5</small>
-                        </div>
-                    </div>
-                    <div class="checklist-item">
-                        <div class="checklist-icon {% if shop.verification_status == 'verified' %}completed{% else %}pending{% endif %}">
-                            <i class="bi {% if shop.verification_status == 'verified' %}bi-check-lg{% else %}bi-circle{% endif %}"></i>
-                        </div>
-                        <div>
-                            <div class="fw-semibold">Shop Verified</div>
-                            <small class="text-muted">Verification Status: {{ shop.verification_status | capitalize }}</small>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Activity Feed Card (with Infinite Scroll) -->
-            <div class="glass-card p-4">
-                <h5 class="fw-bold mb-4">Recent Activity</h5>
-                <div class="activity-feed-container" id="activityFeed" onscroll="handleActivityScroll()">
-                    <div id="activityList">
-                        <!-- Loaded dynamically via AJAX -->
-                    </div>
-                    <div id="activityLoader" class="text-center py-2 text-muted small" style="display: none;">
-                        <div class="spinner-border spinner-border-sm text-primary me-2" role="status"></div>
-                        Loading activities...
                     </div>
                 </div>
             </div>
         </div>
     </div>
-</div>
 
-<!-- Add Product Modal -->
-<div class="modal fade" id="addProductModal" tabindex="-1" aria-labelledby="addProductModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content bg-dark text-white border-secondary">
-            <div class="modal-header border-secondary">
-                <h5 class="modal-title" id="addProductModalLabel">Add New Product</h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+    <div class="row g-4 mb-4">
+        <div class="col-12 col-lg-4">
+            <div class="dashboard-card h-100">
+                <div class="dashboard-card-header">
+                    <div>
+                        <div class="section-title mb-1">Quick Actions</div>
+                        <p class="section-copy">Shop-first actions with product access built in.</p>
+                    </div>
+                </div>
+                <div class="dashboard-card-body">
+                    <div class="d-grid gap-2">
+                        <a href="{{ url_for('manage_bp.products') }}" class="btn btn-primary btn-sm dashboard-link-btn">
+                            <i class="bi bi-plus-lg me-1"></i>Add Product
+                        </a>
+                        <a href="{{ url_for('manage_bp.edit_shop_page', shop_id=shop.id) }}" class="btn btn-outline-primary btn-sm dashboard-link-btn">
+                            <i class="bi bi-pencil-square me-1"></i>Edit Shop
+                        </a>
+                        <a href="{{ url_for('main_bp.add_shop', new=1) }}" class="btn btn-outline-success btn-sm dashboard-link-btn">
+                            <i class="bi bi-shop-window me-1"></i>Add New Shop
+                        </a>
+                        <button type="button" class="btn btn-outline-warning btn-sm dashboard-link-btn" onclick="requestVerification();">
+                            <i class="bi bi-shield-check me-1"></i>Request Verification
+                        </button>
+                        <a href="{{ url_for('main_bp.shop_detail', shop_id=shop.id) }}" class="btn btn-outline-secondary btn-sm dashboard-link-btn" target="_blank" rel="noopener noreferrer">
+                            <i class="bi bi-box-arrow-up-right me-1"></i>View Public Shop
+                        </a>
+                    </div>
+                </div>
             </div>
-            <form action="{{ url_for('manage_bp.add_product') }}" method="POST">
-                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                <div class="modal-body">
-                    <p class="text-muted">Quickly redirect to standard product creation.</p>
-                </div>
-                <div class="modal-footer border-secondary">
-                    <button type="button" class="btn btn-outline-light" data-bs-dismiss="modal">Cancel</button>
-                    <a href="{{ url_for('manage_bp.add_product') }}" class="btn gradient-btn px-4">Continue to Form</a>
-                </div>
-            </form>
+        </div>
+
+        <div class="col-12 col-lg-8">
+            {% include 'seller/partials/insights_panel.html' %}
         </div>
     </div>
 </div>
+{% endblock %}
 
+{% block manage_scripts %}
 <script>
-    // Inline Search Filtering
-    function filterProducts() {
-        const query = document.getElementById('dashboardSearch').value.toLowerCase().trim();
-        const rows = document.querySelectorAll('.product-row');
-        rows.forEach(row => {
-            const name = row.getAttribute('data-name');
-            const code = row.getAttribute('data-code');
-            if (name.includes(query) || code.includes(query)) {
-                row.style.display = '';
-            } else {
-                row.style.display = 'none';
-            }
-        });
+ (function () {
+    const autosaveUrl = "{{ url_for('manage_bp.autosave_shop_field') }}";
+    const requestVerificationUrl = "{{ url_for('seller_bp.request_verification') }}";
+    const sellerId = {{ current_user.id }};
+    const autosaveTimers = {};
+
+    function setStatus(message) {
+        const el = document.getElementById('autosave-status');
+        if (el) el.textContent = message;
     }
 
-    // Duplicate Product AJAX Call
-    function duplicateProduct(productId) {
-        if (!confirm('Are you sure you want to duplicate this product?')) return;
-        
-        fetch(`/api/seller/products/${productId}/duplicate`, {
+    async function saveField(field, value) {
+        setStatus('Saving...');
+        const response = await fetch(autosaveUrl, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
-            }
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                alert('Product duplicated successfully!');
-                window.location.reload();
-            } else {
-                alert('Error: ' + data.message);
-            }
-        })
-        .catch(error => {
-            console.error('Error:', error);
-            alert('Failed to duplicate product.');
+                'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').content,
+            },
+            credentials: 'same-origin',
+            body: JSON.stringify({ field, value }),
         });
-    }
-
-    // Activity Feed Pagination / Infinite Scroll
-    let activityOffset = 0;
-    const activityLimit = 20;
-    let loadingActivities = false;
-    let hasMoreActivities = true;
-    const shopId = {{ shop.id }};
-
-    function loadMoreActivities() {
-        if (loadingActivities || !hasMoreActivities) return;
-        loadingActivities = true;
-        document.getElementById('activityLoader').style.display = 'block';
-
-        fetch(`/api/seller/shop/${shopId}/activity-feed?offset=${activityOffset}&limit=${activityLimit}`)
-        .then(response => response.json())
-        .then(data => {
-            loadingActivities = false;
-            document.getElementById('activityLoader').style.display = 'none';
-
-            if (data.success) {
-                const events = data.events;
-                if (events.length === 0) {
-                    hasMoreActivities = false;
-                    if (activityOffset === 0) {
-                        document.getElementById('activityList').innerHTML = '<div class="text-muted small py-3">No recent activities found.</div>';
-                    }
-                    return;
-                }
-                
-                const list = document.getElementById('activityList');
-                events.forEach(event => {
-                    const item = document.createElement('div');
-                    item.className = 'activity-item';
-                    
-                    const time = new Date(event.created_at).toLocaleString();
-                    let metadataStr = '';
-                    if (event.metadata && Object.keys(event.metadata).length > 0) {
-                        metadataStr = `<br><small class="text-muted">${JSON.stringify(event.metadata)}</small>`;
-                    }
-
-                    item.innerHTML = `
-                        <div class="fw-semibold text-white">${formatEventType(event.event_type)}</div>
-                        <small class="text-muted d-block" style="font-size: 0.75rem;">${time}</small>
-                        ${metadataStr}
-                    `;
-                    list.appendChild(item);
-                });
-                
-                activityOffset = data.next_offset;
-                if (events.length < activityLimit) {
-                    hasMoreActivities = false;
-                }
-            }
-        })
-        .catch(err => {
-            console.error('Error loading activities:', err);
-            loadingActivities = false;
-            document.getElementById('activityLoader').style.display = 'none';
-        });
-    }
-
-    function formatEventType(type) {
-        return type.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
-    }
-
-    function handleActivityScroll() {
-        const container = document.getElementById('activityFeed');
-        if (container.scrollHeight - container.scrollTop <= container.clientHeight + 20) {
-            loadMoreActivities();
+        const data = await response.json();
+        if (!data.success) {
+            setStatus(data.message || 'Save failed');
+            return;
         }
+        setStatus('Saved');
+        window.setTimeout(() => setStatus('Autosaves instantly.'), 1200);
     }
 
-    // Initial Load
-    document.addEventListener('DOMContentLoaded', () => {
-        loadMoreActivities();
+    document.querySelectorAll('[data-autosave-field]').forEach((el) => {
+        const field = el.getAttribute('data-autosave-field');
+        const eventName = el.type === 'checkbox' || el.tagName === 'SELECT' ? 'change' : 'input';
+        el.addEventListener(eventName, () => {
+            const value = el.type === 'checkbox' ? el.checked : el.value;
+            if (eventName === 'input') {
+                window.clearTimeout(autosaveTimers[field]);
+                autosaveTimers[field] = window.setTimeout(() => saveField(field, value), 500);
+            } else {
+                saveField(field, value);
+            }
+        });
     });
+
+    window.scrollToShopOverview = function () {
+        document.getElementById('shop-overview')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    };
+
+    window.toggleShopActive = function () {
+        const toggle = document.getElementById('shop-active-toggle');
+        if (!toggle) return;
+        toggle.checked = !toggle.checked;
+        toggle.dispatchEvent(new Event('change', { bubbles: true }));
+    };
+
+    window.requestVerification = async function () {
+        const response = await fetch(requestVerificationUrl, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').content,
+            },
+            credentials: 'same-origin',
+            body: JSON.stringify({ seller_id: sellerId }),
+        });
+        const data = await response.json();
+        if (!data.success) {
+            alert(data.message || 'Could not request verification.');
+            return;
+        }
+        alert(data.message || 'Verification requested.');
+        window.location.reload();
+    };
+
+    document.addEventListener('DOMContentLoaded', function () {
+        if (window.htmx) {
+            htmx.process(document.body);
+        }
+    });
+}());
 </script>
 {% endblock %}

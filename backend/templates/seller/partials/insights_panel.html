@@ -1,0 +1,49 @@
+<div class="dashboard-card h-100" id="insights">
+    <div class="dashboard-card-header">
+        <div>
+            <div class="section-title">Insights</div>
+            <p class="section-copy">Recent activity and live search signals from this shop.</p>
+        </div>
+    </div>
+    <div class="dashboard-card-body">
+        <div class="mb-4">
+            <div class="fw-bold mb-2">Recent Activity</div>
+            {% for event in recent_activity %}
+            <div class="activity-item">
+                <div class="activity-title d-flex align-items-center gap-2">
+                    <i class="bi bi-{{ event.icon or 'clock' }} text-primary"></i>
+                    <span>{{ event.title }}</span>
+                </div>
+                <div class="activity-meta">{{ event.message }}</div>
+                <div class="activity-meta">{{ event.time_ago }}</div>
+            </div>
+            {% else %}
+            <div class="text-muted small">No recent activity yet.</div>
+            {% endfor %}
+        </div>
+
+        <div class="mb-4">
+            <div class="fw-bold mb-2">Top Searches</div>
+            {% for row in top_searches %}
+            <span class="search-chip">
+                <i class="bi bi-search"></i>{{ row.query or 'Unknown' }}
+                <span class="badge text-bg-light border">{{ row.count }}</span>
+            </span>
+            {% else %}
+            <div class="text-muted small">No search data yet.</div>
+            {% endfor %}
+        </div>
+
+        <div>
+            <div class="fw-bold mb-2">Searches With No Results</div>
+            {% for row in no_result_searches %}
+            <span class="search-chip">
+                <i class="bi bi-x-circle"></i>{{ row.query or 'Unknown' }}
+                <span class="badge text-bg-light border">{{ row.count }}</span>
+            </span>
+            {% else %}
+            <div class="text-muted small">No zero-result searches yet.</div>
+            {% endfor %}
+        </div>
+    </div>
+</div>

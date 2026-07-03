@@ -1,4 +1,4 @@
-from flask import Blueprint, jsonify, request, render_template, current_app, url_for
+from flask import Blueprint, jsonify, request, render_template, current_app, url_for, redirect
 from flask_jwt_extended import jwt_required
 from flask_login import current_user, login_required
 from werkzeug.utils import secure_filename
@@ -371,7 +371,7 @@ def seller_dashboard():
     """Seller dashboard with shop overview and product statistics"""
     if current_user.role != USER_ROLE_SELLER and not getattr(current_user, 'can_access_admin', lambda: False)():
         return jsonify({'success': False, 'message': 'Seller access required'}), 403
-    return render_template("seller/seller_dashboard.html")
+    return redirect(url_for('seller_template_bp.seller_products_dashboard'))
 
 @seller_bp.route("/shop")
 def my_shop():

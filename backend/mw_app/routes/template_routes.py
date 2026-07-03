@@ -1197,7 +1197,7 @@ def oauth_authorize():
         if user.role == 'admin':
             return redirect(url_for('admin_template_bp.admin_dashboard'))
         elif user.role == 'seller':
-            return redirect(url_for('seller_template_bp.seller_dashboard'))
+            return redirect(url_for('seller_template_bp.seller_products_dashboard'))
         return redirect(url_for('main_bp.index'))
 
     except Exception as e:
@@ -1208,26 +1208,128 @@ def oauth_authorize():
 @seller_bp.route('/dashboard/products')
 @login_required
 def seller_products_dashboard():
-    """Render the unified product dashboard for sellers."""
+    """Render the unified shop dashboard for sellers."""
     redirect_response = _seller_guard_redirect()
     if redirect_response:
         return redirect_response
 
-    shop = _resolve_user_shop(current_user)
+    from ..models.analytics_model import Event
+    from ..utils.helpers import get_managed_shop
+    from ..utils.progress import get_shop_progress
+
+    shop, error = get_managed_shop(current_user, request.args.get('shop_id', type=int))
+    if error or not shop:
+        flash(error or 'Please create a shop first to access the dashboard.', 'warning')
+        return redirect(url_for('seller_template_bp.seller_shop'))
+
+    managed_shops = list(current_user.owned_shops) if current_user.role != USER_ROLE_ADMIN else Shop.query.order_by(Shop.name.asc()).all()
+
+    products = Product.query.filter_by(shop_id=shop.id).order_by(Product.updated_at.desc()).all()
+    product_ids = [product.id for product in products]
+    follower_count = UserFollowShop.query.filter_by(shop_id=shop.id).count()
+    product_count = len(products)
+    active_product_count = sum(1 for product in products if product.is_active)
+    categories = Category.query.filter(
+        Category.is_active.is_(True),
+        Category.level == CATEGORY_LEVEL_LEAF,
+    ).order_by(Category.name.asc()).all()
+    recent_stock_updates = (
+        StockUpdate.query.filter(StockUpdate.product_id.in_(product_ids))
+        .order_by(StockUpdate.updated_at.desc())
+        .limit(6)
+        .all()
+        if product_ids else []
+    )
+    recent_events = (
+        Event.query.filter(
+            db.or_(
+                db.and_(Event.entity_type == 'shop', Event.entity_id == shop.id),
+                db.and_(Event.entity_type == 'product', Event.entity_id.in_(product_ids))
+            ) if product_ids else db.and_(Event.entity_type == 'shop', Event.entity_id == shop.id)
+        ).order_by(Event.created_at.desc()).limit(8).all()
+    )
+
+    def describe_activity(event):
+        payload = event.payload or {}
+        event_label = (event.event_type or '').replace('_', ' ').title()
+        query = payload.get('query')
+        item_name = payload.get('product_name') or payload.get('name') or payload.get('shop_name')
+
+        if event.event_type in {'search', 'search_in_shop', 'failed_search'} and query:
+            return event_label, f'No results for "{query}"' if event.event_type == 'failed_search' else f'Searched for "{query}"'
+        if event.event_type in {'product_view', 'product_click'}:
+            return event_label, f'Viewed {item_name}' if item_name else 'Viewed a product'
+        if event.event_type in {'product_add', 'product_created'}:
+            return event_label, f'Added {item_name}' if item_name else 'Added a product'
+        if event.event_type in {'product_update', 'product_updated'}:
+            return event_label, f'Updated {item_name}' if item_name else 'Updated a product'
+        if event.event_type in {'shop_update', 'shop_updated'}:
+            return event_label, f'Updated {shop.name}'
+        if event.event_type in {'shop_follow', 'follow_shop'}:
+            return 'New follower', f'{shop.name} gained a follower'
+        return event_label, payload.get('message') or 'Activity recorded'
+
+    recent_activity = []
+    for event in recent_events:
+        title, message = describe_activity(event)
+        recent_activity.append({
+            'title': title,
+            'message': message,
+            'time_ago': _time_ago(event.created_at),
+            'icon': 'clock',
+            'color': 'info',
+            'url': None,
+            'sort_at': _timestamp_or_zero(event.created_at),
+        })
+    top_searches = db.session.query(
+        Event.payload['query'].astext.label('query'),
+        func.count(Event.id).label('count')
+    ).filter(
+        Event.event_type == 'search_in_shop',
+        Event.entity_type == 'shop',
+        Event.entity_id == shop.id,
+    ).group_by(
+        Event.payload['query'].astext
+    ).order_by(
+        func.count(Event.id).desc()
+    ).limit(5).all()
+    no_result_searches = db.session.query(
+        Event.payload['query'].astext.label('query'),
+        func.count(Event.id).label('count')
+    ).filter(
+        Event.event_type == 'search_in_shop',
+        Event.entity_type == 'shop',
+        Event.entity_id == shop.id,
+        Event.payload['result_count'].astext == '0',
+    ).group_by(
+        Event.payload['query'].astext
+    ).order_by(
+        func.count(Event.id).desc()
+    ).limit(5).all()
+
+    shop_progress = get_shop_progress(shop)
+    logo_image_url = shop.image_urls[1] if len(shop.image_urls) > 1 else None
+
     if not shop:
         flash("Please create a shop first to access the product dashboard.", "warning")
-        return redirect(url_for('seller_template_bp.seller_dashboard'))
-
-    products = Product.query.filter_by(shop_id=shop.id).order_by(Product.name.asc()).all()
-
-    from ..utils.progress import get_shop_progress
-    progress = get_shop_progress(shop)
+        return redirect(url_for('seller_template_bp.seller_shop'))
 
     return render_template(
         'seller/products_dashboard.html',
         shop=shop,
         products=products,
-        progress=progress
+        product_count=product_count,
+        active_product_count=active_product_count,
+        follower_count=follower_count,
+        recent_activity=recent_activity,
+        recent_stock_updates=recent_stock_updates,
+        top_searches=top_searches,
+        no_result_searches=no_result_searches,
+        shop_progress=shop_progress,
+        logo_image_url=logo_image_url,
+        managed_shops=managed_shops,
+        categories=categories,
+        is_active=lambda path: 'active' if request.path == path or request.path.startswith(path + '/') else '',
     )
 
 # Seller template routes
@@ -1237,135 +1339,9 @@ def seller_dashboard():
     """Seller dashboard - main overview"""
     redirect_response = _seller_guard_redirect()
     if redirect_response:
-        return redirect_response
+        return redirect(url_for('seller_template_bp.seller_products_dashboard'))
 
-    shops = _resolve_user_shops(current_user)
-    shop_ids = [shop.id for shop in shops]
-    products = []
-    product_ids = []
-
-    if shop_ids:
-        products = Product.query.filter(
-            Product.shop_id.in_(shop_ids)
-        ).order_by(Product.updated_at.desc()).all()
-        product_ids = [product.id for product in products]
-
-    active_products = [product for product in products if product.is_active]
-    low_stock_products = [product for product in products if product.stock is not None and 0 < product.stock <= 10]
-    out_of_stock_products = [product for product in products if product.stock is not None and product.stock <= 0]
-    total_stock = sum(max(product.stock or 0, 0) for product in products)
-    follower_count = UserFollowShop.query.filter(
-        UserFollowShop.shop_id.in_(shop_ids)
-    ).count() if shop_ids else 0
-    wishlist_saves = UserFavoriteProduct.query.filter(
-        UserFavoriteProduct.product_id.in_(product_ids)
-    ).count() if product_ids else 0
-    unread_notifications = Notification.query.filter_by(
-        recipient_user_id=current_user.id,
-        is_read=False,
-    ).count()
-    product_view_count = UserBrowsingHistory.query.filter(
-        UserBrowsingHistory.product_id.in_(product_ids)
-    ).count() if product_ids else 0
-    shop_view_count = UserBrowsingHistory.query.filter(
-        UserBrowsingHistory.shop_id.in_(shop_ids)
-    ).count() if shop_ids else 0
-
-    favorite_counts = {}
-    if product_ids:
-        favorite_counts = dict(
-            db.session.query(
-                UserFavoriteProduct.product_id,
-                func.count(UserFavoriteProduct.id),
-            ).filter(
-                UserFavoriteProduct.product_id.in_(product_ids)
-            ).group_by(UserFavoriteProduct.product_id).all()
-        )
-
-    popular_products = sorted(
-        products,
-        key=lambda product: (
-            favorite_counts.get(product.id, 0),
-            _timestamp_or_zero(product.updated_at or product.created_at),
-        ),
-        reverse=True,
-    )[:5]
-
-    recent_stock_updates = []
-    if product_ids:
-        recent_stock_updates = StockUpdate.query.filter(
-            StockUpdate.product_id.in_(product_ids)
-        ).order_by(StockUpdate.updated_at.desc()).limit(4).all()
-
-    recent_notifications = Notification.query.filter_by(
-        recipient_user_id=current_user.id,
-    ).order_by(Notification.created_at.desc()).limit(4).all()
-
-    recent_activity = []
-    for item in recent_notifications:
-        recent_activity.append({
-            'title': item.title,
-            'description': item.message,
-            'time_ago': _time_ago(item.created_at),
-            'icon': _bootstrap_icon_name(_notification_icon(item)),
-            'color': 'info' if not item.is_read else 'secondary',
-            'url': _notification_action_url(item),
-            'sort_at': _timestamp_or_zero(item.created_at),
-        })
-
-    for update in recent_stock_updates:
-        direction = "increased" if update.stock_change > 0 else "reduced"
-        recent_activity.append({
-            'title': update.product.name if update.product else 'Stock updated',
-            'description': f"Stock {direction} from {update.old_stock} to {update.new_stock}",
-            'time_ago': _time_ago(update.updated_at),
-            'icon': 'boxes',
-            'color': 'warning',
-            'url': url_for('manage_bp.products'),
-            'sort_at': _timestamp_or_zero(update.updated_at),
-        })
-
-    for product in products[:4]:
-        recent_activity.append({
-            'title': product.name,
-            'description': 'Product updated' if product.updated_at else 'Product added',
-            'time_ago': _time_ago(product.updated_at or product.created_at),
-            'icon': 'box-seam',
-            'color': 'primary',
-            'url': url_for('manage_bp.products'),
-            'sort_at': _timestamp_or_zero(product.updated_at or product.created_at),
-        })
-
-    recent_activity = sorted(
-        recent_activity,
-        key=lambda item: item.get('sort_at', 0),
-        reverse=True,
-    )[:6]
-
-    dashboard = {
-        'shops': shops,
-        'primary_shop': shops[0] if shops else None,
-        'metrics': {
-            'shops_count': len(shops),
-            'products_count': len(products),
-            'active_products_count': len(active_products),
-            'low_stock_count': len(low_stock_products),
-            'out_of_stock_count': len(out_of_stock_products),
-            'total_stock': total_stock,
-            'followers_count': follower_count,
-            'wishlist_saves': wishlist_saves,
-            'unread_notifications': unread_notifications,
-            'product_views': product_view_count,
-            'shop_views': shop_view_count,
-        },
-        'low_stock_products': low_stock_products[:5],
-        'out_of_stock_products': out_of_stock_products[:5],
-        'popular_products': popular_products,
-        'favorite_counts': favorite_counts,
-        'recent_activity': recent_activity,
-    }
-
-    return render_template('seller/seller_dashboard.html', dashboard=dashboard)
+    return redirect(url_for('seller_template_bp.seller_products_dashboard'))
 
 @seller_bp.route('/shop')
 @seller_bp.route('/shop/edit')

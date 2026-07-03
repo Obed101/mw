@@ -2,9 +2,114 @@
 
 {% block title %}Market Window - Your Trusted Marketplace{% endblock %}
 
+{% block head %}
+<style>
+.hero-section {
+    position: relative;
+    overflow: hidden;
+    background: #081321;
+}
+
+.hero-bg {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    overflow: hidden;
+    z-index: -1;
+    pointer-events: none;
+}
+
+.hero-bg::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(circle at center, rgba(255, 255, 255, .04), transparent 70%);
+}
+
+.hero-bg::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: rgba(8, 19, 33, .28);
+}
+
+.hero-content,
+.hero-section .container-fluid {
+    position: relative;
+    z-index: 2;
+}
+
+.aurora {
+    position: absolute;
+    width: 900px;
+    height: 900px;
+    border-radius: 50%;
+    filter: blur(120px);
+    opacity: .78;
+    mix-blend-mode: screen;
+    will-change: transform, background;
+    animation: auroraFloat 32s ease-in-out infinite;
+}
+
+.aurora-1 {
+    top: -250px;
+    left: -180px;
+    background: linear-gradient(45deg, #4F7EFF, #8B5CF6, #3DD9FF);
+    animation-duration: 28s;
+}
+
+.aurora-2 {
+    bottom: -280px;
+    right: -180px;
+    background: linear-gradient(130deg, #3DD9FF, #4F7EFF, #7C5CFF);
+    animation-duration: 36s;
+    animation-direction: reverse;
+}
+
+.aurora-3 {
+    top: 10%;
+    left: 35%;
+    background: linear-gradient(220deg, #4ADE80, #3DD9FF, #8B5CF6);
+    animation-duration: 42s;
+}
+
+@keyframes auroraFloat {
+    0% {
+        transform: translate(0px, 0px) rotate(0deg) scale(1);
+    }
+
+    20% {
+        transform: translate(70px, -50px) rotate(60deg) scale(1.06);
+    }
+
+    40% {
+        transform: translate(-60px, 40px) rotate(150deg) scale(.96);
+    }
+
+    60% {
+        transform: translate(90px, 60px) rotate(240deg) scale(1.10);
+    }
+
+    80% {
+        transform: translate(-40px, -40px) rotate(320deg) scale(1.02);
+    }
+
+    100% {
+        transform: translate(0px, 0px) rotate(360deg) scale(1);
+    }
+}
+</style>
+{% endblock %}
+
 {% block content %}
+<div class="hero-bg">
+    <div class="aurora aurora-1"></div>
+    <div class="aurora aurora-2"></div>
+    <div class="aurora aurora-3"></div>
+</div>
 <section class="hero-section py-5">
-    <div class="hero-bg"></div>
     <div class="container-fluid px-3 px-lg-4 position-relative z-1">
         <div class="row align-items-center min-vh-50 g-4">
             <div class="col-lg-7 hero-content">
@@ -293,4 +398,39 @@
 {% endblock %}
 
 {% block scripts %}
+<script>
+const palettes = [
+    ["#4F7EFF", "#8B5CF6", "#3DD9FF"],
+    ["#5B7FFF", "#4ADE80", "#8B5CF6"],
+    ["#3DD9FF", "#4F7EFF", "#7C5CFF"],
+    ["#2563EB", "#B76EFF", "#22D3EE"],
+    ["#4F7EFF", "#7DD3FC", "#A855F7"],
+    ["#3B82F6", "#6D5BFF", "#10B981"],
+    ["#4F7EFF", "#5C7CFA", "#A855F7"],
+    ["#2563EB", "#3DD9FF", "#8B5CF6"]
+];
+
+const auroras = document.querySelectorAll(".aurora");
+
+function randomBetween(min, max) {
+    return Math.floor(Math.random() * (max - min + 1)) + min;
+}
+
+function shuffle(array) {
+    return [...array].sort(() => Math.random() - 0.5);
+}
+
+function updateAurora(element) {
+    const colors = shuffle(palettes[randomBetween(0, palettes.length - 1)]);
+    const angle = randomBetween(0, 360);
+    element.style.background = `linear-gradient(${angle}deg, ${colors[0]}, ${colors[1]}, ${colors[2]})`;
+}
+
+function refreshAurora() {
+    auroras.forEach(updateAurora);
+}
+
+refreshAurora();
+setInterval(refreshAurora, 18000);
+</script>
 {% endblock %}

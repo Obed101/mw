@@ -24,13 +24,14 @@
         {% endif %}
     </td>
     <td>
-        <div class="fw-bold">{{ product.name }}
+        <a class="fw-bold text-decoration-none text-dark d-inline-block mb-1" href="{{ url_for('buyer_bp.product_detail', product_id=product.id) }}">
+            {{ product.name }}
             {% if product.is_active %}
             <i class="bi bi-check-circle text-success"></i>
             {% else %}
             <i class="bi bi-x-circle text-warning"></i>
             {% endif %}
-        </div>
+        </a>
         <div class="d-flex align-items-center gap-2 mt-1">
             <span class="text-muted rounded-pill badge bg-body-secondary small">{{ product.code or 'No Code' }}</span>
         </div>
@@ -42,20 +43,186 @@
         {% include "manage/partials/stock_badge.html" %}
     </td>
     <td class="pe-4 text-end">
-        <div class="btn-group btn-group-sm">
-            <button class="btn btn-outline-primary" 
-                    hx-get="{{ url_for('manage_bp.edit_product', product_id=product.id) }}"
-                    hx-target="#product-row-{{ product.id }}"
-                    hx-swap="outerHTML">
-                <i class="bi bi-pencil"></i>
+        <button class="btn btn-link text-muted p-1" onclick="toggleProductRow({{ product.id }})" title="More actions">
+            <i class="bi bi-three-dots-vertical fs-5"></i>
+        </button>
+    </td>
+</tr>
+
+<!-- Expanded Actions Row -->
+<tr id="product-actions-{{ product.id }}" style="display: none;">
+    <td colspan="5" class="p-0">
+        <div class="p-3 bg-light border-top">
+            <div class="d-flex gap-2 align-items-center">
+                <button class="btn btn-sm btn-outline-primary" onclick="toggleProductEdit({{ product.id }})">
+                    <i class="bi bi-pencil me-1"></i>Edit
+                </button>
+                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="duplicateProduct({{ product.id }})">
+                    <i class="bi bi-copy me-1"></i>Duplicate
+                </button>
+                <button class="btn btn-sm btn-outline-danger"
+                        hx-post="{{ url_for('manage_bp.delete_product', product_id=product.id) }}"
+                        hx-confirm="Are you sure you want to delete '{{ product.name }}'?"
+                        hx-target="#product-row-{{ product.id }}"
+                        hx-swap="outerHTML">
+                    <i class="bi bi-trash me-1"></i>Delete
+                </button>
+            </div>
+        </div>
+    </td>
+</tr>
+
+<!-- Inline Edit Row -->
+<tr id="product-edit-{{ product.id }}" style="display: none;">
+    <td colspan="5" class="p-0">
+        <div class="p-3 bg-white border-top">
+            <form hx-post="{{ url_for('manage_bp.edit_product', product_id=product.id) }}"
+                  hx-target="#product-row-{{ product.id }}"
+                  hx-swap="outerHTML"
+                  class="m-0">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <div class="row g-3">
+                    <div class="col-12 col-md-4">
+                        <div class="floating-label-group">
+                            <input type="text" name="name" class="form-control form-control-sm" value="{{ product.name }}" required id="name-{{ product.id }}">
+                            <label for="name-{{ product.id }}" class="floating-label">Product Name</label>
+                        </div>
+                    </div>
+                    <div class="col-12 col-md-3">
+                        <div class="floating-label-group">
+                            <input type="text" name="category_name" list="category-list-{{ product.id }}"
+                                   class="form-control form-control-sm"
+                                   value="{{ product.category.name if product.category else '' }}"
+                                   required placeholder="Category..."
+                                   id="category-{{ product.id }}"
+                                   hx-get="{{ url_for('manage_bp.search_categories') }}"
+                                   hx-trigger="keyup changed delay:200ms"
+                                   hx-target="#category-list-{{ product.id }}">
+                            <label for="category-{{ product.id }}" class="floating-label">Category</label>
+                            <datalist id="category-list-{{ product.id }}">
+                                {% for c in categories %}
+                                <option value="{{ c.name }}">
+                                {% endfor %}
+                            </datalist>
+                        </div>
+                    </div>
+                    <div class="col-12 col-md-2">
+                        <div class="floating-label-group">
+                            <div class="input-group input-group-sm">
+                                <span class="input-group-text">GHS</span>
+                                <input type="number" name="price" step="0.01" class="form-control" value="{{ product.price }}" required id="price-{{ product.id }}">
+                            </div>
+                            <label for="price-{{ product.id }}" class="floating-label">Price</label>
+                        </div>
+                    </div>
+                    <div class="col-12 col-md-2">
+                        <div class="floating-label-group">
+                            <input type="number" name="stock" class="form-control form-control-sm" value="{{ product.stock }}" required id="stock-{{ product.id }}">
+                            <label for="stock-{{ product.id }}" class="floating-label">Stock</label>
+                        </div>
+                    </div>
+                    <div class="col-12 col-md-1">
+                        <div class="form-check form-switch mb-0">
+                            <input class="form-check-input" type="checkbox" name="is_active" id="active-{{ product.id }}" {% if product.is_active %}checked{% endif %}>
+                            <label class="form-check-label small" for="active-{{ product.id }}">Active</label>
+                        </div>
+                    </div>
+                </div>
+                <div class="row g-3 mt-2">
+                    <div class="col-12">
+                        <button type="button" class="btn btn-light btn-sm me-2" onclick="toggleProductEdit({{ product.id }})">
+                            Cancel
+                        </button>
+                        <button type="submit" class="btn btn-primary btn-sm">Save</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </td>
+</tr>
+
+<!-- More Details Row -->
+<tr id="product-more-details-{{ product.id }}" style="display: none;">
+    <td colspan="5" class="p-0">
+        <div class="p-3 bg-white border-top">
+            <button class="btn btn-sm btn-link text-decoration-none p-0 mb-2" onclick="toggleProductMoreDetails({{ product.id }})">
+                <span class="fw-bold">More Details</span>
+                <i class="bi" id="more-details-chevron-{{ product.id }}" class="bi-chevron-down"></i>
             </button>
-            <button class="btn btn-outline-danger"
-                    hx-post="{{ url_for('manage_bp.delete_product', product_id=product.id) }}"
-                    hx-confirm="Are you sure you want to delete '{{ product.name }}'?"
-                    hx-target="#product-row-{{ product.id }}"
-                    hx-swap="outerHTML">
-                <i class="bi bi-trash"></i>
-            </button>
+
+            <div id="more-details-content-{{ product.id }}" style="display: none;">
+                <div class="row g-3">
+                    <div class="col-12 col-md-6">
+                        <div class="floating-label-group">
+                            <textarea class="form-control form-control-sm" rows="3"
+                                      id="description-{{ product.id }}"
+                                      data-autosave-field="description"
+                                      data-product-id="{{ product.id }}">{{ product.description or '' }}</textarea>
+                            <label for="description-{{ product.id }}" class="floating-label">Product Description</label>
+                        </div>
+                    </div>
+                    <div class="col-12 col-md-6">
+                        <div class="specifications-container" x-data="specsData()" x-init="initSpecs({{ product.specifications_dict | tojson }})">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <span class="fw-bold small">Specifications</span>
+                                <button class="btn btn-sm btn-outline-primary py-0" @click="addSpec()">
+                                    <i class="bi bi-plus"></i> Add More
+                                </button>
+                            </div>
+                            <template x-for="(spec, index) in specs" :key="index">
+                                <div class="row g-2 mb-2 spec-row">
+                                    <div class="col-5">
+                                        <div class="floating-label-group">
+                                            <input type="text" class="form-control form-control-sm spec-key"
+                                                   x-model="spec.key"
+                                                   list="spec-key-suggestions"
+                                                   @input="handleKeyInput($event, index)"
+                                                   :id="'spec-key-' + {{ product.id }} + '-' + index">
+                                            <label :for="'spec-key-' + {{ product.id }} + '-' + index" class="floating-label">Key</label>
+                                        </div>
+                                    </div>
+                                    <div class="col-5">
+                                        <div class="floating-label-group">
+                                            <input type="text" class="form-control form-control-sm spec-value"
+                                                   x-model="spec.value"
+                                                   :id="'spec-value-' + {{ product.id }} + '-' + index">
+                                            <label :for="'spec-value-' + {{ product.id }} + '-' + index" class="floating-label">Value</label>
+                                        </div>
+                                    </div>
+                                    <div class="col-2">
+                                        <button class="btn btn-sm btn-outline-danger" @click="removeSpec(index)">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            </template>
+                            <datalist id="spec-key-suggestions">
+                                <option value="Height">
+                                <option value="Width">
+                                <option value="Length">
+                                <option value="Weight">
+                                <option value="Size">
+                                <option value="Dimensions">
+                                <option value="Color">
+                                <option value="Material">
+                                <option value="Capacity">
+                                <option value="Volume">
+                                <option value="Brand">
+                                <option value="Model">
+                                <option value="Power">
+                                <option value="Voltage">
+                                <option value="Storage">
+                                <option value="RAM">
+                                <option value="Screen Size">
+                                <option value="Processor">
+                                <option value="Condition">
+                                <option value="Warranty">
+                            </datalist>
+                            <div class="autosave-note small text-muted mt-2" x-text="saveStatus"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
     </td>
 </tr>

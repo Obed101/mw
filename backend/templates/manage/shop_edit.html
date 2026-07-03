@@ -8,8 +8,9 @@
     </div>
     
     <div class="p-4">
-        <form action="{{ url_for('manage_bp.edit_shop_page') }}" method="POST" class="row g-4">
+        <form action="{{ url_for('manage_bp.edit_shop_page', shop_id=shop.id) }}" method="POST" class="row g-4">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="hidden" name="shop_id" value="{{ shop.id }}">
             
             <div class="col-12 col-md-6">
                 <label class="form-label fw-bold small">Shop Name</label>
@@ -42,10 +43,8 @@
             </div>
 
             <div class="col-12 d-flex justify-content-between align-items-center mt-5 flex-column flex-md-row">
-                <div class="form-check form-switch">
-                    <input class="form-check-input" type="checkbox" name="is_active" id="shop-active" {% if shop.is_active %}checked{% endif %}>
-                    <label class="form-check-label fw-bold" for="shop-active">Keep Shop Active (Public)</label>
-                </div>
+                <!---TODO: Add a button for MORE EDITS ----->
+                <a href="{{ url_for('seller_template_bp.seller_shop', shop_id=shop.id) }}" class="text-gradient btn rounded-pill bg-light border">More Edits</a>
                 <button type="submit" class="btn btn-primary px-4">Save Changes</button>
             </div>
         </form>

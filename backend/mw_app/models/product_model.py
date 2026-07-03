@@ -51,6 +51,7 @@ class Product(db.Model):
     type_ = db.Column(db.String(100), nullable=False, default='product')  # product, service
     description = db.Column(db.Text)
     tags = db.Column(db.Text)  # JSON string or comma-separated tags
+    specifications = db.Column(db.Text)  # JSON string for key-value specification pairs
     price = db.Column(db.Float, nullable=False)
     stock = db.Column(db.Integer, default=0)
     images = db.Column(db.Text)  # Deprecated: legacy JSON/comma-separated URLs
@@ -155,6 +156,20 @@ class Product(db.Model):
     def is_out_of_stock(self):
         """Check if product is out of stock"""
         return self.stock <= 0
+
+    @property
+    def specifications_dict(self):
+        """Parse specifications JSON string into dictionary"""
+        if not self.specifications:
+            return {}
+        try:
+            return json.loads(self.specifications)
+        except (json.JSONDecodeError, TypeError):
+            return {}
+
+    def set_specifications(self, specs_dict):
+        """Set specifications from dictionary"""
+        self.specifications = json.dumps(specs_dict) if specs_dict else None
 
 
 class ProductImage(db.Model):

@@ -63,3 +63,5 @@ uploads/
 backend/mw_app/static/uploads/
 **/uploads/
 *meilisearch.exe
+
+.kilocode/

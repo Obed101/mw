@@ -7,11 +7,12 @@ def get_shop_progress(shop):
     - at least 5 products
     - verification requested (shop.can_request_verification())
     """
-    product_count = shop.products.count() if hasattr(shop, 'products') else 0
+    product_count = len(shop.products) if hasattr(shop, 'products') else 0
+    image_urls = list(shop.image_urls or [])
     progress = {
         'created': bool(shop.id),
-        'image_uploaded': bool(shop.image_urls),
-        'has_logo': bool(getattr(shop, 'logo_url', None)),
+        'front_image_added': bool(image_urls),
+        'logo_added': bool(getattr(shop, 'logo_url', None) or image_urls[1:2]),
         'has_min_products': product_count >= 5,
         'verification_requested': shop.can_request_verification(),
     }

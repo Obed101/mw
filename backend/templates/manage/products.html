@@ -143,6 +143,54 @@
         transition: color 0.15s;
     }
     .img-slot-clear:hover { color: #ef4444; }
+
+    /* Floating Labels */
+    .floating-label-group {
+        position: relative;
+    }
+
+    .floating-label {
+        position: absolute;
+        top: 0;
+        left: 0.75rem;
+        padding: 0 0.25rem;
+        font-size: 0.75rem;
+        color: #6b7280;
+        background: #fff;
+        transition: all 0.2s ease;
+        pointer-events: none;
+        transform: translateY(-50%);
+        opacity: 0;
+    }
+
+    .floating-label-group input:focus + .floating-label,
+    .floating-label-group input:not(:placeholder-shown) + .floating-label,
+    .floating-label-group textarea:focus + .floating-label,
+    .floating-label-group textarea:not(:placeholder-shown) + .floating-label {
+        opacity: 1;
+        top: 0;
+        transform: translateY(-50%);
+    }
+
+    .floating-label-group input::placeholder,
+    .floating-label-group textarea::placeholder {
+        opacity: 1;
+    }
+
+    .floating-label-group input:focus::placeholder,
+    .floating-label-group textarea:focus::placeholder {
+        opacity: 0;
+    }
+
+    /* Specifications */
+    .spec-row {
+        transition: all 0.2s ease;
+    }
+
+    .spec-row:hover {
+        background: #f9fafb;
+        border-radius: 8px;
+    }
 </style>
 {% endblock %}
 
@@ -170,9 +218,14 @@
                 <option value="out">Out of Stock</option>
             </select>
         </div>
-        <button class="btn btn-primary btn-sm" onclick="document.getElementById('add-product-panel').classList.toggle('show')">
-            <i class="bi bi-plus-lg me-1"></i>Add Product
-        </button>
+        <div class="d-flex gap-2 flex-wrap">
+            <button class="btn btn-primary btn-sm" onclick="document.getElementById('add-product-panel').classList.toggle('show')">
+                <i class="bi bi-plus-lg me-1"></i>Add Product
+            </button>
+            <a href="{{ url_for('main_bp.add_shop', new=1) }}" class="btn btn-outline-success btn-sm">
+                <i class="bi bi-shop-window me-1"></i>Add New Shop
+            </a>
+        </div>
     </div>
 
     <!-- Add Product Panel (HTMX Slide-in/Toggle) -->
@@ -211,6 +264,37 @@
 {% endblock %}
 
 {% block manage_scripts %}
+<script>
+function toggleProductRow(productId) {
+    const actionsRow = document.getElementById('product-actions-' + productId);
+    const moreDetailsRow = document.getElementById('product-more-details-' + productId);
+    if (actionsRow) {
+        actionsRow.style.display = actionsRow.style.display === 'none' ? '' : 'none';
+    }
+    if (moreDetailsRow) {
+        moreDetailsRow.style.display = 'none';
+    }
+}
+
+function toggleProductEdit(productId) {
+    const editRow = document.getElementById('product-edit-' + productId);
+    if (editRow) {
+        editRow.style.display = editRow.style.display === 'none' ? '' : 'none';
+    }
+}
+
+function toggleProductMoreDetails(productId) {
+    const content = document.getElementById('more-details-content-' + productId);
+    const chevron = document.getElementById('more-details-chevron-' + productId);
+    if (content) {
+        content.style.display = content.style.display === 'none' ? '' : 'none';
+    }
+    if (chevron) {
+        chevron.className = content.style.display === 'none' ? 'bi-chevron-down' : 'bi-chevron-up';
+    }
+}
+</script>
+
 <!-- Image Gallery Modal -->
 <div class="modal fade" id="imageModal" tabindex="-1" aria-labelledby="imageModalLabel" aria-hidden="true">
   <div class="modal-dialog modal-dialog-centered" style="max-width:520px">
@@ -271,6 +355,81 @@
 </div>
 
 <script>
+// Alpine.js component for specifications
+function specsData() {
+    return {
+        specs: [],
+        saveStatus: '',
+        saveTimer: null,
+        productId: null,
+
+        initSpecs(initialSpecs) {
+            this.specs = Object.entries(initialSpecs || {}).map(([key, value]) => ({ key, value }));
+            if (this.specs.length === 0) {
+                this.specs = [{ key: '', value: '' }];
+            }
+        },
+
+        addSpec() {
+            this.specs.push({ key: '', value: '' });
+        },
+
+        removeSpec(index) {
+            if (this.specs.length > 1) {
+                this.specs.splice(index, 1);
+                this.scheduleSave();
+            }
+        },
+
+        handleKeyInput(event, index) {
+            this.scheduleSave();
+        },
+
+        scheduleSave() {
+            if (this.saveTimer) {
+                clearTimeout(this.saveTimer);
+            }
+            this.saveStatus = 'Saving...';
+            this.saveTimer = setTimeout(() => this.saveSpecs(), 5000);
+        },
+
+        async saveSpecs() {
+            const container = this.$el.closest('.specifications-container');
+            const row = container.closest('tr');
+            const productId = row.id.replace('product-row-', '');
+            
+            const specsDict = {};
+            this.specs.forEach(spec => {
+                if (spec.value) {
+                    const key = spec.key || 'Specification';
+                    specsDict[key] = spec.value;
+                }
+            });
+
+            try {
+                const response = await fetch(`/manage/products/${productId}/specifications`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').content,
+                    },
+                    credentials: 'same-origin',
+                    body: JSON.stringify({ specifications: specsDict }),
+                });
+                const data = await response.json();
+                if (data.success) {
+                    this.saveStatus = 'Saved';
+                    setTimeout(() => this.saveStatus = '', 2000);
+                } else {
+                    this.saveStatus = 'Save failed';
+                }
+            } catch (error) {
+                this.saveStatus = 'Error saving';
+            }
+        }
+    };
+}
+
 (function () {
     let _productId  = null;
     let _rowSelector = null;
@@ -430,6 +589,61 @@
             spinner.classList.add('d-none');
         }
     };
+
+    window.duplicateProduct = async function (productId) {
+        const res = await fetch(`/api/seller/products/${productId}/duplicate`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+            },
+            credentials: 'same-origin',
+            body: JSON.stringify({}),
+        });
+        const data = await res.json();
+        if (!data.success) {
+            alert(data.message || 'Could not duplicate product.');
+            return;
+        }
+        if (window.htmx) {
+            htmx.trigger(document.body, 'product-added');
+        } else {
+            window.location.reload();
+        }
+    };
+
+    // Autosave for description field
+    const descriptionAutosaveTimers = {};
+    document.addEventListener('input', function(e) {
+        if (e.target.matches('[data-autosave-field="description"]')) {
+            const productId = e.target.dataset.productId;
+            const value = e.target.value;
+            
+            if (descriptionAutosaveTimers[productId]) {
+                clearTimeout(descriptionAutosaveTimers[productId]);
+            }
+            
+            descriptionAutosaveTimers[productId] = setTimeout(async () => {
+                try {
+                    const response = await fetch(`/manage/products/${productId}/description`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').content,
+                        },
+                        credentials: 'same-origin',
+                        body: JSON.stringify({ description: value }),
+                    });
+                    const data = await response.json();
+                    if (!data.success) {
+                        console.error('Failed to save description:', data.message);
+                    }
+                } catch (error) {
+                    console.error('Error saving description:', error);
+                }
+            }, 5000);
+        }
+    });
 }());
 </script>
 {% endblock %}
