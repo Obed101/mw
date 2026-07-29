@@ -1,0 +1,272 @@
+{% extends 'base.html' %}
+
+{% block styles %}
+<style>
+    .upload-shell {
+        min-height: calc(100vh - 76px);
+        background:
+            radial-gradient(circle at top left, rgba(13, 110, 253, 0.12), transparent 28%),
+            radial-gradient(circle at top right, rgba(32, 201, 151, 0.12), transparent 24%),
+            linear-gradient(180deg, #f8fafc 0%, #eef2ff 100%);
+    }
+    .upload-hero {
+        border: 1px solid rgba(148, 163, 184, 0.25);
+        border-radius: 24px;
+        background: rgba(255, 255, 255, 0.88);
+        box-shadow: 0 20px 50px rgba(15, 23, 42, 0.08);
+        backdrop-filter: blur(10px);
+    }
+    .upload-dropzone {
+        border: 2px dashed #94a3b8;
+        border-radius: 20px;
+        background: linear-gradient(180deg, rgba(255,255,255,0.96), rgba(248,250,252,0.96));
+        transition: all 0.2s ease;
+        cursor: pointer;
+    }
+    .upload-dropzone:hover,
+    .upload-dropzone.dragover {
+        border-color: #0d6efd;
+        box-shadow: 0 0 0 4px rgba(13, 110, 253, 0.12);
+        transform: translateY(-1px);
+    }
+    .upload-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        border-radius: 999px;
+        padding: 0.35rem 0.8rem;
+        background: #e0f2fe;
+        color: #075985;
+        font-size: 0.8rem;
+        font-weight: 700;
+    }
+    .upload-card {
+        border: 1px solid rgba(148, 163, 184, 0.2);
+        border-radius: 18px;
+        background: rgba(255,255,255,0.94);
+        box-shadow: 0 8px 24px rgba(15, 23, 42, 0.06);
+    }
+    .preview-table thead th {
+        background: #f8fafc;
+        font-size: 0.78rem;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        color: #475569;
+        border-bottom: 1px solid #e2e8f0;
+    }
+    .preview-table td {
+        vertical-align: top;
+        font-size: 0.9rem;
+    }
+    .muted-code {
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+        font-size: 0.8rem;
+        color: #475569;
+    }
+    .row-chip {
+        display: inline-flex;
+        align-items: center;
+        border-radius: 999px;
+        background: #f1f5f9;
+        color: #334155;
+        padding: 0.25rem 0.5rem;
+        font-size: 0.78rem;
+        margin: 0 0.25rem 0.25rem 0;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="upload-shell py-4 py-lg-5">
+    <div class="container">
+        <div class="upload-hero p-3 p-lg-4 mb-4">
+            <div class="row g-4 align-items-center">
+                <div class="col-12 col-lg-7">
+                    <span class="upload-badge mb-3">
+                        <i class="bi bi-cloud-arrow-up"></i>
+                        IDS CSV Upload
+                    </span>
+                    <h1 class="display-6 fw-bold mb-3">Upload your Instant Data Scraper export</h1>
+                    <p class="text-muted mb-3">
+                        This uploader accepts the raw Google Maps CSV from IDS, runs the row-level parser,
+                        and gives you a clean preview without depending on the messy column names.
+                    </p>
+                    <div class="d-flex flex-wrap gap-2">
+                        <span class="row-chip"><i class="bi bi-check2-circle me-1"></i>Content-based parsing</span>
+                        <span class="row-chip"><i class="bi bi-check2-circle me-1"></i>Phone and plus code detection</span>
+                        <span class="row-chip"><i class="bi bi-check2-circle me-1"></i>Preview before import</span>
+                    </div>
+                </div>
+                <div class="col-12 col-lg-5">
+                    <form method="POST" enctype="multipart/form-data" id="ids-upload-form" class="upload-card p-3 p-lg-4">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <label for="files" class="form-label fw-bold">Choose CSV file(s)</label>
+                        <div class="upload-dropzone p-4 text-center" id="upload-dropzone">
+                            <input type="file"
+                                   name="files"
+                                   id="files"
+                                   class="d-none"
+                                   accept=".csv,text/csv"
+                                   multiple>
+                            <div class="mb-2">
+                                <i class="bi bi-filetype-csv fs-1 text-primary"></i>
+                            </div>
+                            <h5 class="fw-semibold mb-1">Drop CSV files here</h5>
+                            <p class="text-muted small mb-0">or click to browse from your device</p>
+                        </div>
+                        <div class="mt-3 small text-muted">
+                            Best results come from the original IDS export. The parser ignores header names and inspects every cell.
+                        </div>
+                        <div class="mt-3 d-flex flex-column flex-sm-row justify-content-between align-items-start align-items-sm-center gap-2">
+                            <div id="selected-files" class="small text-muted">No file selected yet.</div>
+                            <button type="submit" class="btn btn-primary px-4">
+                                <i class="bi bi-upload me-1"></i>Parse CSV
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        {% if upload_errors %}
+        <div class="alert alert-danger border-0 shadow-sm">
+            <div class="fw-bold mb-2">Upload issue</div>
+            <ul class="mb-0">
+                {% for error in upload_errors %}
+                <li>{{ error }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+        {% endif %}
+
+        {% if upload_reports %}
+        <div class="d-grid gap-4">
+            {% for report in upload_reports %}
+            <div class="upload-card p-3 p-lg-4">
+                <div class="d-flex justify-content-between align-items-start flex-column flex-md-row gap-2 mb-3">
+                    <div>
+                        <h4 class="fw-bold mb-1">{{ report.filename }}</h4>
+                        <div class="text-muted small">
+                            Saved to <span class="muted-code">{{ report.stored_name }}</span>
+                        </div>
+                    </div>
+                    <div class="d-flex flex-wrap gap-2">
+                        <span class="badge text-bg-primary">Rows: {{ report.total_rows }}</span>
+                        <span class="badge text-bg-warning">Warnings: {{ report.warning_count }}</span>
+                        <a href="{{ report.stored_url }}" class="btn btn-outline-secondary btn-sm" target="_blank" rel="noreferrer">
+                            <i class="bi bi-download me-1"></i>Original CSV
+                        </a>
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <div class="small text-muted mb-2">Detected source headers</div>
+                    <div class="d-flex flex-wrap gap-2">
+                        {% for header in report.headers[:10] %}
+                        <span class="row-chip">{{ header }}</span>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <div class="table-responsive">
+                    <table class="table table-sm align-middle preview-table mb-0">
+                        <thead>
+                            <tr>
+                                <th style="width: 70px;">Row</th>
+                                <th>Name</th>
+                                <th>Phone</th>
+                                <th>Address</th>
+                                <th>Plus Code</th>
+                                <th>Rating</th>
+                                <th>Warnings</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for row in report.preview_rows %}
+                            {% set data = row.data %}
+                            <tr>
+                                <td class="text-muted">{{ row.row_number }}</td>
+                                <td>{{ data.name or 'Not found' }}</td>
+                                <td>{{ data.phone or 'Not found' }}</td>
+                                <td>{{ data.address or data.landmark or 'Not found' }}</td>
+                                <td>{{ data.plus_code or 'Not found' }}</td>
+                                <td>{{ data.rating if data.rating is not none else 'Not found' }}</td>
+                                <td>
+                                    {% if data.warnings %}
+                                        <div class="d-flex flex-wrap gap-1">
+                                            {% for warning in data.warnings[:3] %}
+                                            <span class="badge text-bg-light border">{{ warning }}</span>
+                                            {% endfor %}
+                                        </div>
+                                    {% else %}
+                                        <span class="text-success small fw-semibold">Clean</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="upload-card p-4 text-center text-muted">
+            <i class="bi bi-inboxes fs-1 d-block mb-2 text-primary"></i>
+            Upload a CSV to see the cleaned preview here.
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script>
+(() => {
+    const dropzone = document.getElementById('upload-dropzone');
+    const input = document.getElementById('files');
+    const label = document.getElementById('selected-files');
+
+    if (!dropzone || !input || !label) {
+        return;
+    }
+
+    const renderFileList = () => {
+        const files = Array.from(input.files || []);
+        if (!files.length) {
+            label.textContent = 'No file selected yet.';
+            return;
+        }
+        label.textContent = files.map(file => file.name).join(', ');
+    };
+
+    dropzone.addEventListener('click', () => input.click());
+
+    ['dragenter', 'dragover'].forEach(eventName => {
+        dropzone.addEventListener(eventName, event => {
+            event.preventDefault();
+            event.stopPropagation();
+            dropzone.classList.add('dragover');
+        });
+    });
+
+    ['dragleave', 'drop'].forEach(eventName => {
+        dropzone.addEventListener(eventName, event => {
+            event.preventDefault();
+            event.stopPropagation();
+            dropzone.classList.remove('dragover');
+        });
+    });
+
+    dropzone.addEventListener('drop', event => {
+        if (event.dataTransfer.files && event.dataTransfer.files.length) {
+            input.files = event.dataTransfer.files;
+            renderFileList();
+        }
+    });
+
+    input.addEventListener('change', renderFileList);
+})();
+</script>
+{% endblock %}

@@ -1,4 +1,6 @@
 # Template routes for HTMX frontend
+import csv
+import io
 from ..services import email_service
 from datetime import timedelta
 from ..services.analytics_service import track_event
@@ -17,6 +19,7 @@ from werkzeug.utils import secure_filename
 from ..forms import LoginForm, RegistrationForm
 from ..services.geocoding_service import reverse_geocode
 from ..utils.location import get_user_location, haversine_distance_expr, NEAR_YOU_KM
+from ..utils.ids_parser import IDSParser
 from ..models import (
     Category,
     Product,
@@ -1094,10 +1097,96 @@ def profile():
                          owned_shops=owned_shops)
 
 # Dropbox routes (main)
-@main_bp.route('/dropbox')
+def _parse_ids_upload(file_storage):
+    """Parse one uploaded CSV file and return a preview report."""
+
+    filename = secure_filename(file_storage.filename or '').strip()
+    if not filename:
+        raise ValueError('Please choose a CSV file before uploading.')
+    if Path(filename).suffix.lower() != '.csv':
+        raise ValueError(f"'{filename}' is not a CSV file.")
+
+    raw_bytes = file_storage.read()
+    if not raw_bytes:
+        raise ValueError(f"'{filename}' is empty.")
+
+    try:
+        text = raw_bytes.decode('utf-8-sig')
+    except UnicodeDecodeError:
+        text = raw_bytes.decode('latin-1')
+
+    sample = text[:4096]
+    try:
+        dialect = csv.Sniffer().sniff(sample, delimiters=',;\t|')
+    except csv.Error:
+        dialect = csv.get_dialect('excel')
+
+    parser = IDSParser()
+    parsed_rows = []
+    non_empty_rows = 0
+
+    reader = csv.reader(io.StringIO(text), dialect)
+    headers = next(reader, None)
+    if headers is None:
+        raise ValueError(f"'{filename}' does not contain any rows.")
+
+    for row_number, row in enumerate(reader, start=2):
+        if not any(str(cell or '').strip() for cell in row):
+            continue
+
+        non_empty_rows += 1
+        parsed = parser.parse_row(row)
+        parsed_rows.append({
+            'row_number': row_number,
+            'raw_cells': len(row),
+            'data': parsed,
+        })
+
+    upload_dir = Path(current_app.static_folder) / 'uploads' / 'imports'
+    upload_dir.mkdir(parents=True, exist_ok=True)
+    stored_name = f"ids-{uuid4().hex}-{filename}"
+    upload_path = upload_dir / stored_name
+    upload_path.write_bytes(raw_bytes)
+
+    return {
+        'filename': filename,
+        'stored_name': stored_name,
+        'stored_url': url_for('static', filename=f'uploads/imports/{stored_name}'),
+        'headers': headers,
+        'total_rows': non_empty_rows,
+        'preview_rows': parsed_rows[:10],
+        'parsed_rows': parsed_rows,
+        'warning_count': sum(len(row['data'].get('warnings') or []) for row in parsed_rows),
+    }
+
+
+@main_bp.route('/dropbox', methods=['GET', 'POST'])
+@login_required
 def dropbox():
-    """Dropbox page"""
-    return render_template('manage/dropbox.html')
+    """CSV upload page for IDS exports."""
+
+    upload_reports = []
+    errors = []
+
+    if request.method == 'POST':
+        files = [file for file in request.files.getlist('files') if file and file.filename]
+        if not files:
+            errors.append('Choose at least one CSV file to upload.')
+        else:
+            for file_storage in files:
+                try:
+                    upload_reports.append(_parse_ids_upload(file_storage))
+                except ValueError as exc:
+                    errors.append(str(exc))
+                except Exception as exc:
+                    current_app.logger.exception('Failed to parse IDS upload')
+                    errors.append(f"Could not process '{secure_filename(file_storage.filename or 'upload.csv')}' ({exc}).")
+
+    return render_template(
+        'manage/dropbox.html',
+        upload_reports=upload_reports,
+        upload_errors=errors,
+    )
 
 @auth_bp.route('/register', methods=['POST'])
 def register_post():

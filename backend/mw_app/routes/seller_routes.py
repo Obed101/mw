@@ -2305,13 +2305,16 @@ def unsuccessful_searches(shop_id):
 
 @seller_bp.route('/shop/<int:shop_id>/claim', methods=['POST'])
 def claim_shop(shop_id):
-    """Claim an unclaimed shop for the current user."""
+    """Check if shop is not claimed, verify phone and email to claim shop"""
     if not current_user.is_authenticated:
         return _json_error('Authentication required', 401)
 
     shop = Shop.query.get_or_404(shop_id)
     if shop.is_claimed and shop.owner_id != current_user.id:
         return jsonify({'success': False, 'message': 'This shop has already been claimed'}), 400
+
+    if shop.owner_id == current_user.id:
+        return jsonify({'success': True, 'message': 'You already own this shop'}), 200
 
     user = current_user
     previous_owner_id = shop.owner_id

@@ -67,9 +67,20 @@ class Shop(db.Model):
     ai_job_status = db.Column(db.String(20), default='idle')  # idle, running, failed
     
     # Foreign key: Shop is owned by a User (seller)
-    owner_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
+    owner_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=True)
     is_claimed = db.Column(db.Boolean, default=False, server_default='0', nullable=False)
     creator_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=True)
+    
+    # Import / source fields
+    source = db.Column(db.String(20), default="user", nullable=False)
+    source_reference = db.Column(db.String(255))
+    import_batch = db.Column(db.String(100))
+    data_quality_score = db.Column(db.SmallInteger, default=0)
+    claimed_at = db.Column(db.DateTime)
+    google_category = db.Column(db.String(100))
+    plus_code = db.Column(db.String(30))
+    landmark = db.Column(db.String(255))
+    google_image_url = db.Column(db.String(500))
     
     # Explicit relationships to avoid AmbiguousForeignKeysError
     owner = db.relationship(
