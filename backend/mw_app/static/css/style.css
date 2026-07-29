@@ -40,10 +40,11 @@ body {
 html,
 body {
     height: 100%;
+    padding: 0;
 }
 
 body {
-    background-color: #f9fafb;
+    background-color: #e1c8f65f;
     color: var(--text-dark);
 }
 

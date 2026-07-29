@@ -1,4 +1,6 @@
 # Template routes for HTMX frontend
+from ..services import email_service
+from datetime import timedelta
 from ..services.analytics_service import track_event
 import json
 from pathlib import Path
@@ -1091,6 +1093,12 @@ def profile():
                          recent_activity=recent_activity,
                          owned_shops=owned_shops)
 
+# Dropbox routes (main)
+@main_bp.route('/dropbox')
+def dropbox():
+    """Dropbox page"""
+    return render_template('manage/dropbox.html')
+
 @auth_bp.route('/register', methods=['POST'])
 def register_post():
     """Handle registration - returns redirect or error"""
@@ -1672,4 +1680,62 @@ def followed_shops():
     """Redirect followed shops to unified wishlist page"""
     return redirect(url_for('buyer_bp.wishlist'))
 
-# Old admin routes removed in favor of mw_admin_bp
+# Email Routes (Admin Test Utilities)
+
+@admin_bp.route("/test/email", methods=["POST"])
+@admin_required
+def admin_test_email():
+    """Admin test endpoint: trigger any available test email to the current admin."""
+    email_type = request.form.get("email_type", "").strip()
+    user = current_user
+
+    if email_type == "verification":
+        verification_code = str(secrets.randbelow(900000) + 100000)
+        # Temporarily store on user object for the template (not persisted to DB for test)
+        user.email_verification_code = verification_code
+        user.email_verification_expires = datetime.utcnow() + timedelta(minutes=15)
+        db.session.commit()
+        success, message = email_service.send_email_verification(user, verification_code)
+
+    elif email_type == "welcome":
+        success, message = email_service.send_welcome_email(user)
+
+    else:
+        return jsonify({"success": False, "message": f"Unknown email type: '{email_type}'"}), 400
+
+    status_code = 200 if success else 500
+    return jsonify({"success": success, "message": message}), status_code
+
+
+# Legacy routes (kept for backward compatibility, now properly guarded)
+@main_bp.route("/verify/email", methods=["GET", "POST"])
+@login_required
+def verify_email():
+    """Verify user email address"""
+    user = current_user
+
+    verification_code = str(secrets.randbelow(900000) + 100000)
+    user.email_verification_code = verification_code
+    user.email_verification_expires = datetime.utcnow() + timedelta(minutes=15)
+    db.session.commit()
+
+    success, message = email_service.send_email_verification(user, verification_code)
+    if success:
+        flash("Verification email sent! Please check your inbox.", "success")
+    else:
+        flash(f"Failed to send verification email: {message}", "error")
+    return redirect(url_for("main_bp.index"))
+
+
+@main_bp.route("/welcome", methods=["GET"])
+@login_required
+def welcome_email():
+    """Send welcome email"""
+    user = current_user
+    success, message = email_service.send_welcome_email(user)
+    if success:
+        flash("Welcome email sent!", "success")
+    else:
+        flash(f"Failed to send welcome email: {message}", "error")
+    return redirect(url_for("main_bp.index"))
+

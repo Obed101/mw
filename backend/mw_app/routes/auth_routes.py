@@ -1,3 +1,4 @@
+from ..services.email_service import send_welcome_email
 from flask import request, jsonify, url_for, redirect, flash, Blueprint, session
 from flask_jwt_extended import create_access_token, create_refresh_token, jwt_required, get_jwt_identity, get_jwt
 from flask_login import login_user, logout_user, current_user
@@ -125,6 +126,8 @@ def register():
         access_token = create_access_token(identity=user.id)
         refresh_token = create_refresh_token(identity=user.id)
         
+        send_welcome_email(user)
+
         # Handle form vs API responses
         if request.is_json:
             return jsonify({

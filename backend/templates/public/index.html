@@ -2,22 +2,22 @@
 
 {% block title %}Market Window - Your Trusted Marketplace{% endblock %}
 
-{% block head %}
+{% block styles %}
 <style>
 .hero-section {
     position: relative;
-    overflow: hidden;
-    background: #081321;
+    /* overflow: ; */
+    background: #32124e;
 }
 
 .hero-bg {
-    position: fixed;
+    position: absolute;
     top: 0;
     left: 0;
     right: 0;
     bottom: 0;
     overflow: hidden;
-    z-index: -1;
+    z-index: 1;
     pointer-events: none;
 }
 
@@ -45,51 +45,50 @@
     position: absolute;
     width: 900px;
     height: 900px;
-    border-radius: 50%;
+    border-radius: 20%;
     filter: blur(120px);
-    opacity: .78;
+    opacity: .88;
     mix-blend-mode: screen;
     will-change: transform, background;
     animation: auroraFloat 32s ease-in-out infinite;
 }
 
 .aurora-1 {
-    top: -250px;
-    left: -180px;
-    background: linear-gradient(45deg, #4F7EFF, #8B5CF6, #3DD9FF);
-    animation-duration: 28s;
+    top: 10%;
+    left: 0px;
+    background: linear-gradient(45deg, #9438eb, #3636f9, #983dff);
+    animation-duration: 12s;
 }
 
 .aurora-2 {
-    bottom: -280px;
-    right: -180px;
-    background: linear-gradient(130deg, #3DD9FF, #4F7EFF, #7C5CFF);
-    animation-duration: 36s;
+    bottom: 0%;
+    right: 0px;
+    background: linear-gradient(130deg, #1027cf, #942f5b, #d95cff);
+    animation-duration: 10s;
     animation-direction: reverse;
 }
 
 .aurora-3 {
     top: 10%;
     left: 35%;
-    background: linear-gradient(220deg, #4ADE80, #3DD9FF, #8B5CF6);
-    animation-duration: 42s;
+    background: linear-gradient(220deg, #0205cf, #3DD9FF, #a41ff1);
+    animation-duration: 12s;
 }
 
 @keyframes auroraFloat {
     0% {
         transform: translate(0px, 0px) rotate(0deg) scale(1);
+        
     }
 
     20% {
         transform: translate(70px, -50px) rotate(60deg) scale(1.06);
+        opacity: .85;
     }
 
     40% {
-        transform: translate(-60px, 40px) rotate(150deg) scale(.96);
-    }
-
-    60% {
-        transform: translate(90px, 60px) rotate(240deg) scale(1.10);
+        transform: translate(60px, 40px) rotate(200deg) scale(.56);
+        opacity: .95;
     }
 
     80% {
@@ -97,27 +96,27 @@
     }
 
     100% {
-        transform: translate(0px, 0px) rotate(360deg) scale(1);
+        transform: translate(0px, 0px) rotate(360deg) scale(0.7);
     }
 }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="hero-bg">
-    <div class="aurora aurora-1"></div>
-    <div class="aurora aurora-2"></div>
-    <div class="aurora aurora-3"></div>
-</div>
 <section class="hero-section py-5">
+    <div class="hero-bg">
+        <div class="aurora aurora-1"></div>
+        <div class="aurora aurora-2"></div>
+        <div class="aurora aurora-3"></div>
+    </div>
     <div class="container-fluid px-3 px-lg-4 position-relative z-1">
         <div class="row align-items-center min-vh-50 g-4">
             <div class="col-lg-7 hero-content">
                 <h1 class="display-5 fw-bold text-white mb-3">
-                    More Than Window Shopping
+                    Explore Stores Around You From Home
                 </h1>
                 <p class="lead text-white mb-4">
-                    Compare prices, find shop directions and contact info, check which shops have what you're looking for.
+                    Get directions, contacts, product stock, prices, and more
                 </p>
                 <div class="search-wrapper position-relative mt-4" style="z-index: 1050;">
                     <div class="input-group input-group-lg shadow-sm bg-opacity-75 rounded-pill overflow-hidden bg-white p-1">
@@ -127,7 +126,7 @@
                         <input 
                             type="search" 
                             class="form-control border-0 shadow-none bg-transparent py-3 fs-5" 
-                            placeholder="Start searching..."
+                            placeholder="Search here..."
                             name="q"
                             autocomplete="off"
                             hx-get="{{ url_for('buyer_bp.global_search') }}"
@@ -393,6 +392,27 @@
             </div>
             {% endfor %}
         </div>
+    </div>
+</section>
+
+<!-- Infinite Scroll Feed -->
+<section class="py-5 bg-light" data-track-section="discover_more">
+    <div class="container-fluid px-3 px-lg-4">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h3 class="fw-bold mb-0"><i class="bi bi-infinity text-primary me-2"></i>Discover More</h3>
+        </div>
+        <div class="market-grid market-grid-products" id="products-container"
+             hx-get="{{ url_for('buyer_bp.browse_products', page=1) }}"
+             hx-trigger="load"
+             hx-swap="innerHTML">
+            <div class="text-center py-5 w-100" style="grid-column: 1 / -1;">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+                <p class="text-muted mt-2 mb-0">Loading products...</p>
+            </div>
+        </div>
+        <div id="product-load-more-container"></div>
     </div>
 </section>
 {% endblock %}

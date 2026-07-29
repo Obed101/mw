@@ -2,6 +2,10 @@ from flask import Flask
 from flask_migrate import Migrate
 from flask_wtf.csrf import CSRFProtect
 from .extensions import db, jwt, cors, search, login_manager, session, oauth
+from flask_mail import Mail
+
+mail = Mail()
+
 
 def create_app():
     import os
@@ -13,10 +17,11 @@ def create_app():
     
     # Configure CSRF protection
     csrf = CSRFProtect(app)
-    
-    # Initialize session & oauth
+
+    # Initialize session & oauth & flask mail
     session.init_app(app)
     oauth.init_app(app)
+    mail.init_app(app)
 
     oauth.register(
         name='google',
@@ -27,7 +32,6 @@ def create_app():
             'scope': 'openid email profile'
         }
     )
-
 
     
     # Initialize Search Service

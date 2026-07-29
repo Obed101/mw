@@ -44,16 +44,113 @@
     text-transform: uppercase;
     letter-spacing: 0.05em;
   }
+  /* Test Lab styles */
+  .testlab-card {
+    background: var(--admin-surface);
+    border: 1px solid var(--admin-border);
+    border-radius: 12px;
+    padding: 1.5rem;
+    transition: border-color .2s, box-shadow .2s;
+  }
+  .testlab-card:hover {
+    border-color: rgba(99, 102, 241, 0.35);
+    box-shadow: 0 4px 20px rgba(99,102,241,.08);
+  }
+  .testlab-card-icon {
+    width: 48px; height: 48px;
+    border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.4rem; flex-shrink: 0;
+    background: rgba(99,102,241,.12);
+    color: var(--admin-accent);
+  }
+  .testlab-badge {
+    font-size: .65rem; font-weight: 700;
+    padding: .2rem .55rem;
+    border-radius: 999px;
+    background: rgba(99,102,241,.15);
+    color: var(--admin-accent);
+    border: 1px solid rgba(99,102,241,.25);
+    text-transform: uppercase; letter-spacing: .05em;
+  }
+  .test-btn {
+    display: inline-flex; align-items: center; gap: .5rem;
+    padding: .55rem 1.2rem;
+    border-radius: 8px;
+    font-size: .85rem; font-weight: 600;
+    cursor: pointer; border: none;
+    background: linear-gradient(135deg, var(--admin-accent), var(--admin-accent2));
+    color: #fff;
+    transition: opacity .15s, transform .1s;
+  }
+  .test-btn:hover { opacity: .88; transform: translateY(-1px); }
+  .test-btn:active { transform: scale(.97); }
+  .test-btn:disabled { opacity: .5; cursor: not-allowed; transform: none; }
+  .test-result {
+    margin-top: .75rem;
+    padding: .6rem 1rem;
+    border-radius: 8px;
+    font-size: .82rem;
+    display: none;
+    align-items: center;
+    gap: .5rem;
+  }
+  .test-result.success { background: rgba(16,185,129,.12); color: #10b981; border: 1px solid rgba(16,185,129,.2); }
+  .test-result.error   { background: rgba(239,68,68,.12);  color: #ef4444; border: 1px solid rgba(239,68,68,.2); }
+  .test-result.loading { background: rgba(99,102,241,.1);  color: var(--admin-muted); border: 1px solid rgba(99,102,241,.15); }
+  /* Page tabs */
+  .page-tabs {
+    display: flex;
+    gap: .25rem;
+    background: var(--admin-surface);
+    border: 1px solid var(--admin-border);
+    border-radius: 10px;
+    padding: .35rem;
+    width: fit-content;
+    margin-bottom: 1.5rem;
+  }
+  .page-tab {
+    padding: .45rem 1.1rem;
+    border-radius: 7px;
+    font-size: .85rem; font-weight: 600;
+    cursor: pointer;
+    color: var(--admin-muted);
+    border: none; background: transparent;
+    transition: all .15s;
+    display: flex; align-items: center; gap: .4rem;
+  }
+  .page-tab.active {
+    background: var(--admin-accent);
+    color: #fff;
+    box-shadow: 0 2px 8px rgba(99,102,241,.3);
+  }
+  .page-tab:not(.active):hover { color: var(--admin-text); background: rgba(255,255,255,.04); }
+  .tab-pane { display: none; }
+  .tab-pane.active { display: block; }
 </style>
 {% endblock %}
 
 {% block admin_content %}
 <div class="mb-4 d-flex justify-content-between align-items-center">
   <div>
-    <h5 class="fw-bold mb-1" style="color:var(--admin-text)">System Analytics & Insights</h5>
+    <h5 class="fw-bold mb-1" style="color:var(--admin-text)">System Analytics &amp; Insights</h5>
     <p style="color:var(--admin-muted);font-size:.875rem">Behavioral tracking data, trends, and commercial funnel analysis.</p>
   </div>
 </div>
+
+<!-- Page Tabs -->
+<div class="page-tabs" role="tablist">
+  <button class="page-tab active" id="tab-analytics" onclick="switchTab('analytics')" aria-selected="true">
+    <i class="bi bi-graph-up"></i> Analytics
+  </button>
+  <button class="page-tab" id="tab-testlab" onclick="switchTab('testlab')" aria-selected="false">
+    <i class="bi bi-flask"></i> Test Lab
+    <span class="testlab-badge">DEV</span>
+  </button>
+</div>
+
+<!-- Analytics Pane -->
+<div class="tab-pane active" id="pane-analytics">
 
 <!-- Quick Statistics Overview -->
 <div class="row g-3 mb-4">
@@ -299,6 +396,71 @@
     </div>
   </div>
 </div>
+</div><!-- /pane-analytics -->
+
+<!-- Test Lab Pane -->
+<div class="tab-pane" id="pane-testlab">
+
+  <div class="mb-3" style="color:var(--admin-muted);font-size:.85rem;">
+    <i class="bi bi-info-circle me-1 text-primary"></i>
+    All test actions send outputs to <strong style="color:var(--admin-text)">your admin email ({{ current_user.email }})</strong>.
+    No end-users are affected.
+  </div>
+
+  <!-- Email Tests -->
+  <div class="mb-3" style="font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--admin-muted);">
+    <i class="bi bi-envelope-fill me-1"></i> Email Functions
+  </div>
+
+  <div class="row g-3">
+
+    <!-- Verification Email -->
+    <div class="col-md-6 col-lg-4">
+      <div class="testlab-card">
+        <div class="d-flex align-items-center gap-3 mb-3">
+          <div class="testlab-card-icon">
+            <i class="bi bi-shield-check"></i>
+          </div>
+          <div>
+            <div class="fw-bold" style="color:var(--admin-text);font-size:.95rem;">Verification Email</div>
+            <div style="font-size:.78rem;color:var(--admin-muted);">Sends a 6-digit OTP code</div>
+          </div>
+        </div>
+        <p style="font-size:.82rem;color:var(--admin-muted);margin-bottom:1rem;">
+          Tests the account email verification flow. A random code is generated and mailed to your inbox.
+        </p>
+        <button class="test-btn" id="btn-test-verification" onclick="sendTestEmail('verification', this)">
+          <i class="bi bi-send"></i> Send Test
+        </button>
+        <div class="test-result" id="result-verification"></div>
+      </div>
+    </div>
+
+    <!-- Welcome Email -->
+    <div class="col-md-6 col-lg-4">
+      <div class="testlab-card">
+        <div class="d-flex align-items-center gap-3 mb-3">
+          <div class="testlab-card-icon" style="background:rgba(16,185,129,.12);color:#10b981;">
+            <i class="bi bi-hand-wave"></i>
+          </div>
+          <div>
+            <div class="fw-bold" style="color:var(--admin-text);font-size:.95rem;">Welcome Email</div>
+            <div style="font-size:.78rem;color:var(--admin-muted);">New user onboarding email</div>
+          </div>
+        </div>
+        <p style="font-size:.82rem;color:var(--admin-muted);margin-bottom:1rem;">
+          Tests the welcome email sent to new users after registration. Previews your onboarding content.
+        </p>
+        <button class="test-btn" id="btn-test-welcome" onclick="sendTestEmail('welcome', this)" style="background:linear-gradient(135deg,#10b981,#059669);">
+          <i class="bi bi-send"></i> Send Test
+        </button>
+        <div class="test-result" id="result-welcome"></div>
+      </div>
+    </div>
+
+  </div><!-- /row -->
+
+</div><!-- /pane-testlab -->
 
 {% endblock %}
 
@@ -398,5 +560,60 @@
       }
     }
   });
+
+  // ── Tab Switching ───────────────────────────────────────────────
+  function switchTab(tabName) {
+    document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+    document.querySelectorAll('.page-tab').forEach(t => {
+      t.classList.remove('active');
+      t.setAttribute('aria-selected', 'false');
+    });
+    document.getElementById('pane-' + tabName).classList.add('active');
+    const tabBtn = document.getElementById('tab-' + tabName);
+    tabBtn.classList.add('active');
+    tabBtn.setAttribute('aria-selected', 'true');
+  }
+
+  // ── Test Lab: Send Email ────────────────────────────────────────
+  async function sendTestEmail(emailType, btn) {
+    const resultEl = document.getElementById('result-' + emailType);
+
+    // Show loading state
+    btn.disabled = true;
+    resultEl.className = 'test-result loading';
+    resultEl.style.display = 'flex';
+    resultEl.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status"></span> Sending&hellip;';
+
+    try {
+      const formData = new FormData();
+      formData.append('email_type', emailType);
+
+      // Grab CSRF token from the meta tag (set by Flask-WTF)
+      const csrfMeta = document.querySelector('meta[name="csrf-token"]');
+      const headers = {};
+      if (csrfMeta) headers['X-CSRFToken'] = csrfMeta.getAttribute('content');
+
+      const res = await fetch('{{ url_for("admin_template_bp.admin_test_email") }}', {
+        method: 'POST',
+        headers: headers,
+        body: formData
+      });
+
+      const data = await res.json();
+
+      if (res.ok && data.success) {
+        resultEl.className = 'test-result success';
+        resultEl.innerHTML = '<i class="bi bi-check-circle-fill me-1"></i>' + (data.message || 'Email sent successfully!');
+      } else {
+        resultEl.className = 'test-result error';
+        resultEl.innerHTML = '<i class="bi bi-x-circle-fill me-1"></i>' + (data.message || 'Failed to send email.');
+      }
+    } catch (err) {
+      resultEl.className = 'test-result error';
+      resultEl.innerHTML = '<i class="bi bi-x-circle-fill me-1"></i>Network error: ' + err.message;
+    } finally {
+      btn.disabled = false;
+    }
+  }
 </script>
 {% endblock %}
