@@ -36,11 +36,12 @@
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     <div id="add-product-feedback" class="d-none mb-3"></div>
     <div class="row g-3">
+        <!-- Main Row -->
         <div class="col-12 col-md-4">
             <label class="form-label small fw-bold">Product Name</label>
             <input type="text" name="name" class="form-control form-control-sm" required placeholder="e.g. Fresh Mangoes">
         </div>
-        <div class="col-6 col-md-2" id="category-field-container">
+        <div class="col-6 col-md-4" id="category-field-container">
             <label class="form-label small fw-bold">Category</label>
             <input type="text" name="category_name" list="category-list-add" 
                    class="form-control form-control-sm" required placeholder="Type to search..."
@@ -61,14 +62,105 @@
             <label class="form-label small fw-bold">Initial Stock</label>
             <input type="number" name="stock" class="form-control form-control-sm" value="0">
         </div>
-        <div class="col-6 col-md-2 d-flex align-items-end">
-            <button type="submit" id="add-product-submit" class="btn btn-primary btn-sm w-100">Done</button>
+
+        <!-- Description & Specifications Row -->
+        <div class="col-12 col-md-6">
+            <label class="form-label small fw-bold">Product Description</label>
+            <textarea name="description" class="form-control form-control-sm" rows="5" placeholder="Write a detailed description here..." style="resize: vertical; min-height: 120px;"></textarea>
+        </div>
+        <div class="col-12 col-md-6">
+            <div x-data="addFormSpecsWidget()"
+                 @reset.window="if ($event.target.id === 'add-product-form') { specs = [{ key: '', value: '' }]; }">
+                <input type="hidden" name="specifications" :value="specsJson">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <label class="form-label small fw-bold mb-0">Product Specifications</label>
+                    <button type="button" class="btn btn-sm btn-outline-primary py-0" style="font-size: 1rem;" @click="addSpec()">
+                        <i class="bi bi-plus-lg"></i>
+                    </button>
+                </div>
+                <div class="pe-1 p-2" style="overflow: auto; min-height: 55px; max-height: 200px; border: 1px solid #e5e5e5; border-radius: 10px;">
+                    <template x-for="(spec, index) in specs" :key="index">
+                        <div class="row g-2 mb-2 align-items-center">
+                            <div class="col-5">
+                                <input type="text" class="form-control form-control-sm spec-key-input"
+                                       placeholder="e.g. Brand, Color, Waterproof"
+                                       x-model="spec.key"
+                                       list="spec-key-suggestions-add">
+                            </div>
+                            <div class="col-5">
+                                <input type="text" class="form-control form-control-sm"
+                                       placeholder="Value (optional)"
+                                       x-model="spec.value"
+                                       @keydown.enter.prevent="addSpec()">
+                            </div>
+                            <div class="col-1">
+                                <button type="button" class="btn btn-sm w-100 py-1" @click="removeSpec(index)">
+                                    <i class="bi bi-x-lg"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </template>
+                </div>
+                <datalist id="spec-key-suggestions-add">
+                    <option value="Height"><option value="Width"><option value="Length">
+                    <option value="Weight"><option value="Size"><option value="Dimensions">
+                    <option value="Color"><option value="Material"><option value="Capacity">
+                    <option value="Volume"><option value="Brand"><option value="Model">
+                    <option value="Power"><option value="Voltage"><option value="Storage">
+                    <option value="RAM"><option value="Screen Size"><option value="Processor">
+                    <option value="Condition"><option value="Warranty">
+                </datalist>
+            </div>
+        </div>
+
+        <!-- Submit Button Row -->
+        <div class="col-12 d-flex justify-content-end mt-2">
+            <button type="submit" id="add-product-submit" class="btn btn-primary btn-sm px-4">Done</button>
         </div>
     </div>
 </form>
 
 <script>
-document.querySelectorAll('#add-product-form input, #add-product-form select').forEach(el => {
+function addFormSpecsWidget() {
+    return {
+        specs: [{ key: '', value: '' }],
+        addSpec() {
+            this.specs.push({ key: '', value: '' });
+            this.$nextTick(() => {
+                const inputs = this.$el.querySelectorAll('.spec-key-input');
+                if (inputs.length) inputs[inputs.length - 1].focus();
+            });
+        },
+        removeSpec(index) {
+            if (this.specs.length > 1) {
+                this.specs.splice(index, 1);
+            } else {
+                this.specs = [{ key: '', value: '' }];
+            }
+        },
+        get specsJson() {
+            const d = {};
+            this.specs.forEach(s => {
+                const k = (s.key || '').trim();
+                const v = (s.value || '').trim();
+                if (k && v) d[k] = v;
+                else if (k) d[k] = '';
+                else if (v) d[v] = '';
+            });
+            return JSON.stringify(d);
+        }
+    };
+}
+
+function debounce(func, wait) {
+    let timeout;
+    return function(...args) {
+        clearTimeout(timeout);
+        timeout = setTimeout(() => func.apply(this, args), wait);
+    };
+}
+
+document.querySelectorAll('#add-product-form input, #add-product-form select, #add-product-form textarea').forEach(el => {
     el.addEventListener('input', debounce(() => {
         htmx.ajax('POST', '/products/draft', {
             source: document.getElementById('add-product-form'),

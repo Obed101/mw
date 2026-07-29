@@ -15,8 +15,8 @@
         </form>
     </div>
     {% if product.stock <= 0 %}
-    <span class="text-danger x-small fw-bold text-uppercase">Out of stock</span>
+    <span class="text-danger x-small text-uppercase">Out of stock</span>
     {% elif product.stock <= 10 %}
-    <span class="text-warning x-small fw-bold text-uppercase">Low stock</span>
+    <span class="text-warning x-small text-uppercase">Low stock</span>
     {% endif %}
 </div>

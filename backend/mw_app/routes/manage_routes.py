@@ -159,11 +159,9 @@ def _apply_product_form_data(product, form):
         raise ValueError('Category is required.')
 
     price_raw = form.get('price', '0').strip()
-    stock_raw = form.get('stock', '0').strip()
 
     try:
         price = float(price_raw) if price_raw else 0.0
-        stock = int(stock_raw) if stock_raw else 0
     except ValueError as exc:
         raise ValueError(f'Invalid numeric value: {exc}')
 
@@ -210,9 +208,17 @@ def _apply_product_form_data(product, form):
     product.name = name
     product.category_id = resolved_category.id
     product.price = price
-    product.stock = stock
     product.description = form.get('description', '').strip()
     product.type_ = form.get('type_', 'product')
+
+    specs_raw = form.get('specifications')
+    if specs_raw:
+        import json
+        try:
+            specs_dict = json.loads(specs_raw)
+            product.set_specifications(specs_dict)
+        except Exception:
+            pass
 
     return product
 
@@ -292,7 +298,6 @@ def edit_product(product_id):
         print(f"DEBUG: edit_product POST request data: {request.form}")
         name = request.form.get('name', '').strip()
         price_raw = request.form.get('price', '').strip()
-        stock_raw = request.form.get('stock', '').strip()
         
         if not name:
             print("DEBUG: Product name is required.")

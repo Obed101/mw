@@ -1,6 +1,3 @@
-
-
-
 <tr id="product-row-{{ product.id }}">
     <td class="ps-4">
         {% if product.primary_image_url %}
@@ -37,7 +34,7 @@
         </div>
     </td>
     <td class="text-center fw-semibold">
-        GHS {{ "%.2f"|format(product.price) }}
+        &#8373; {{ "%.2f"|format(product.price) }}
     </td>
     <td class="text-center" id="stock-cell-{{ product.id }}">
         {% include "manage/partials/stock_badge.html" %}
@@ -109,16 +106,10 @@
                     <div class="col-12 col-md-2">
                         <div class="floating-label-group">
                             <div class="input-group input-group-sm">
-                                <span class="input-group-text">GHS</span>
+                                <span class="input-group-text">&#8373;</span>
                                 <input type="number" name="price" step="0.01" class="form-control" value="{{ product.price }}" required id="price-{{ product.id }}">
                             </div>
                             <label for="price-{{ product.id }}" class="floating-label">Price</label>
-                        </div>
-                    </div>
-                    <div class="col-12 col-md-2">
-                        <div class="floating-label-group">
-                            <input type="number" name="stock" class="form-control form-control-sm" value="{{ product.stock }}" required id="stock-{{ product.id }}">
-                            <label for="stock-{{ product.id }}" class="floating-label">Stock</label>
                         </div>
                     </div>
                     <div class="col-12 col-md-1">
@@ -128,6 +119,105 @@
                         </div>
                     </div>
                 </div>
+
+                <!-- Description & Specifications Row -->
+                <div class="row g-3 mt-1">
+                    <div class="col-12 col-md-6">
+                        <label class="form-label small fw-bold mb-1">Product Description</label>
+                        <textarea name="description"
+                                  class="form-control form-control-sm"
+                                  rows="4"
+                                  placeholder="Write a detailed description here..."
+                                  style="resize: vertical; min-height: 110px;">{{ product.description or '' }}</textarea>
+                    </div>
+                    <div class="col-12 col-md-6">
+                        <div x-data="{
+                            specs: [],
+                            init() {
+                                const initial = {{ product.specifications_dict | tojson | forceescape }};
+                                this.specs = Object.entries(initial || {}).map(([key, value]) => ({ key, value }));
+                                if (this.specs.length === 0) this.specs = [{ key: '', value: '' }];
+                            },
+                            addSpec() {
+                                this.specs.push({ key: '', value: '' });
+                                this.$nextTick(() => {
+                                    const inputs = this.$el.querySelectorAll('.spec-key-input');
+                                    if (inputs.length) inputs[inputs.length - 1].focus();
+                                });
+                            },
+                            removeSpec(index) {
+                                if (this.specs.length > 1) {
+                                    this.specs.splice(index, 1);
+                                } else {
+                                    this.specs = [{ key: '', value: '' }];
+                                }
+                            },
+                            get specsJson() {
+                                const d = {};
+                                this.specs.forEach(s => {
+                                    const k = (s.key || '').trim();
+                                    const v = (s.value || '').trim();
+                                    if (k || v) {
+                                        if (k) {
+                                            d[k] = v;
+                                        } else {
+                                            d[v] = '';
+                                        }
+                                    }
+                                });
+                                return JSON.stringify(d);
+                            }
+                        }">
+                            <input type="hidden" name="specifications" :value="specsJson">
+                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                <label class="form-label small fw-bold mb-0">Product Features</label>
+                            </div>
+                            <p class="text-muted mb-2" style="font-size: 0.7rem;">Leave Value blank to add a flag (e.g. <em>Waterproof</em>).</p>
+                            <template x-for="(spec, index) in specs" :key="index">
+                                <div class="row g-2 mb-1 align-items-center spec-row">
+                                    <div class="col-5">
+                                        <input type="text"
+                                               class="form-control form-control-sm spec-key-input"
+                                               placeholder="Key or flag"
+                                               x-model="spec.key"
+                                               list="spec-key-sugg-row-{{ product.id }}">
+                                    </div>
+                                    <div class="col-5">
+                                        <input type="text"
+                                               class="form-control form-control-sm"
+                                               placeholder="Value (optional)"
+                                               x-model="spec.value"
+                                               @keydown.enter.prevent="addSpec()">
+                                    </div>
+                                    <!-- Strictly keep these two buttons in one line, even on mobile devices -->
+                                    <div class="col-2 d-flex flex-row gap-1">
+                                        <button type="button" class="btn btn-sm" @click="removeSpec(index)">
+                                            <i class="bi bi-x-circle text-danger"></i>
+                                        </button>
+                                        <button type="button"
+                                                class="btn btn-sm border-start border-2"
+                                                x-show="index === specs.length - 1"
+                                                @click="addSpec()">
+                                            <i class="bi bi-plus-square-fill"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            </template>
+                            <datalist id="spec-key-sugg-row-{{ product.id }}">
+                                <option value="Height"><option value="Width"><option value="Length">
+                                <option value="Weight"><option value="Size"><option value="Dimensions">
+                                <option value="Color"><option value="Material"><option value="Capacity">
+                                <option value="Volume"><option value="Brand"><option value="Model">
+                                <option value="Power"><option value="Voltage"><option value="Storage">
+                                <option value="RAM"><option value="Screen Size"><option value="Processor">
+                                <option value="Condition"><option value="Warranty">
+                            </datalist>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Action Buttons -->
+                <hr class="border-2 border-secondary-subtle">
                 <div class="row g-3 mt-2">
                     <div class="col-12">
                         <button type="button" class="btn btn-light btn-sm me-2" onclick="toggleProductEdit({{ product.id }})">

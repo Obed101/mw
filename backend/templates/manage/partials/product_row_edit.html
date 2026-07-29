@@ -1,3 +1,44 @@
+<script>
+function editRowSpecsWidget_{{ product.id }}() {
+    return {
+        specs: [],
+        init() {
+            const initial = {{ product.specifications_dict | tojson }};
+            this.specs = Object.entries(initial || {}).map(([key, value]) => ({ key, value }));
+            if (this.specs.length === 0) this.specs = [{ key: '', value: '' }];
+        },
+        addSpec() {
+            this.specs.push({ key: '', value: '' });
+            this.$nextTick(() => {
+                const inputs = this.$el.querySelectorAll('.spec-key-input');
+                if (inputs.length) inputs[inputs.length - 1].focus();
+            });
+        },
+        removeSpec(index) {
+            if (this.specs.length > 1) {
+                this.specs.splice(index, 1);
+            } else {
+                this.specs = [{ key: '', value: '' }];
+            }
+        },
+        get specsJson() {
+            const d = {};
+            this.specs.forEach(s => {
+                const k = (s.key || '').trim();
+                const v = (s.value || '').trim();
+                if (k || v) {
+                    if (k) {
+                        d[k] = v;
+                    } else {
+                        d[v] = '';
+                    }
+                }
+            });
+            return JSON.stringify(d);
+        }
+    };
+}
+</script>
 <tr id="product-row-{{ product.id }}" class="table-info">
     <td colspan="5" class="p-0">
         <form hx-post="{{ url_for('manage_bp.edit_product', product_id=product.id) }}"
@@ -5,11 +46,14 @@
               hx-swap="outerHTML"
               class="m-0 p-3">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-            <div class="row g-2 align-items-center">
-                <div class="col-12 col-md-3">
+            <div class="row g-3">
+                <!-- Basic Details Row -->
+                <div class="col-12 col-md-4">
+                    <label class="form-label small fw-bold">Product Name</label>
                     <input type="text" name="name" class="form-control form-control-sm" value="{{ product.name }}" required>
                 </div>
-                <div class="col-6 col-md-2" id="category-field-{{ product.id }}">
+                <div class="col-6 col-md-3" id="category-field-{{ product.id }}">
+                    <label class="form-label small fw-bold">Category</label>
                     <input type="text" name="category_name" list="category-list-{{ product.id }}" 
                            class="form-control form-control-sm" 
                            value="{{ product.category.name if product.category else '' }}" 
@@ -24,27 +68,77 @@
                     </datalist>
                 </div>
                 <div class="col-6 col-md-2">
-                    <div class="input-group input-group-sm">
-                        <span class="input-group-text">GHS</span>
-                        <input type="number" name="price" step="0.01" class="form-control" value="{{ product.price }}" required>
-                    </div>
+                    <label class="form-label small fw-bold">Price (GHS)</label>
+                    <input type="number" name="price" step="0.01" class="form-control form-control-sm" value="{{ product.price }}" required>
                 </div>
-                <div class="col-6 col-md-2">
+                <div class="col-6 col-md-1">
+                    <label class="form-label small fw-bold">Stock</label>
                     <input type="number" name="stock" class="form-control form-control-sm" value="{{ product.stock }}" required>
                 </div>
-                <div class="col-6 col-md-2 d-flex align-items-center">
-                    <div class="form-check form-switch mb-0">
+                <div class="col-6 col-md-2 d-flex align-items-end">
+                    <div class="form-check form-switch mb-2">
                         <input class="form-check-input" type="checkbox" name="is_active" id="active-{{ product.id }}" {% if product.is_active %}checked{% endif %}>
                         <label class="form-check-label small" for="active-{{ product.id }}">Active</label>
                     </div>
                 </div>
-                <div class="col-6 col-md-3 text-end">
+
+                <!-- Description & Specifications Row -->
+                <div class="col-12 col-md-6">
+                    <label class="form-label small fw-bold">Product Description</label>
+                    <textarea name="description" class="form-control form-control-sm" rows="5" placeholder="Write a detailed description here..." style="resize: vertical; min-height: 120px;">{{ product.description or '' }}</textarea>
+                </div>
+                <div class="col-12 col-md-6">
+                    <div x-data="editRowSpecsWidget_{{ product.id }}()">
+                        <input type="hidden" name="specifications" :value="specsJson">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <label class="form-label small fw-bold mb-0">Product pecifications</label>
+                            <button type="button" class="btn btn-xs btn-outline-primary py-0" style="font-size: 0.75rem;" @click="addSpec()">
+                                <i class="bi bi-plus"></i> Add Spec
+                            </button>
+                        </div>
+                <div class="pe-1 p-2" style="overflow: auto; min-height: 55px; max-height: 200px; border: 1px solid #e5e5e5; border-radius: 10px;">
+                    <template x-for="(spec, index) in specs" :key="index">
+                        <div class="row g-2 mb-2 align-items-center">
+                            <div class="col-5">
+                                <input type="text" class="form-control form-control-sm spec-key-input"
+                                       placeholder="e.g. Brand, Color, Waterproof"
+                                       x-model="spec.key"
+                                       list="spec-key-suggestions-add">
+                            </div>
+                            <div class="col-5">
+                                <input type="text" class="form-control form-control-sm"
+                                       placeholder="Value (optional)"
+                                       x-model="spec.value"
+                                       @keydown.enter.prevent="addSpec()">
+                            </div>
+                            <div class="col-1">
+                                <button type="button" class="btn btn-sm w-100 py-1" @click="removeSpec(index)">
+                                    <i class="bi bi-x-lg"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </template>
+                </div>
+                        <datalist id="spec-key-suggestions-edit-{{ product.id }}">
+                            <option value="Height"><option value="Width"><option value="Length">
+                            <option value="Weight"><option value="Size"><option value="Dimensions">
+                            <option value="Color"><option value="Material"><option value="Capacity">
+                            <option value="Volume"><option value="Brand"><option value="Model">
+                            <option value="Power"><option value="Voltage"><option value="Storage">
+                            <option value="RAM"><option value="Screen Size"><option value="Processor">
+                            <option value="Condition"><option value="Warranty">
+                        </datalist>
+                    </div>
+                </div>
+
+                <!-- Form Action Buttons Row -->
+                <div class="col-12 text-end mt-2">
                     <button type="button" class="btn btn-light btn-sm me-1" 
                             hx-get="{{ url_for('manage_bp.product_list') }}" 
                             hx-target="#product-list-container">
                         Cancel
                     </button>
-                    <button type="submit" class="btn btn-primary btn-sm">Save</button>
+                    <button type="submit" class="btn btn-primary btn-sm px-4">Save</button>
                 </div>
             </div>
         </form>
