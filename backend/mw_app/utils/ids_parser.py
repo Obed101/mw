@@ -55,7 +55,6 @@ _ADDRESS_HINTS = (
     "ln",
     "close",
     "crescent",
-    "court",
     "estate",
     "highway",
     "boulevard",
@@ -68,7 +67,18 @@ _ADDRESS_HINTS = (
     "p.o. box",
     "po box",
     "plot",
-    "no.",
+    "opposite",
+    "near",
+    "beside",
+    "behind",
+    "next to",
+    "adjacent to",
+    "across from",
+    "junction",
+    "roundabout",
+    "close to",
+    "opposite to",
+    "around",
 )
 _LANDMARK_HINTS = (
     "opposite",
@@ -80,15 +90,71 @@ _LANDMARK_HINTS = (
     "across from",
     "junction",
     "roundabout",
-    "taxi rank",
-    "filling station",
-    "school",
-    "church",
-    "mosque",
-    "mall",
-    "market",
-    "hospital",
+    "close to",
+    "opposite to",
+    "around",
 )
+_DESCRIPTION_PHRASE_HINTS = (
+    "customer service",
+    "quality service",
+    "one-stop",
+    "one stop",
+    "our products",
+    "our services",
+)
+_DESCRIPTION_WORD_HINTS = {
+    "we",
+    "our",
+    "us",
+    "sell",
+    "selling",
+    "offer",
+    "offering",
+    "providing",
+    "buy",
+    "visit",
+    "come",
+    "experience",
+    "quality",
+    "affordable",
+    "cheap",
+    "best",
+    "good",
+    "excellent",
+    "professional",
+    "friendly",
+    "services",
+    "products",
+    "items",
+    "available",
+    "fresh",
+    "wholesale",
+    "retail",
+    "original",
+    "genuine",
+    "trusted",
+    "modern",
+    "clean",
+    "comfortable",
+    "reliable",
+    "guaranteed",
+    "satisfaction",
+    "variety",
+    "everything",
+    "all",
+    "prices",
+    "discount",
+    "welcome",
+    "special",
+    "top",
+    "leading",
+    "premier",
+    "expert",
+    "fast",
+    "quick",
+    "your",
+    "needs",
+}
 _SERVICE_PHRASES = {
     "delivery": "Delivery",
     "takeaway": "Takeaway",
@@ -135,12 +201,17 @@ _SERVICE_BUSINESS_HINTS = (
     "gym",
     "spa",
 )
-_CATEGORY_HINTS = (
+_STANDALONE_CATEGORY_PHRASES = {
     "shop",
+    "retail store",
+    "provision store",
     "store",
+    "organic food store",
+    "natural goods store",
     "market",
     "supermarket",
     "grocery",
+    "grocery store",
     "mart",
     "boutique",
     "wholesale",
@@ -154,14 +225,18 @@ _CATEGORY_HINTS = (
     "clinic",
     "station",
     "hardware",
+    "hardware store",
     "electronics",
+    "electronics store",
     "furniture",
+    "furniture store",
     "fashion",
+    "fashion store",
     "bakery",
     "butcher",
     "tailor",
     "repair",
-)
+}
 
 
 @dataclass(frozen=True)
@@ -564,7 +639,7 @@ class IDSParser:
         combined = " | ".join(haystacks).lower()
 
         service_hits = sum(1 for hint in _SERVICE_BUSINESS_HINTS if hint in combined)
-        retail_hits = sum(1 for hint in _CATEGORY_HINTS if hint in combined)
+        retail_hits = sum(1 for hint in _STANDALONE_CATEGORY_PHRASES if hint in combined)
 
         if service_hits and retail_hits:
             return "both"
@@ -630,7 +705,7 @@ class IDSParser:
             score += 1.0
         if text.endswith((".", "!", "?")):
             score += 2.0
-        if any(marker in text.lower() for marker in ("quality", "affordable", "fresh", "best", "excellent", "friendly", "delivery", "service")):
+        if self._has_description_hint(text):
             score += 0.5
         if text[:1].isupper():
             score += 0.5
@@ -640,13 +715,18 @@ class IDSParser:
             score -= min(index * 0.1, 0.5)
         return score
 
+    def _has_description_hint(self, text: str) -> bool:
+        lowered = text.lower()
+        if any(phrase in lowered for phrase in _DESCRIPTION_PHRASE_HINTS):
+            return True
+
+        tokens = set(re.findall(r"[a-z]+(?:-[a-z]+)?", lowered))
+        return any(word in tokens for word in _DESCRIPTION_WORD_HINTS)
+
     def _looks_like_category(self, text: str) -> bool:
-        lower = text.lower()
         if self._is_noise(text):
             return False
-        if len(text.split()) > 6 or len(text) > 45:
-            return False
-        return any(hint in lower for hint in _CATEGORY_HINTS)
+        return self._is_standalone_category_phrase(text)
 
     def _category_candidate(self, text: str) -> str | None:
         if self._is_noise(text):
@@ -657,15 +737,18 @@ class IDSParser:
             return None
         if _PHONE_RE.search(text) or _EMAIL_RE.search(text) or _PLUS_CODE_RE.search(text.upper()) or _GPS_RE.search(text):
             return None
-        if len(text.split()) > 6 or len(text) > 45:
+        if len(text.split()) > 4 or len(text) > 30:
             return None
 
-        lower = text.lower()
-        if any(hint in lower for hint in _CATEGORY_HINTS):
-            return self._titleish(text)
-        if re.fullmatch(r"(?i)[a-z][a-z\s&'\-]{2,40}", text) and not any(ch.isdigit() for ch in text):
+        if self._is_standalone_category_phrase(text):
             return self._titleish(text)
         return None
+
+    def _is_standalone_category_phrase(self, text: str) -> bool:
+        """Return True only when the full text is an exact category phrase."""
+
+        normalized = self._clean_text(text).lower()
+        return normalized in _STANDALONE_CATEGORY_PHRASES
 
     def _rating_from_text(self, text: str) -> float | None:
         lowered = text.lower()

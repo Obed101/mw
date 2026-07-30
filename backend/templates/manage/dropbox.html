@@ -88,7 +88,7 @@
                     </span>
                     <h1 class="display-6 fw-bold mb-3">Upload your Instant Data Scraper export</h1>
                     <p class="text-muted mb-3">
-                        This uploader accepts the raw Google Maps CSV from IDS, runs the row-level parser,
+                        This uploader accepts the raw Google Maps CSV from Instant Data Scraper, runs a parser over it,
                         and gives you a clean preview without depending on the messy column names.
                     </p>
                     <div class="d-flex flex-wrap gap-2">
@@ -115,12 +115,12 @@
                             <p class="text-muted small mb-0">or click to browse from your device</p>
                         </div>
                         <div class="mt-3 small text-muted">
-                            Best results come from the original IDS export. The parser ignores header names and inspects every cell.
+                            Best results come from the original IDS export.
                         </div>
                         <div class="mt-3 d-flex flex-column flex-sm-row justify-content-between align-items-start align-items-sm-center gap-2">
                             <div id="selected-files" class="small text-muted">No file selected yet.</div>
                             <button type="submit" class="btn btn-primary px-4">
-                                <i class="bi bi-upload me-1"></i>Parse CSV
+                                <i class="bi bi-upload me-1"></i>Run CSV file
                             </button>
                         </div>
                     </form>
@@ -176,6 +176,7 @@
                                 <th>Name</th>
                                 <th>Phone</th>
                                 <th>Address</th>
+                                <th>Google Category</th>
                                 <th>Plus Code</th>
                                 <th>Rating</th>
                                 <th>Warnings</th>
@@ -189,6 +190,7 @@
                                 <td>{{ data.name or 'Not found' }}</td>
                                 <td>{{ data.phone or 'Not found' }}</td>
                                 <td>{{ data.address or data.landmark or 'Not found' }}</td>
+                                <td>{{ data.category or 'Not found' }}</td>
                                 <td>{{ data.plus_code or 'Not found' }}</td>
                                 <td>{{ data.rating if data.rating is not none else 'Not found' }}</td>
                                 <td>
