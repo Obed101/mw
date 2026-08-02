@@ -217,15 +217,28 @@ body {
 /* ===== BOTTOM NAVIGATION (Mobile) ===== */
 .bottom-nav {
     position: fixed;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    background: white;
-    border-top: 1px solid var(--border-light);
-    padding: 0.5rem 0;
-    z-index: 1020;
+    left: 50%;
+    transform: translateX(-50%);
+    bottom: calc(env(safe-area-inset-bottom, 0px) + 0.9rem);
+    width: min(93vw, 560px);
+    padding: 0.45rem;
+    z-index: 1040;
     display: none;
-    box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.08);
+    align-items: stretch;
+    justify-content: space-between;
+    gap: 0.3rem;
+    border: 1px solid rgba(107, 70, 193, 0.16);
+    border-radius: 999px;
+    background:
+        linear-gradient(135deg, rgba(107, 70, 193, 0.18), rgba(59, 130, 246, 0.12) 52%, rgba(147, 51, 234, 0.16)),
+        rgba(255, 255, 255, 0.58);
+    backdrop-filter: blur(18px) saturate(180%);
+    -webkit-backdrop-filter: blur(18px) saturate(180%);
+    box-shadow:
+        0 18px 40px rgba(27, 31, 55, 0.18),
+        0 2px 6px rgba(59, 130, 246, 0.08),
+        inset 0 1px 0 rgba(255, 255, 255, 0.45);
+    overflow: visible;
 }
 
 .bottom-nav-item {
@@ -233,39 +246,78 @@ body {
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    padding: 0.625rem 0.5rem;
-    color: var(--text-muted);
+    gap: 0.2rem;
+    min-height: 58px;
+    padding: 0.55rem 0.35rem 0.5rem;
+    color: rgba(55, 65, 81, 0.8);
     text-decoration: none;
-    transition: all 0.2s ease;
+    transition:
+        transform 0.22s cubic-bezier(0.2, 0.8, 0.2, 1),
+        color 0.22s ease,
+        box-shadow 0.22s ease,
+        background-color 0.22s ease;
     flex: 1;
-    font-weight: 500;
+    font-weight: 600;
     position: relative;
+    border-radius: 999px;
+    isolation: isolate;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+    overflow: visible;
 }
 
 .bottom-nav-item:hover,
 .bottom-nav-item.active {
-    color: var(--primary-purple);
+    color: white;
 }
 
 .bottom-nav-item.active::before {
     content: '';
     position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: 3px;
-    background: var(--gradient-primary);
+    inset: 0.05rem;
+    border-radius: inherit;
+    background: linear-gradient(135deg, rgba(107, 70, 193, 0.95), rgba(59, 130, 246, 0.95) 55%, rgba(147, 51, 234, 0.92));
+    box-shadow:
+        0 10px 24px rgba(59, 130, 246, 0.22),
+        inset 0 1px 0 rgba(255, 255, 255, 0.2);
+    z-index: -1;
+    animation: mwBottomNavActivePop 220ms cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
 .bottom-nav-item i {
-    font-size: 1.375rem;
-    margin-bottom: 0.25rem;
+    font-size: 1.18rem;
+    line-height: 1;
+    transition: transform 0.22s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
 .bottom-nav-item span {
-    font-size: 0.7rem;
+    font-size: 0.67rem;
+    line-height: 1;
+    letter-spacing: 0.04em;
     text-transform: uppercase;
-    letter-spacing: 0.5px;
+    transition: transform 0.22s cubic-bezier(0.2, 0.8, 0.2, 1), opacity 0.22s ease;
+}
+
+.bottom-nav-item:hover:not(.active) {
+    background-color: rgba(255, 255, 255, 0.18);
+    transform: translateY(-1px);
+}
+
+.bottom-nav-item.active {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 18px rgba(59, 130, 246, 0.16);
+}
+
+.bottom-nav-item.active i {
+    transform: translateY(-1px) scale(1.03);
+}
+
+.bottom-nav-item.active span {
+    opacity: 0.98;
+}
+
+.bottom-nav-item:active {
+    transform: translateY(0) scale(0.98);
 }
 
 /* ===== BOTTOM NAV "ME" DROPUP ===== */
@@ -274,6 +326,7 @@ body {
     flex: 1;
     display: flex;
     position: relative;
+    overflow: visible;
 }
 
 /* Reset <button> defaults so it looks identical to <a> nav items */
@@ -283,6 +336,8 @@ body {
     padding: 0;
     flex: 1;
     cursor: pointer;
+    width: 100%;
+    appearance: none;
     -webkit-tap-highlight-color: transparent;
 }
 
@@ -308,7 +363,46 @@ body {
 }
 
 .main-content.with-bottom-nav {
-    padding-bottom: 80px;
+    padding-bottom: 112px;
+}
+
+body.mw-page-transitioning {
+    overflow-x: hidden;
+}
+
+body.mw-page-transitioning::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 2000;
+    background:
+        radial-gradient(circle at top, rgba(59, 130, 246, 0.16), transparent 42%),
+        linear-gradient(135deg, rgba(107, 70, 193, 0.08), rgba(59, 130, 246, 0.06) 50%, rgba(147, 51, 234, 0.08));
+    opacity: 1;
+    transition: opacity 0.2s ease;
+}
+
+body.mw-page-transitioning .navbar-top,
+body.mw-page-transitioning .sidebar-nav,
+body.mw-page-transitioning .main-content,
+body.mw-page-transitioning .bottom-nav {
+    transition: opacity 0.2s ease, transform 0.2s ease, filter 0.2s ease;
+    opacity: 0.96;
+    transform: translateY(2px);
+    filter: saturate(0.98);
+}
+
+@keyframes mwBottomNavActivePop {
+    from {
+        transform: scale(0.94);
+        opacity: 0.78;
+    }
+
+    to {
+        transform: scale(1);
+        opacity: 1;
+    }
 }
 
 .hero-section {
@@ -780,7 +874,6 @@ body {
 
     .bottom-nav {
         display: flex !important;
-        justify-content: space-around;
     }
 
     .main-content {
@@ -789,7 +882,7 @@ body {
     }
 
     .main-content.with-bottom-nav {
-        padding-bottom: 80px;
+        padding-bottom: calc(116px + env(safe-area-inset-bottom, 0px));
     }
 
     .hero-section {

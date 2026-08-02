@@ -1,15 +1,44 @@
 {% extends "base.html" %}
 
-{% block title %}Categories - Market Window{% endblock %}
+{% block title %}Explore - Market Window{% endblock %}
 
 {% block content %}
-<div class="container py-4">
+<div class="container py-4 explore-page">
     <div class="row mb-4">
         <div class="col-12">
-            <h1 class="fw-bold">Product Categories</h1>
-            <p class="text-muted mb-0">Explore product categories to quickly find what you need.</p>
+            <h1 class="fw-bold text-uppercase mb-2">Explore</h1>
+            <p class="text-gradient mb-0">Discover everything on Market Window.</p>
         </div>
     </div>
+
+    <section class="explore-search-panel mb-4">
+        <div class="explore-search-shell">
+            <span class="explore-search-icon">
+                <i class="bi bi-search"></i>
+            </span>
+            <input
+                type="search"
+                class="form-control explore-search-input"
+                name="q"
+                value="{{ explore_query or '' }}"
+                placeholder="Search products, shops, or categories"
+                autocomplete="off"
+                hx-get="{{ url_for('buyer_bp.global_search') }}"
+                hx-trigger="load, keyup changed delay:350ms, search"
+                hx-target="#explore-search-results"
+                hx-indicator="#explore-search-spinner"
+                hx-vals='{"layout":"inline"}'
+            >
+            <div class="explore-search-spinner htmx-indicator" id="explore-search-spinner" style="display: none;">
+                <div class="spinner-border spinner-border-sm text-primary" role="status">
+                    <span class="visually-hidden">Searching...</span>
+                </div>
+            </div>
+        </div>
+        <p class="small text-muted mt-2 mb-0">Start typing to search.</p>
+    </section>
+
+    <div id="explore-search-results" class="mb-4"></div>
 
     {% if selected_category %}
     <section class="card border-0 shadow-sm mb-4 overflow-hidden">
@@ -77,20 +106,9 @@
     <section x-data="{ showExtraCriteria: false }">
         <div class="row g-3 align-items-center mb-3">
             <div class="col-md-8">
-                <div class="input-group">
-                    <span class="input-group-text"><i class="bi bi-search"></i></span>
-                    <input
-                        type="text"
-                        class="form-control"
-                        name="search"
-                        value="{{ search_term or '' }}"
-                        placeholder="Search categories or parent category..."
-                        hx-get="{{ url_for('main_bp.categories') }}"
-                        hx-trigger="keyup changed delay:350ms"
-                        hx-target="#categories-container"
-                        hx-include="[name='sort_by'], [name='with_products'], [name='category_id']"
-                        hx-swap="innerHTML"
-                    >
+                <div class="d-flex flex-column gap-1">
+                    <h2 class="h5 fw-bold mb-0">Category Browser</h2>
+                    <p class="text-muted small mb-0">Sort the category grid or limit it to categories with products.</p>
                 </div>
             </div>
             <div class="col-md-4 text-md-end">
@@ -100,7 +118,7 @@
                     @click="showExtraCriteria = !showExtraCriteria"
                     :aria-expanded="showExtraCriteria.toString()"
                 >
-                    Extra Search Criteria
+                    Category Filters
                     <i class="bi ms-1" :class="showExtraCriteria ? 'bi-caret-up-fill' : 'bi-caret-down-fill'"></i>
                 </button>
             </div>
@@ -114,7 +132,7 @@
                     hx-get="{{ url_for('main_bp.categories') }}"
                     hx-trigger="change"
                     hx-target="#categories-container"
-                    hx-include="[name='search'], [name='with_products'], [name='category_id']"
+                    hx-include="[name='with_products'], [name='category_id']"
                     hx-swap="innerHTML"
                 >
                     <option value="name" {% if sort_by == 'name' %}selected{% endif %}>Sort: Name</option>
@@ -134,7 +152,7 @@
                         hx-get="{{ url_for('main_bp.categories') }}"
                         hx-trigger="change"
                         hx-target="#categories-container"
-                        hx-include="[name='search'], [name='sort_by'], [name='category_id']"
+                        hx-include="[name='sort_by'], [name='category_id']"
                         hx-swap="innerHTML"
                     >
                     <label class="form-check-label" for="with-products">Only categories with products</label>
@@ -153,6 +171,112 @@
 
 {% block styles %}
 <style>
+    .explore-search-panel {
+        border-radius: 1.75rem;
+        padding: 1rem;
+        background:
+            linear-gradient(135deg, rgba(107, 70, 193, 0.12), rgba(59, 130, 246, 0.08) 55%, rgba(147, 51, 234, 0.1)),
+            rgba(255, 255, 255, 0.66);
+        border: 1px solid rgba(107, 70, 193, 0.14);
+        box-shadow:
+            0 18px 32px rgba(27, 31, 55, 0.08),
+            inset 0 1px 0 rgba(255, 255, 255, 0.5);
+        backdrop-filter: blur(18px) saturate(165%);
+        -webkit-backdrop-filter: blur(18px) saturate(165%);
+    }
+
+    .explore-search-shell {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        padding: 0.35rem 0.5rem 0.35rem 1rem;
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.88);
+        border: 1px solid rgba(148, 163, 184, 0.22);
+        box-shadow: 0 6px 18px rgba(15, 23, 42, 0.05);
+    }
+
+    .explore-search-icon {
+        width: 2.4rem;
+        height: 2.4rem;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 999px;
+        color: var(--primary-purple);
+        background: linear-gradient(135deg, rgba(107, 70, 193, 0.12), rgba(59, 130, 246, 0.08));
+        flex: 0 0 auto;
+    }
+
+    .explore-search-input {
+        border: none;
+        box-shadow: none !important;
+        background: transparent;
+        padding: 0.95rem 0;
+        font-size: 1rem;
+        font-weight: 500;
+        min-width: 0;
+    }
+
+    .explore-search-input:focus {
+        background: transparent;
+    }
+
+    .explore-search-input::placeholder {
+        color: #6b7280;
+    }
+
+    .explore-search-spinner {
+        padding-right: 0.5rem;
+        flex: 0 0 auto;
+    }
+
+    .explore-search-results {
+        scroll-margin-top: 6rem;
+    }
+
+    .explore-result-row {
+        transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+    }
+
+    .explore-result-row:hover {
+        transform: translateY(-2px);
+        border-color: rgba(107, 70, 193, 0.2) !important;
+        box-shadow: 0 12px 24px rgba(27, 31, 55, 0.08) !important;
+    }
+
+    .explore-collapse-toggle {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.2rem;
+        font-size: 0.78rem;
+        font-weight: 600;
+        color: var(--primary-purple);
+        border-color: rgba(107, 70, 193, 0.18);
+        background: #ffffffc7;
+        box-shadow: 0 6px 14px rgba(27, 31, 55, 0.05);
+        transition: transform 0.18s ease, box-shadow 0.18s ease, background-color 0.18s ease;
+    }
+
+    .explore-collapse-toggle:hover {
+        transform: translateY(-1px);
+        color: #17034b;
+        box-shadow: 0 10px 18px rgba(27, 31, 55, 0.08);
+        background: #ffffffeb;
+    }
+
+    .explore-collapse-toggle .explore-caret-closed {
+        display: none;
+    }
+
+    .explore-collapse-toggle.collapsed .explore-caret-open {
+        display: none;
+    }
+
+    .explore-collapse-toggle.collapsed .explore-caret-closed {
+        display: inline-block;
+    }
+
     .category-focus-image {
         min-height: 180px;
         max-height: 240px;

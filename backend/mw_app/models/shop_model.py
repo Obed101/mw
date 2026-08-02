@@ -34,7 +34,7 @@ def _normalize_image_keys(image_keys):
     return normalized
 
 class Shop(db.Model):
-    __searchable__ = ['name', 'description', 'address', 'region', 'district', 'town']
+    __searchable__ = ['name', 'google_category', 'description', 'address', 'region', 'district', 'town']
     
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(150), nullable=False)

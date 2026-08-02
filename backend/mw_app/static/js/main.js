@@ -38,6 +38,217 @@ document.addEventListener("DOMContentLoaded", () => {
         overlay.setAttribute("aria-hidden", "false");
     }
 
+    const bottomNav = document.querySelector(".bottom-nav");
+    const bottomNavTargets = bottomNav
+        ? Array.from(bottomNav.querySelectorAll(".bottom-nav-item"))
+            .map((item) => {
+                if (!(item instanceof Element)) return null;
+                if (item.matches("button.bottom-nav-btn")) {
+                    return { element: item, path: "/profile" };
+                }
+
+                const href = item.getAttribute("href");
+                if (!href) return null;
+
+                try {
+                    return { element: item, path: new URL(href, window.location.origin).pathname };
+                } catch (error) {
+                    return null;
+                }
+            })
+            .filter(Boolean)
+        : [];
+
+    let swipeState = null;
+    let swipeNavigationLocked = false;
+
+    function normalizePath(pathname) {
+        const cleaned = String(pathname || "").replace(/\/+$/, "");
+        return cleaned || "/";
+    }
+
+    function isPathMatch(currentPath, targetPath) {
+        const normalizedCurrent = normalizePath(currentPath);
+        const normalizedTarget = normalizePath(targetPath);
+        return normalizedCurrent === normalizedTarget || normalizedCurrent.startsWith(`${normalizedTarget}/`);
+    }
+
+    function hasBlockingOverlay() {
+        return Boolean(document.querySelector(".modal.show, .offcanvas.show, .dropdown-menu.show, .global-loading-overlay.is-visible"));
+    }
+
+    function isHorizontalScrollable(element) {
+        if (!(element instanceof Element)) return false;
+        const style = window.getComputedStyle(element);
+        if (!/(auto|scroll|overlay)/.test(style.overflowX)) return false;
+        return element.scrollWidth > element.clientWidth + 8;
+    }
+
+    function shouldIgnoreSwipe(target) {
+        if (hasBlockingOverlay()) return true;
+        if (!(target instanceof Element)) return true;
+
+        if (target.closest(
+            ".bottom-nav, .modal, .offcanvas, .dropdown-menu, .pswp, .carousel, .swiper, .leaflet-container, .gm-style, .mapboxgl-map, [data-bs-touch=\"true\"], [data-no-swipe=\"true\"], [data-swipe-ignore=\"true\"]"
+        )) {
+            return true;
+        }
+
+        if (target.closest("input, textarea, select, option, button, [contenteditable=\"true\"], [contenteditable=\"\"], [role=\"button\"]")) {
+            return true;
+        }
+
+        let node = target;
+        while (node && node !== document.body) {
+            if (node instanceof Element && isHorizontalScrollable(node)) {
+                return true;
+            }
+            node = node.parentElement;
+        }
+
+        return false;
+    }
+
+    function getCurrentNavIndex() {
+        return bottomNavTargets.findIndex((entry) => isPathMatch(window.location.pathname, entry.path));
+    }
+
+    function startSwipeNavigation(clientX, clientY, target) {
+        if (swipeNavigationLocked || shouldIgnoreSwipe(target)) return;
+
+        swipeState = {
+            startX: clientX,
+            startY: clientY,
+            lastX: clientX,
+            lastY: clientY,
+            startTime: performance.now(),
+            locked: false,
+            cancelled: false,
+        };
+    }
+
+    function updateSwipeNavigation(clientX, clientY, event) {
+        if (!swipeState || swipeState.cancelled) return;
+
+        swipeState.lastX = clientX;
+        swipeState.lastY = clientY;
+
+        const deltaX = clientX - swipeState.startX;
+        const deltaY = clientY - swipeState.startY;
+        const absX = Math.abs(deltaX);
+        const absY = Math.abs(deltaY);
+
+        if (!swipeState.locked) {
+            if (absX < 12 && absY < 12) return;
+
+            if (absY > absX * 1.05) {
+                swipeState.cancelled = true;
+                return;
+            }
+
+            if (absX > absY * 1.2) {
+                swipeState.locked = true;
+            }
+        }
+
+        if (swipeState.locked && event && event.cancelable) {
+            event.preventDefault();
+        }
+    }
+
+    function finishSwipeNavigation(clientX, clientY) {
+        if (!swipeState) return;
+
+        const state = swipeState;
+        swipeState = null;
+
+        if (state.cancelled || swipeNavigationLocked) return;
+
+        const deltaX = clientX - state.startX;
+        const deltaY = clientY - state.startY;
+        const absX = Math.abs(deltaX);
+        const absY = Math.abs(deltaY);
+        const elapsed = Math.max(performance.now() - state.startTime, 1);
+        const velocityX = absX / elapsed;
+
+        if (absX < 72) return;
+        if (absX <= absY * 1.2) return;
+        if (velocityX < 0.35 && absX < 110) return;
+
+        const currentIndex = getCurrentNavIndex();
+        if (currentIndex < 0) return;
+
+        const direction = deltaX < 0 ? 1 : -1;
+        const nextIndex = currentIndex + direction;
+        if (nextIndex < 0 || nextIndex >= bottomNavTargets.length) return;
+
+        const nextTarget = bottomNavTargets[nextIndex];
+        if (!nextTarget || !nextTarget.path) return;
+        if (isPathMatch(window.location.pathname, nextTarget.path)) return;
+
+        swipeNavigationLocked = true;
+        document.body.classList.add("mw-page-transitioning");
+        window.requestAnimationFrame(() => {
+            window.setTimeout(() => {
+                window.location.assign(nextTarget.path);
+            }, 220);
+        });
+    }
+
+    function cancelSwipeNavigation() {
+        swipeState = null;
+    }
+
+    if (window.PointerEvent) {
+        document.addEventListener("pointerdown", (event) => {
+            if (event.pointerType !== "touch" && event.pointerType !== "pen") return;
+            if (event.isPrimary === false) return;
+            startSwipeNavigation(event.clientX, event.clientY, event.target);
+        }, { passive: true });
+
+        document.addEventListener("pointermove", (event) => {
+            if (event.pointerType !== "touch" && event.pointerType !== "pen") return;
+            updateSwipeNavigation(event.clientX, event.clientY, event);
+        }, { passive: false });
+
+        document.addEventListener("pointerup", (event) => {
+            if (event.pointerType !== "touch" && event.pointerType !== "pen") return;
+            finishSwipeNavigation(event.clientX, event.clientY);
+        }, { passive: true });
+
+        document.addEventListener("pointercancel", cancelSwipeNavigation, { passive: true });
+    } else {
+        let touchIdentifier = null;
+
+        document.addEventListener("touchstart", (event) => {
+            if (event.touches.length !== 1) {
+                cancelSwipeNavigation();
+                return;
+            }
+            const touch = event.touches[0];
+            touchIdentifier = touch.identifier;
+            startSwipeNavigation(touch.clientX, touch.clientY, event.target);
+        }, { passive: true });
+
+        document.addEventListener("touchmove", (event) => {
+            const touch = Array.from(event.touches).find((item) => item.identifier === touchIdentifier);
+            if (!touch) return;
+            updateSwipeNavigation(touch.clientX, touch.clientY, event);
+        }, { passive: false });
+
+        document.addEventListener("touchend", (event) => {
+            const touch = Array.from(event.changedTouches).find((item) => item.identifier === touchIdentifier);
+            if (!touch) return;
+            finishSwipeNavigation(touch.clientX, touch.clientY);
+            touchIdentifier = null;
+        }, { passive: true });
+
+        document.addEventListener("touchcancel", () => {
+            touchIdentifier = null;
+            cancelSwipeNavigation();
+        }, { passive: true });
+    }
+
     function dismissToast(toast) {
         if (!toast || toast.classList.contains("is-leaving")) return;
         toast.classList.add("is-leaving");
