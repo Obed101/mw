@@ -3,9 +3,179 @@
 
 {% block admin_content %}
 <h5 class="fw-bold mb-4" style="color:var(--admin-text)">Settings</h5>
-<div class="admin-card">
-  <div class="admin-card-body">
-    <p style="color:var(--admin-muted)">System settings will be available here in a future release.</p>
+
+<!-- AI Chat Test Card -->
+<div class="admin-card" style="max-width:640px">
+  <div class="admin-card-header">
+    <span><i class="bi bi-robot"></i>&ensp;AI Model Test</span>
+    <span class="role-badge role-admin" style="font-size:.65rem">CHAT WITH AI</span>
+  </div>
+  <div class="admin-card-body" style="padding:0">
+
+    <!-- Messages area -->
+    <div id="chatMessages" style="
+      height:340px; overflow-y:auto; padding:1.25rem;
+      display:flex; flex-direction:column; gap:.75rem;
+    ">
+      <div class="ai-chat-empty" id="chatEmpty">
+        <i class="bi bi-chat-dots" style="font-size:1.6rem;opacity:.35"></i>
+        <span style="font-size:.82rem;color:var(--admin-muted)">Send a message to test the AI model</span>
+      </div>
+    </div>
+
+    <!-- Input area -->
+    <div style="border-top:1px solid var(--admin-border);padding:.875rem 1.25rem;display:flex;gap:.6rem;align-items:end">
+      <textarea id="chatInput" rows="1" placeholder="Type a message…"
+        style="
+          flex:1; resize:none; background:var(--admin-surface2);
+          border:1px solid var(--admin-border); border-radius:8px;
+          padding:.55rem .875rem; color:var(--admin-text); font-size:.875rem;
+          outline:none; max-height:120px; line-height:1.45;
+          transition:border-color .15s;
+        "
+      ></textarea>
+      <button id="chatSend" class="btn-admin-primary" style="padding:.55rem .875rem;flex-shrink:0" title="Send">
+        <i class="bi bi-send"></i>
+      </button>
+    </div>
   </div>
 </div>
+
+<style>
+  /* Scrollbar inside chat */
+  #chatMessages::-webkit-scrollbar { width:5px }
+  #chatMessages::-webkit-scrollbar-track { background:transparent }
+  #chatMessages::-webkit-scrollbar-thumb { background:var(--admin-border);border-radius:9px }
+
+  /* Empty state */
+  .ai-chat-empty {
+    flex:1;display:flex;flex-direction:column;align-items:center;
+    justify-content:center;gap:.5rem;
+  }
+
+  /* Bubbles */
+  .chat-bubble {
+    max-width:85%;padding:.6rem .9rem;border-radius:10px;
+    font-size:.855rem;line-height:1.55;word-break:break-word;
+    animation:bubbleIn .2s ease;
+  }
+  .chat-bubble.user {
+    align-self:flex-end;
+    background:var(--admin-accent);color:#fff;
+    border-bottom-right-radius:3px;
+  }
+  .chat-bubble.assistant {
+    align-self:flex-start;
+    background:var(--admin-surface2);color:var(--admin-text);
+    border:1px solid var(--admin-border);border-bottom-left-radius:3px;
+  }
+  .chat-bubble.error {
+    align-self:flex-start;
+    background:rgba(239,68,68,.1);color:#f87171;
+    border:1px solid rgba(239,68,68,.25);border-bottom-left-radius:3px;
+    font-size:.8rem;
+  }
+
+  /* Typing indicator */
+  .typing-dots{display:inline-flex;gap:4px;padding:2px 0}
+  .typing-dots span{width:6px;height:6px;border-radius:50%;background:var(--admin-muted);
+    animation:dotPulse .9s ease-in-out infinite}
+  .typing-dots span:nth-child(2){animation-delay:.15s}
+  .typing-dots span:nth-child(3){animation-delay:.3s}
+
+  @keyframes dotPulse{0%,80%,100%{opacity:.3;transform:scale(.85)}40%{opacity:1;transform:scale(1.1)}}
+  @keyframes bubbleIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+
+  /* Focus ring on input */
+  #chatInput:focus{border-color:var(--admin-accent)}
+</style>
+
+<script>
+(function(){
+  const input    = document.getElementById('chatInput');
+  const sendBtn  = document.getElementById('chatSend');
+  const msgBox   = document.getElementById('chatMessages');
+  const emptyEl  = document.getElementById('chatEmpty');
+  const endpoint = "{{ url_for('mw_admin_bp.ai_chat') }}";
+
+  // Keep the last 2 exchanges (4 messages) for context
+  let history = [];
+
+  function addBubble(text, cls){
+    if(emptyEl) emptyEl.remove();
+    const div = document.createElement('div');
+    div.className = 'chat-bubble ' + cls;
+    div.textContent = text;
+    msgBox.appendChild(div);
+    msgBox.scrollTop = msgBox.scrollHeight;
+    return div;
+  }
+
+  function showTyping(){
+    if(emptyEl) emptyEl.remove();
+    const div = document.createElement('div');
+    div.className = 'chat-bubble assistant';
+    div.id = 'typingIndicator';
+    div.innerHTML = '<div class="typing-dots"><span></span><span></span><span></span></div>';
+    msgBox.appendChild(div);
+    msgBox.scrollTop = msgBox.scrollHeight;
+  }
+
+  function removeTyping(){
+    const el = document.getElementById('typingIndicator');
+    if(el) el.remove();
+  }
+
+  function autoResize(){
+    input.style.height = 'auto';
+    input.style.height = Math.min(input.scrollHeight, 120) + 'px';
+  }
+
+  async function send(){
+    const text = input.value.trim();
+    if(!text) return;
+
+    input.value = '';
+    input.style.height = 'auto';
+    addBubble(text, 'user');
+    sendBtn.disabled = true;
+    showTyping();
+
+    try{
+      const res = await fetch(endpoint, {
+        method:'POST',
+        headers:{
+          'Content-Type':'application/json',
+          'X-CSRFToken': '{{ csrf_token() }}'
+        }, 
+        body: JSON.stringify({ message: text, history: history })
+      });
+      const data = await res.json();
+      removeTyping();
+
+      if(data.success){
+        addBubble(data.reply, 'assistant');
+        // Track history — keep last 2 exchanges (4 msgs)
+        history.push({role:'user', content:text});
+        history.push({role:'assistant', content:data.reply});
+        if(history.length > 4) history = history.slice(-4);
+      } else {
+        addBubble(data.error || 'Something went wrong.', 'error');
+      }
+    } catch(err){
+      removeTyping();
+      addBubble('Network error — could not reach the server.', 'error');
+    }
+
+    sendBtn.disabled = false;
+    input.focus();
+  }
+
+  sendBtn.addEventListener('click', send);
+  input.addEventListener('keydown', function(e){
+    if(e.key === 'Enter' && !e.shiftKey){ e.preventDefault(); send(); }
+  });
+  input.addEventListener('input', autoResize);
+})();
+</script>
 {% endblock %}

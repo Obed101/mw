@@ -10,7 +10,7 @@ class UserFavoriteProduct(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False, index=True)
     product_id = db.Column(db.Integer, db.ForeignKey("product.id"), nullable=False, index=True)
-    favorited_at = db.Column(db.DateTime, default=datetime.now(timezone.utc), nullable=False)
+    favorited_at = db.Column(db.DateTime(timezone=True), default=datetime.now(timezone.utc), nullable=False)
 
     __table_args__ = (
         db.UniqueConstraint("user_id", "product_id", name="unique_user_product_favorite"),
@@ -41,8 +41,8 @@ class Notification(db.Model):
     related_product_id = db.Column(db.Integer, db.ForeignKey("product.id"), nullable=True, index=True)
     payload = db.Column(db.Text, nullable=True)
     is_read = db.Column(db.Boolean, default=False, nullable=False, index=True)
-    created_at = db.Column(db.DateTime, default=datetime.now(timezone.utc), nullable=False, index=True)
-    read_at = db.Column(db.DateTime, nullable=True)
+    created_at = db.Column(db.DateTime(timezone=True), default=datetime.now(timezone.utc), nullable=False, index=True)
+    read_at = db.Column(db.DateTime(timezone=True), nullable=True)
 
     recipient = db.relationship("User", foreign_keys=[recipient_user_id], backref="received_notifications")
     actor = db.relationship("User", foreign_keys=[actor_user_id], backref="sent_notifications")

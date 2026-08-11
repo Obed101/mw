@@ -861,6 +861,7 @@ def view_product(product_id):
 def global_search():
     """Global search across products, shops, and categories using MeiliSearch."""
     q = request.args.get('q', '').strip()
+    inline = request.args.get('layout', '').strip().lower() == 'inline'
     if len(q) < 2:
         return ""
 
@@ -869,19 +870,13 @@ def global_search():
     categories_hits = []
 
     try:
-        # Connect to MeiliSearch
-        ms_url = current_app.config.get('MEILISEARCH_URL', 'http://127.0.0.1:7700')
-        ms_key = current_app.config.get('MEILISEARCH_KEY', 'masterKey')
-        client = meilisearch.Client(ms_url, ms_key)
-
-        # Execute searches (handles typo tolerance naturally)
-        products_res = client.index('products').search(q, {'limit': 5})
+        products_res = search_service.search('products', q, {'limit': 5})
         products_hits = products_res.get('hits', [])
 
-        shops_res = client.index('shops').search(q, {'limit': 3})
+        shops_res = search_service.search('shops', q, {'limit': 3})
         shops_hits = shops_res.get('hits', [])
 
-        categories_res = client.index('categories').search(q, {'limit': 3})
+        categories_res = search_service.search('categories', q, {'limit': 3})
         categories_hits = categories_res.get('hits', [])
 
     except Exception as e:
@@ -920,7 +915,8 @@ def global_search():
         products=products_hits,
         shops=shops_hits,
         categories=categories_hits,
-        query=q
+        query=q,
+        inline=inline
     )
 
 @buyer_bp.route("/products/compare")

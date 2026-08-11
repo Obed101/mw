@@ -327,6 +327,17 @@
                                 </span>
                                 <input type="email" class="form-control form-control-modern border-start-0" 
                                        value="{{ current_user.email }}" name="email" readonly>
+                                <span class="input-group-text bg-light border-0">
+                                    {% if current_user.is_email_verified %}
+                                    <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill">
+                                        <i class="bi bi-check-circle-fill me-1"></i>Verified
+                                    </span>
+                                    {% else %}
+                                    <button type="button" class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#emailVerifyModal">
+                                        <i class="bi bi-shield-check me-1"></i>Verify
+                                    </button>
+                                    {% endif %}
+                                </span>
                             </div>
                         </div>
                         
@@ -338,6 +349,17 @@
                                 </span>
                                 <input type="tel" class="form-control form-control-modern border-start-0" 
                                        value="{{ current_user.phone or '' }}" name="phone">
+                                <span class="input-group-text bg-light border-0">
+                                    {% if current_user.is_phone_verified %}
+                                    <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill">
+                                        <i class="bi bi-check-circle-fill me-1"></i>Verified
+                                    </span>
+                                    {% else %}
+                                    <button type="button" class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#phoneVerifyModal">
+                                        <i class="bi bi-shield-check me-1"></i>Verify
+                                    </button>
+                                    {% endif %}
+                                </span>
                             </div>
                         </div>
                         
@@ -497,4 +519,336 @@
         </div>
     </div>
 </div>
+
+<!-- Phone Verification Modal -->
+<div class="modal fade" id="phoneVerifyModal" tabindex="-1" aria-labelledby="phoneVerifyModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content rounded-4">
+            <div class="modal-header border-0 pb-0">
+                <h5 class="modal-title fw-bold" id="phoneVerifyModalLabel">
+                    <i class="bi bi-phone me-2 text-primary"></i>Verify Phone Number
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div id="phone-alert-container"></div>
+                
+                <div id="phone-step-1">
+                    <label for="profile-phone-input" class="form-label fw-semibold">Enter your phone number</label>
+                    <div class="input-group mb-3">
+                        <span class="input-group-text bg-light fw-bold">+233</span>
+                        <input type="tel" class="form-control form-control-lg" id="profile-phone-input" placeholder="0553995047" value="{{ current_user.phone or '' }}">
+                        <button class="btn btn-primary px-4 fw-semibold" type="button" id="profile-btn-send-phone-otp">
+                            Send SMS OTP
+                        </button>
+                    </div>
+                    <div class="form-text">Formats accepted: 0553995047 or +233553995047</div>
+                </div>
+
+                <!-- Phone OTP Entry Form (Hidden until code sent) -->
+                <div id="phone-step-2" class="d-none mt-3 text-center">
+                    <div class="alert alert-info border-0 rounded-3 text-start mb-3">
+                        <i class="bi bi-info-circle me-1"></i> We sent a 6-digit code to <strong id="profile-sent-phone-display"></strong>.
+                    </div>
+                    <label class="form-label fw-semibold">Enter 6-Digit Code</label>
+                    <div class="d-flex justify-content-center gap-2 mb-3">
+                        <input type="text" maxlength="6" class="form-control form-control-lg text-center font-monospace tracking-widest fs-4" id="profile-phone-otp-code" placeholder="000000" style="max-width: 220px; letter-spacing: 0.5rem;">
+                    </div>
+                    
+                    <div class="d-flex justify-content-center align-items-center gap-3">
+                        <button class="btn btn-success px-4 fw-semibold" id="profile-btn-verify-phone-otp">
+                            Verify Code
+                        </button>
+                        <button class="btn btn-outline-secondary" id="profile-btn-resend-phone-otp" disabled>
+                            Resend in <span id="profile-phone-countdown">03:00</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Email Verification Modal -->
+<div class="modal fade" id="emailVerifyModal" tabindex="-1" aria-labelledby="emailVerifyModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content rounded-4">
+            <div class="modal-header border-0 pb-0">
+                <h5 class="modal-title fw-bold" id="emailVerifyModalLabel">
+                    <i class="bi bi-envelope me-2 text-primary"></i>Verify Email Address
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div id="email-alert-container"></div>
+                
+                <div id="email-step-1">
+                    <label for="profile-email-input" class="form-label fw-semibold">Email address</label>
+                    <div class="input-group mb-3">
+                        <input type="email" class="form-control form-control-lg" id="profile-email-input" value="{{ current_user.email }}" readonly>
+                        <button class="btn btn-primary px-4 fw-semibold" type="button" id="profile-btn-send-email-otp">
+                            Send Email OTP
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Email OTP Entry Form -->
+                <div id="email-step-2" class="d-none mt-3 text-center">
+                    <div class="alert alert-info border-0 rounded-3 text-start mb-3">
+                        <i class="bi bi-info-circle me-1"></i> We sent a verification code to <strong>{{ current_user.email }}</strong>.
+                    </div>
+                    <label class="form-label fw-semibold">Enter 6-Digit Code</label>
+                    <div class="d-flex justify-content-center gap-2 mb-3">
+                        <input type="text" maxlength="6" class="form-control form-control-lg text-center font-monospace tracking-widest fs-4" id="profile-email-otp-code" placeholder="000000" style="max-width: 220px; letter-spacing: 0.5rem;">
+                    </div>
+                    
+                    <div class="d-flex justify-content-center align-items-center gap-3">
+                        <button class="btn btn-success px-4 fw-semibold" id="profile-btn-verify-email-otp">
+                            Verify Code
+                        </button>
+                        <button class="btn btn-outline-secondary" id="profile-btn-resend-email-otp" disabled>
+                            Resend in <span id="profile-email-countdown">03:00</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute("content") || '';
+    
+    // Phone verification variables
+    const phoneAlertContainer = document.getElementById('phone-alert-container');
+    const phoneStep1 = document.getElementById('phone-step-1');
+    const phoneStep2 = document.getElementById('phone-step-2');
+    const phoneInput = document.getElementById('profile-phone-input');
+    const sentPhoneDisplay = document.getElementById('profile-sent-phone-display');
+    const btnSendPhone = document.getElementById('profile-btn-send-phone-otp');
+    const btnVerifyPhone = document.getElementById('profile-btn-verify-phone-otp');
+    const phoneOtpCode = document.getElementById('profile-phone-otp-code');
+    const btnResendPhone = document.getElementById('profile-btn-resend-phone-otp');
+    const phoneCountdown = document.getElementById('profile-phone-countdown');
+    
+    // Email verification variables
+    const emailAlertContainer = document.getElementById('email-alert-container');
+    const emailStep1 = document.getElementById('email-step-1');
+    const emailStep2 = document.getElementById('email-step-2');
+    const btnSendEmail = document.getElementById('profile-btn-send-email-otp');
+    const btnVerifyEmail = document.getElementById('profile-btn-verify-email-otp');
+    const emailOtpCode = document.getElementById('profile-email-otp-code');
+    const btnResendEmail = document.getElementById('profile-btn-resend-email-otp');
+    const emailCountdown = document.getElementById('profile-email-countdown');
+    
+    function showAlert(container, message, type = 'danger') {
+        container.innerHTML = `
+            <div class="alert alert-${type} alert-dismissible fade show rounded-3 mb-3" role="alert">
+                <i class="bi ${type === 'success' ? 'bi-check-circle-fill' : 'bi-exclamation-triangle-fill'} me-2"></i>
+                ${message}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        `;
+    }
+
+    function startTimer(durationSeconds, displayEl, buttonEl) {
+        let remaining = durationSeconds;
+        buttonEl.disabled = true;
+        
+        const interval = setInterval(function() {
+            const minutes = Math.floor(remaining / 60);
+            const seconds = remaining % 60;
+            displayEl.textContent = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+            
+            if (--remaining < 0) {
+                clearInterval(interval);
+                buttonEl.disabled = false;
+                displayEl.textContent = '00:00';
+            }
+        }, 1000);
+    }
+
+    async function apiPost(url, payload = {}) {
+        const headers = {
+            'Content-Type': 'application/json'
+        };
+        if (csrfToken) {
+            headers['X-CSRFToken'] = csrfToken;
+        }
+
+        const res = await fetch(url, {
+            method: 'POST',
+            headers: headers,
+            body: JSON.stringify(payload)
+        });
+
+        let data = {};
+        const contentType = res.headers.get('content-type') || '';
+        if (contentType.includes('application/json')) {
+            try {
+                data = await res.json();
+            } catch (e) {
+                data = {};
+            }
+        } else {
+            const text = await res.text();
+            data = { message: `HTTP Error ${res.status}: ${res.statusText}` };
+        }
+
+        return { ok: res.ok, status: res.status, data: data };
+    }
+
+    // --- Phone OTP Handlers ---
+    if (btnSendPhone) {
+        btnSendPhone.addEventListener('click', async function() {
+            const phoneVal = phoneInput.value.trim();
+            if (!phoneVal) {
+                showAlert(phoneAlertContainer, 'Please enter a valid phone number.', 'warning');
+                return;
+            }
+            btnSendPhone.disabled = true;
+            btnSendPhone.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Sending...';
+
+            try {
+                const { ok, status, data } = await apiPost('/api/auth/verify-phone/request-otp', { phone: phoneVal });
+                
+                if (ok && data.success) {
+                    phoneStep1.classList.add('d-none');
+                    phoneStep2.classList.remove('d-none');
+                    sentPhoneDisplay.textContent = data.masked_phone || phoneVal;
+                    showAlert(phoneAlertContainer, data.message, 'success');
+                    startTimer(data.cooldown_seconds || 180, phoneCountdown, btnResendPhone);
+                } else {
+                    showAlert(phoneAlertContainer, data.message || 'Failed to send SMS OTP.', status === 429 ? 'warning' : 'danger');
+                    if (data.in_cooldown && data.cooldown_seconds) {
+                        phoneStep1.classList.add('d-none');
+                        phoneStep2.classList.remove('d-none');
+                        startTimer(data.cooldown_seconds, phoneCountdown, btnResendPhone);
+                    }
+                }
+            } catch (err) {
+                showAlert(phoneAlertContainer, 'Network error while requesting phone code.', 'danger');
+            } finally {
+                btnSendPhone.disabled = false;
+                btnSendPhone.textContent = 'Send SMS OTP';
+            }
+        });
+    }
+
+    if (btnResendPhone) {
+        btnResendPhone.addEventListener('click', function() {
+            if (btnSendPhone) btnSendPhone.click();
+        });
+    }
+
+    if (btnVerifyPhone) {
+        btnVerifyPhone.addEventListener('click', async function() {
+            const code = phoneOtpCode.value.trim();
+            if (!code || code.length !== 6) {
+                showAlert(phoneAlertContainer, 'Please enter the 6-digit code sent to your phone.', 'warning');
+                return;
+            }
+            btnVerifyPhone.disabled = true;
+            btnVerifyPhone.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Verifying...';
+
+            try {
+                const { ok, status, data } = await apiPost('/api/auth/verify-phone/verify-otp', { otp: code });
+                
+                if (ok && data.success) {
+                    showAlert(phoneAlertContainer, 'Phone number verified! Reloading page...', 'success');
+                    setTimeout(() => window.location.reload(), 1200);
+                } else {
+                    showAlert(phoneAlertContainer, data.message || 'Invalid verification code.', 'danger');
+                }
+            } catch (err) {
+                showAlert(phoneAlertContainer, 'Network error while verifying code.', 'danger');
+            } finally {
+                btnVerifyPhone.disabled = false;
+                btnVerifyPhone.textContent = 'Verify Code';
+            }
+        });
+    }
+
+    // --- Email OTP Handlers ---
+    if (btnSendEmail) {
+        btnSendEmail.addEventListener('click', async function() {
+            btnSendEmail.disabled = true;
+            btnSendEmail.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Sending...';
+
+            try {
+                const { ok, status, data } = await apiPost('/api/auth/verify-email/request-otp', {});
+
+                if (ok && data.success) {
+                    emailStep1.classList.add('d-none');
+                    emailStep2.classList.remove('d-none');
+                    showAlert(emailAlertContainer, data.message, 'success');
+                    startTimer(data.cooldown_seconds || 180, emailCountdown, btnResendEmail);
+                } else {
+                    showAlert(emailAlertContainer, data.message || 'Failed to send email OTP.', status === 429 ? 'warning' : 'danger');
+                    if (data.in_cooldown && data.cooldown_seconds) {
+                        emailStep1.classList.add('d-none');
+                        emailStep2.classList.remove('d-none');
+                        startTimer(data.cooldown_seconds, emailCountdown, btnResendEmail);
+                    }
+                }
+            } catch (err) {
+                showAlert(emailAlertContainer, 'Network error while requesting email code.', 'danger');
+            } finally {
+                btnSendEmail.disabled = false;
+                btnSendEmail.textContent = 'Send Email OTP';
+            }
+        });
+    }
+
+    if (btnResendEmail) {
+        btnResendEmail.addEventListener('click', function() {
+            if (btnSendEmail) btnSendEmail.click();
+        });
+    }
+
+    if (btnVerifyEmail) {
+        btnVerifyEmail.addEventListener('click', async function() {
+            const code = emailOtpCode.value.trim();
+            if (!code || code.length !== 6) {
+                showAlert(emailAlertContainer, 'Please enter the 6-digit code sent to your email.', 'warning');
+                return;
+            }
+            btnVerifyEmail.disabled = true;
+            btnVerifyEmail.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Verifying...';
+
+            try {
+                const { ok, status, data } = await apiPost('/api/auth/verify-email/verify-otp', { otp: code });
+
+                if (ok && data.success) {
+                    showAlert(emailAlertContainer, 'Email address verified! Reloading page...', 'success');
+                    setTimeout(() => window.location.reload(), 1200);
+                } else {
+                    showAlert(emailAlertContainer, data.message || 'Invalid verification code.', 'danger');
+                }
+            } catch (err) {
+                showAlert(emailAlertContainer, 'Network error while verifying code.', 'danger');
+            } finally {
+                btnVerifyEmail.disabled = false;
+                btnVerifyEmail.textContent = 'Verify Code';
+            }
+        });
+    }
+    
+    // Reset modal state when closed
+    document.getElementById('phoneVerifyModal').addEventListener('hidden.bs.modal', function() {
+        phoneStep1.classList.remove('d-none');
+        phoneStep2.classList.add('d-none');
+        phoneOtpCode.value = '';
+        phoneAlertContainer.innerHTML = '';
+    });
+    
+    document.getElementById('emailVerifyModal').addEventListener('hidden.bs.modal', function() {
+        emailStep1.classList.remove('d-none');
+        emailStep2.classList.add('d-none');
+        emailOtpCode.value = '';
+        emailAlertContainer.innerHTML = '';
+    });
+});
+</script>
 {% endblock %}

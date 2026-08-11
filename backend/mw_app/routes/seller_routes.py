@@ -186,6 +186,8 @@ def _serialize_shop(shop):
         'image_urls': shop.image_urls,
         'primary_image_url': shop.primary_image_url,
         'last_updated': shop.last_updated.isoformat() if shop.last_updated else None,
+        'ai_description_generated': bool(getattr(shop, 'ai_description_generated', False)),
+        'ai_job_status': getattr(shop, 'ai_job_status', 'idle'),
     }
 
 
@@ -389,6 +391,29 @@ def my_shop():
         _, shop, error_response = _load_user_and_shop(seller_id, require_shop=True)
         if error_response:
             return error_response
+
+        return jsonify({
+            'success': True,
+            'shop': _serialize_shop(shop),
+        }), 200
+
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'message': 'Error fetching shop information',
+            'error': str(e),
+        }), 500
+
+@seller_bp.route("/shops/<int:shop_id>")
+def get_shop_by_id(shop_id):
+    """Get specific shop information by ID"""
+    try:
+        shop = Shop.query.get(shop_id)
+        if not shop:
+            return jsonify({
+                'success': False,
+                'message': 'Shop not found'
+            }), 404
 
         return jsonify({
             'success': True,
@@ -2305,22 +2330,71 @@ def unsuccessful_searches(shop_id):
 
 @seller_bp.route('/shop/<int:shop_id>/claim', methods=['POST'])
 def claim_shop(shop_id):
-    """Check if shop is not claimed, verify phone and email to claim shop"""
+    """Check if shop is unclaimed, verify contact match (phone/email), and claim shop ownership"""
     if not current_user.is_authenticated:
         return _json_error('Authentication required', 401)
 
     shop = Shop.query.get_or_404(shop_id)
     if shop.is_claimed and shop.owner_id != current_user.id:
-        return jsonify({'success': False, 'message': 'This shop has already been claimed'}), 400
+        return jsonify({'success': False, 'message': 'This shop has already been claimed by another user.'}), 400
 
     if shop.owner_id == current_user.id:
-        return jsonify({'success': True, 'message': 'You already own this shop'}), 200
+        return jsonify({'success': True, 'message': 'You already own this shop.'}), 200
 
     user = current_user
+
+    # 1. Verification requirement check
+    has_verified_contact = bool(user.is_phone_verified or user.is_email_verified)
+    if not has_verified_contact:
+        return jsonify({
+            'success': False,
+            'message': 'Contact verification required. Please verify your phone or email before claiming this shop.'
+        }), 400
+
+    # 2. Contact matching check
+    from ..utils.phone_utils import normalize_ghana_phone
+
+    phone_match = False
+    email_match = False
+
+    if user.is_phone_verified and user.phone and shop.phone:
+        norm_user_phone = normalize_ghana_phone(user.phone)
+        norm_shop_phone = normalize_ghana_phone(shop.phone)
+        if norm_user_phone and norm_shop_phone and norm_user_phone == norm_shop_phone:
+            phone_match = True
+
+    if user.is_email_verified and user.email and shop.email:
+        norm_user_email = user.email.strip().lower()
+        norm_shop_email = shop.email.strip().lower()
+        if norm_user_email == norm_shop_email:
+            email_match = True
+
+    if not (phone_match or email_match):
+        reasons = []
+        if user.is_phone_verified:
+            user_p = normalize_ghana_phone(user.phone) or user.phone
+            shop_p = normalize_ghana_phone(shop.phone) or (shop.phone or 'Not specified')
+            reasons.append(f"Verified phone ({user_p}) does not match shop phone ({shop_p})")
+        if user.is_email_verified:
+            reasons.append(f"Verified email ({user.email}) does not match shop email ({shop.email or 'Not specified'})")
+
+        mismatch_detail = " and ".join(reasons)
+        return jsonify({
+            'success': False,
+            'message': f'Cannot claim shop: {mismatch_detail}. Your verified contact details must match the shop details.'
+        }), 403
+
     previous_owner_id = shop.owner_id
 
+    # Claim shop ownership (does NOT alter shop's admin verification_status)
     shop.owner_id = user.id
     shop.is_claimed = True
+    shop.claimed_at = datetime.now(timezone.utc)
+
+    # Promote buyer to seller role if needed
+    if user.role != USER_ROLE_SELLER:
+        user.role = USER_ROLE_SELLER
+
     db.session.commit()
 
     track_event_async(
@@ -2328,11 +2402,18 @@ def claim_shop(shop_id):
         user=current_user._get_current_object(),
         entity_type='shop',
         entity_id=shop.id,
-        payload={'previous_owner_id': previous_owner_id}
+        payload={
+            'previous_owner_id': previous_owner_id,
+            'match_type': 'phone' if phone_match else 'email'
+        }
     )
+
+    user_display = getattr(user, 'username', getattr(user, 'name', user.email))
+    # Send admins notification
+    message = f'Shop "{shop.name}" has been successfully claimed by {user_display}!'
 
     return jsonify({
         'success': True,
-        'message': f'Shop "{shop.name}" has been successfully claimed by {user.name}',
+        'message': message,
         'shop': _serialize_shop(shop)
     }), 200

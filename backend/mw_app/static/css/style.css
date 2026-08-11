@@ -265,10 +265,14 @@ body {
     touch-action: manipulation;
     overflow: visible;
 }
+.bottom-nav-item:hover {
+    color: #7c50f4;
+    border: 1px solid #7f4afa29;
+}
 
-.bottom-nav-item:hover,
 .bottom-nav-item.active {
-    color: white;
+    color: #fdfee8;
+    border: 1px solid #7f4afa29;
 }
 
 .bottom-nav-item.active::before {
@@ -276,12 +280,22 @@ body {
     position: absolute;
     inset: 0.05rem;
     border-radius: inherit;
-    background: linear-gradient(135deg, rgba(107, 70, 193, 0.95), rgba(59, 130, 246, 0.95) 55%, rgba(147, 51, 234, 0.92));
+    background: linear-gradient(
+        135deg,
+        #6b46c1ad,
+        #0b34ffd2,
+        #9233eace,
+        #6b46c1ad,
+        #0b34ffd2
+    );
+    background-size: 300% 300%;
     box-shadow:
         0 10px 24px rgba(59, 130, 246, 0.22),
         inset 0 1px 0 rgba(255, 255, 255, 0.2);
     z-index: -1;
-    animation: mwBottomNavActivePop 220ms cubic-bezier(0.2, 0.8, 0.2, 1);
+    animation:
+        mwBottomNavActivePop 220ms cubic-bezier(0.2, 0.8, 0.2, 1),
+        mwBottomNavGradientFlow 14s ease infinite;
 }
 
 .bottom-nav-item i {
@@ -402,6 +416,18 @@ body.mw-page-transitioning .bottom-nav {
     to {
         transform: scale(1);
         opacity: 1;
+    }
+}
+
+@keyframes mwBottomNavGradientFlow {
+    0% {
+        background-position: 0% 50%;
+    }
+    50% {
+        background-position: 100% 50%;
+    }
+    100% {
+        background-position: 0% 50%;
     }
 }
 

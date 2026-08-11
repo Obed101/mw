@@ -1,5 +1,5 @@
 from ..extensions import db
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 # Subscription type constants
 SUBSCRIPTION_TYPE_USER = 'user'
@@ -17,11 +17,11 @@ class Subscription(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     subscription_type = db.Column(db.String(20), nullable=False)
     target_id = db.Column(db.Integer, nullable=False)  # References user.id, product.id, or shop.id
-    start_date = db.Column(db.DateTime, nullable=False, default=datetime.now(timezone.utc))
-    end_date = db.Column(db.DateTime, nullable=False)
+    start_date = db.Column(db.DateTime(timezone=True), nullable=False, default=datetime.now(timezone.utc))
+    end_date = db.Column(db.DateTime(timezone=True), nullable=False)
     is_active = db.Column(db.Boolean, default=True)
-    created_at = db.Column(db.DateTime, default=datetime.now(timezone.utc))
-    updated_at = db.Column(db.DateTime, default=datetime.now(timezone.utc), onupdate=datetime.now(timezone.utc))
+    created_at = db.Column(db.DateTime(timezone=True), default=datetime.now(timezone.utc))
+    updated_at = db.Column(db.DateTime(timezone=True), default=datetime.now(timezone.utc), onupdate=datetime.now(timezone.utc))
     
     # Optional: reference to user who owns/created the subscription (useful for audit)
     created_by = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=True)
@@ -71,9 +71,9 @@ class Subscription(db.Model):
     def extend(self, days):
         """Extend subscription by specified number of days"""
         if self.end_date:
-            self.end_date = self.end_date + datetime.timedelta(days=days)
+            self.end_date = self.end_date + timedelta(days=days)
         else:
-            self.end_date = datetime.now(timezone.utc) + datetime.timedelta(days=days)
+            self.end_date = datetime.now(timezone.utc) + timedelta(days=days)
         self.updated_at = datetime.now(timezone.utc)
     
     def deactivate(self):

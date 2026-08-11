@@ -871,7 +871,7 @@
                 </div>
 
                 <div class="mt-4">
-                    <label class="form-label" for="shop-description">Tell buyers what your shop offers</label>
+                    <label class="form-label" for="shop-description">What do you sell at your shop?</label>
                     <textarea
                         id="shop-description"
                         name="description"
@@ -880,7 +880,19 @@
                         x-model="form.description"
                         placeholder="Example: We sell fresh produce, pantry staples, and quick household essentials."
                     ></textarea>
-                    <div class="text-muted small mt-2">Aim for clear and helpful, not long.</div>
+                    <div class="d-flex align-items-center justify-content-between mt-2">
+                        <div class="text-muted small">Aim for clear and helpful, not long.</div>
+                        <button
+                            type="button"
+                            class="btn btn-sm btn-outline-primary"
+                            @click="generateAIDescription()"
+                            :disabled="generatingAIDescription || !currentShopId"
+                            x-cloak
+                        >
+                            <i class="bi" :class="generatingAIDescription ? 'bi-hourglass-split' : 'bi-magic'"></i>
+                            <span x-text="generatingAIDescription ? 'Generating...' : 'Write shop description with AI'"></span>
+                        </button>
+                    </div>
                 </div>
 
                 <div class="d-flex flex-column flex-sm-row gap-3 mt-4">
@@ -1044,6 +1056,7 @@
             currentShopId: config.shop?.id || null,
             locating: false,
             requestingVerification: false,
+            generatingAIDescription: false,
             locationLookupLoading: false,
             locationLookupError: '',
             locationLookupRequestId: 0,
@@ -1493,6 +1506,78 @@
                 } finally {
                     this.requestingVerification = false;
                 }
+            },
+
+            async generateAIDescription() {
+                if (!this.currentShopId || this.generatingAIDescription) {
+                    return;
+                }
+
+                this.generatingAIDescription = true;
+                try {
+                    const url = `/seller/shops/${this.currentShopId}/generate-ai-description?seller_id=${this.sellerId}`;
+                    const response = await fetch(url, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRFToken': this.csrfToken || '',
+                        },
+                    });
+
+                    const data = await response.json();
+                    if (!response.ok || !data.success) {
+                        throw new Error(data.message || 'Unable to generate AI description.');
+                    }
+
+                    this.pushFeedback('success', data.message || 'AI description generation started. Please wait a moment...');
+                    
+                    // Poll for the generated description
+                    this.pollForAIDescription();
+                } catch (error) {
+                    this.pushFeedback('danger', error.message || 'Unable to generate AI description.');
+                } finally {
+                    this.generatingAIDescription = false;
+                }
+            },
+
+            async pollForAIDescription() {
+                const maxAttempts = 10;
+                const intervalMs = 2000;
+                let attempts = 0;
+
+                const poll = async () => {
+                    if (attempts >= maxAttempts) {
+                        this.pushFeedback('danger', 'AI description generation is taking longer than expected. Please try again later.');
+                        return;
+                    }
+
+                    try {
+                        const response = await fetch(`/seller/shops/${this.currentShopId}?seller_id=${this.sellerId}`, {
+                            headers: {
+                                'Accept': 'application/json',
+                            },
+                        });
+
+                        const data = await response.json();
+                        if (data.success && data.shop && data.shop.description && data.shop.ai_description_generated) {
+                            this.form.description = data.shop.description;
+                            this.pushFeedback('success', 'AI description generated successfully!');
+                            return;
+                        }
+
+                        if (data.success && data.shop && data.shop.ai_job_status === 'failed') {
+                            this.pushFeedback('danger', 'AI description generation failed. Please try again.');
+                            return;
+                        }
+
+                        attempts++;
+                        setTimeout(poll, intervalMs);
+                    } catch (error) {
+                        this.pushFeedback('danger', 'Error checking AI description status.');
+                    }
+                };
+
+                poll();
             },
 
             pushFeedback(tone, message) {

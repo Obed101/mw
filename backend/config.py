@@ -23,6 +23,17 @@ class Config:
     )
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     
+    # Force PostgreSQL to use UTC timezone for all sessions
+    # This ensures consistent datetime handling regardless of server timezone
+    if database_url and "postgresql" in database_url:
+        SQLALCHEMY_ENGINE_OPTIONS = {
+            "connect_args": {
+                "options": "-c timezone=UTC"
+            }
+        }
+    else:
+        SQLALCHEMY_ENGINE_OPTIONS = {}
+    
     # Google OAuth configuration
     GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID")
     GOOGLE_CLIENT_SECRET = os.getenv("GOOGLE_CLIENT_SECRET")
@@ -41,4 +52,8 @@ class Config:
         "Market Window",
         os.environ.get("MAIL_USERNAME")
     )
+
+    # Arkesel SMS Configuration
+    ARKESEL_API_KEY = os.getenv("ARKESEL_API_KEY")
+    ARKESEL_SENDER_ID = os.getenv("ARKESEL_SENDER_ID", "Market Wind")
 

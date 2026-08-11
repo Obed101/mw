@@ -326,3 +326,230 @@ def get_current_user():
     current_user_id = get_jwt_identity()
     user = User.query.get(current_user_id)
     return jsonify(user.to_dict()) if user else ({"error": "User not found"}, 404)
+
+
+# --- CONTACT VERIFICATION ROUTES (PHONE & EMAIL) ---
+
+@auth_bp.route('/verify-phone/request-otp', methods=['POST'])
+def request_user_phone_otp():
+    """Request SMS OTP for user phone verification with 180s cooldown"""
+    if not current_user.is_authenticated:
+        return jsonify({'success': False, 'message': 'Authentication required'}), 401
+
+    data = request.get_json(silent=True) or request.form.to_dict()
+    raw_phone = data.get('phone') or current_user.phone
+    if not raw_phone:
+        return jsonify({'success': False, 'message': 'Phone number is required'}), 400
+
+    from ..utils.phone_utils import normalize_ghana_phone, mask_phone_number
+    from ..models.shop_model import VerificationOTP
+    from ..services.sms_service import send_phone_otp_sms
+
+    normalized_phone = normalize_ghana_phone(raw_phone)
+    if not normalized_phone:
+        return jsonify({'success': False, 'message': 'Invalid Ghanaian phone number format'}), 400
+
+    # Check if phone number is registered to a different user
+    existing = User.query.filter(User.phone == normalized_phone, User.id != current_user.id).first()
+    if existing:
+        return jsonify({'success': False, 'message': 'That phone number is already registered to another account'}), 400
+
+    # Check server-side 180s cooldown
+    is_in_cooldown, remaining_seconds = VerificationOTP.check_resend_cooldown(
+        user_id=current_user.id,
+        otp_type='phone',
+        contact_value=normalized_phone
+    )
+    if is_in_cooldown:
+        return jsonify({
+            'success': False,
+            'message': f'Please wait {remaining_seconds} seconds before requesting a new code.',
+            'cooldown_seconds': remaining_seconds,
+            'in_cooldown': True
+        }), 429
+
+    # Generate OTP record
+    otp_record, otp_code = VerificationOTP.create_otp(
+        user_id=current_user.id,
+        otp_type='phone',
+        contact_value=normalized_phone,
+        expires_in_minutes=10,
+        cooldown_seconds=180
+    )
+
+    # Save initial phone on user record if not set
+    if not current_user.phone:
+        current_user.phone = normalized_phone
+        db.session.commit()
+
+    # Dispatch SMS
+    sms_sent, sms_msg = send_phone_otp_sms(normalized_phone, otp_code)
+    if not sms_sent:
+        return jsonify({
+            'success': False,
+            'message': sms_msg or 'Failed to send SMS OTP'
+        }), 500
+
+    masked = mask_phone_number(normalized_phone)
+    return jsonify({
+        'success': True,
+        'message': f'Verification code sent to {masked}',
+        'masked_phone': masked,
+        'cooldown_seconds': 180,
+        'expires_in_minutes': 10
+    }), 200
+
+
+@auth_bp.route('/verify-phone/verify-otp', methods=['POST'])
+def verify_user_phone_otp():
+    """Verify phone SMS OTP code"""
+    if not current_user.is_authenticated:
+        return jsonify({'success': False, 'message': 'Authentication required'}), 401
+
+    data = request.get_json(silent=True) or request.form.to_dict()
+    otp_code = data.get('otp')
+    if not otp_code:
+        return jsonify({'success': False, 'message': 'OTP code is required'}), 400
+
+    from ..models.shop_model import VerificationOTP
+    active_otp = VerificationOTP.get_active_otp(user_id=current_user.id, otp_type='phone')
+    if not active_otp:
+        return jsonify({'success': False, 'message': 'No active verification code found. Please request a new code.'}), 404
+
+    is_valid, msg = active_otp.verify_otp(otp_code)
+    if not is_valid:
+        return jsonify({'success': False, 'message': msg}), 400
+
+    # Mark user phone as verified
+    current_user.phone = active_otp.contact_value
+    current_user.is_phone_verified = True
+    current_user.phone_verified_at = datetime.now(timezone.utc)
+    db.session.commit()
+
+    return jsonify({
+        'success': True,
+        'message': 'Phone number successfully verified!',
+        'is_phone_verified': True,
+        'phone': current_user.phone
+    }), 200
+
+
+@auth_bp.route('/verify-email/request-otp', methods=['POST'])
+def request_user_email_otp():
+    """Request email verification OTP with 180s cooldown"""
+    if not current_user.is_authenticated:
+        return jsonify({'success': False, 'message': 'Authentication required'}), 401
+
+    data = request.get_json(silent=True) or request.form.to_dict()
+    target_email = (data.get('email') or current_user.email or '').strip().lower()
+    if not target_email:
+        return jsonify({'success': False, 'message': 'Email address is required'}), 400
+
+    from ..models.shop_model import VerificationOTP
+    from ..services.email_service import send_email_verification
+
+    # Check server-side 180s cooldown
+    is_in_cooldown, remaining_seconds = VerificationOTP.check_resend_cooldown(
+        user_id=current_user.id,
+        otp_type='email',
+        contact_value=target_email
+    )
+    if is_in_cooldown:
+        return jsonify({
+            'success': False,
+            'message': f'Please wait {remaining_seconds} seconds before requesting a new email code.',
+            'cooldown_seconds': remaining_seconds,
+            'in_cooldown': True
+        }), 429
+
+    otp_record, otp_code = VerificationOTP.create_otp(
+        user_id=current_user.id,
+        otp_type='email',
+        contact_value=target_email,
+        expires_in_minutes=10,
+        cooldown_seconds=180
+    )
+
+    email_sent, email_msg = send_email_verification(current_user, otp_code)
+    if not email_sent:
+        return jsonify({
+            'success': False,
+            'message': email_msg or 'Failed to send verification email'
+        }), 500
+
+    return jsonify({
+        'success': True,
+        'message': f'Verification code sent to {target_email}',
+        'email': target_email,
+        'cooldown_seconds': 180,
+        'expires_in_minutes': 10
+    }), 200
+
+
+@auth_bp.route('/verify-email/verify-otp', methods=['POST'])
+def verify_user_email_otp():
+    """Verify email OTP code"""
+    if not current_user.is_authenticated:
+        return jsonify({'success': False, 'message': 'Authentication required'}), 401
+
+    data = request.get_json(silent=True) or request.form.to_dict()
+    otp_code = data.get('otp')
+    if not otp_code:
+        return jsonify({'success': False, 'message': 'OTP code is required'}), 400
+
+    from ..models.shop_model import VerificationOTP
+    active_otp = VerificationOTP.get_active_otp(user_id=current_user.id, otp_type='email')
+    if not active_otp:
+        return jsonify({'success': False, 'message': 'No active verification code found. Please request a new code.'}), 404
+
+    is_valid, msg = active_otp.verify_otp(otp_code)
+    if not is_valid:
+        return jsonify({'success': False, 'message': msg}), 400
+
+    current_user.email = active_otp.contact_value
+    current_user.is_email_verified = True
+    current_user.email_verified_at = datetime.now(timezone.utc)
+    db.session.commit()
+
+    return jsonify({
+        'success': True,
+        'message': 'Email address successfully verified!',
+        'is_email_verified': True,
+        'email': current_user.email
+    }), 200
+
+
+@auth_bp.route('/verification-status', methods=['GET'])
+def get_user_verification_status():
+    """Get current verification status of the user"""
+    if not current_user.is_authenticated:
+        return jsonify({
+            'is_authenticated': False,
+            'is_phone_verified': False,
+            'is_email_verified': False,
+            'has_verified_contact': False
+        }), 200
+
+    from ..utils.phone_utils import mask_phone_number
+
+    masked_phone = mask_phone_number(current_user.phone) if current_user.phone else None
+    masked_email = None
+    if current_user.email and '@' in current_user.email:
+        parts = current_user.email.split('@')
+        name = parts[0]
+        masked_email = (name[0] + '***' + name[-1] if len(name) > 2 else name[0] + '***') + '@' + parts[1]
+
+    return jsonify({
+        'is_authenticated': True,
+        'user_id': current_user.id,
+        'is_phone_verified': bool(current_user.is_phone_verified),
+        'phone_verified_at': current_user.phone_verified_at.isoformat() if current_user.phone_verified_at else None,
+        'phone': current_user.phone,
+        'masked_phone': masked_phone,
+        'is_email_verified': bool(current_user.is_email_verified),
+        'email_verified_at': current_user.email_verified_at.isoformat() if current_user.email_verified_at else None,
+        'email': current_user.email,
+        'masked_email': masked_email,
+        'has_verified_contact': bool(current_user.is_phone_verified or current_user.is_email_verified)
+    }), 200
+

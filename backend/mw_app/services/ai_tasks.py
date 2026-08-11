@@ -30,7 +30,9 @@ def background_generate_shop_description(shop_id):
         prompt = (
             f"Generate a short, compelling description (max 40 words) for a shop named '{shop.name}' "
             f"located in {shop.town or 'our town'}. The shop sells: {products_text}. "
-            f"Make it persuasive, human-like, and professional."
+            f"Make it persuasive, human-like, and professional. "
+            f"Include relevant keywords that would help with search optimization - think about what customers would search for to find this shop. "
+            f"Focus on product categories, location terms, and popular search terms related to the business."
         )
 
         ai_service = AIService()

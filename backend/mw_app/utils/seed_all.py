@@ -3,7 +3,7 @@ Master seeding script that runs all seed scripts in dependency order.
 Usage: from backend.mw_app.utils.seed_all import seed_all; seed_all()
 """
 
-from . import seed_users, seed_categories, seed_shops, seed_products, seed_subscriptions
+from . import seed_users, seed_categories, seed_shops, seed_products, seed_subscriptions, seed_shop_categories
 
 def seed_all():
     """Run all seeding scripts in the correct dependency order"""
@@ -21,6 +21,10 @@ def seed_all():
         # Step 3: Seed shops (depends on users)
         print("\n=== Seeding Shops ===")
         seed_shops.seed_shops()
+        
+        # Step 3.5: Seed shop categories (ensure all shops have categories)
+        print("\n=== Seeding Shop Categories ===")
+        seed_shop_categories.seed_shop_categories()
         
         # Step 4: Seed products (depends on shops and categories)
         print("\n=== Seeding Products ===")

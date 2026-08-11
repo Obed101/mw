@@ -57,8 +57,8 @@ class Product(db.Model):
     images = db.Column(db.Text)  # Deprecated: legacy JSON/comma-separated URLs
     is_active = db.Column(db.Boolean, default=True)
     is_hidden = db.Column(db.Boolean, default=False, server_default='false', nullable=False)
-    created_at = db.Column(db.DateTime, default=datetime.now(timezone.utc))
-    updated_at = db.Column(db.DateTime, default=datetime.now(timezone.utc), onupdate=datetime.now(timezone.utc))
+    created_at = db.Column(db.DateTime(timezone=True), default=datetime.now(timezone.utc))
+    updated_at = db.Column(db.DateTime(timezone=True), default=datetime.now(timezone.utc), onupdate=datetime.now(timezone.utc))
 
     def __init__(self, **kwargs):
         super(Product, self).__init__(**kwargs)
@@ -180,7 +180,7 @@ class ProductImage(db.Model):
     storage_key = db.Column(db.String(512), nullable=False)
     sort_order = db.Column(db.Integer, nullable=False, default=0, index=True)
     is_primary = db.Column(db.Boolean, nullable=False, default=False, index=True)
-    created_at = db.Column(db.DateTime, default=datetime.now(timezone.utc), nullable=False)
+    created_at = db.Column(db.DateTime(timezone=True), default=datetime.now(timezone.utc), nullable=False)
 
     product = db.relationship("Product", back_populates="image_records")
 
@@ -202,7 +202,7 @@ class StockUpdate(db.Model):
     stock_change = db.Column(db.Integer, nullable=False)  # positive for increase, negative for decrease
     updated_by = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)  # Seller who made the update
     reason = db.Column(db.String(255))  # Optional: "restocked", "sold", "damaged", etc.
-    updated_at = db.Column(db.DateTime, default=datetime.now(timezone.utc), nullable=False)
+    updated_at = db.Column(db.DateTime(timezone=True), default=datetime.now(timezone.utc), nullable=False)
 
     # Relationships
     product = db.relationship("Product", backref="stock_history")

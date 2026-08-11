@@ -2,12 +2,11 @@
 import csv
 import io
 from ..services import email_service
-from datetime import timedelta
+from datetime import datetime, timedelta, timezone
 from ..services.analytics_service import track_event
 import json
 from pathlib import Path
 from uuid import uuid4
-from datetime import datetime, timezone
 
 from flask import Blueprint, render_template, request, redirect, url_for, flash, session, current_app, make_response, jsonify
 from sqlalchemy import func, or_, nullslast
@@ -87,9 +86,6 @@ def _time_ago(value):
         return "Just now"
 
     now = datetime.now(timezone.utc)
-    if value.tzinfo is None:
-        value = value.replace(tzinfo=timezone.utc)
-
     delta = now - value
     seconds = max(int(delta.total_seconds()), 0)
     if seconds < 60:
@@ -112,8 +108,6 @@ def _time_ago(value):
 def _timestamp_or_zero(value):
     if not value:
         return 0
-    if value.tzinfo is None:
-        value = value.replace(tzinfo=timezone.utc)
     return value.timestamp()
 
 
@@ -297,9 +291,9 @@ def _resolve_user_shops(user):
     shops = getattr(user, 'owned_shops', None)
     if isinstance(shops, list):
         def sort_key(item):
-            value = item.last_updated or item.created_at or datetime.min
-            if value.tzinfo is None:
-                value = value.replace(tzinfo=timezone.utc)
+            value = item.last_updated or item.created_at
+            if value is None:
+                value = datetime(1970, 1, 1, tzinfo=timezone.utc)
             return value
 
         return sorted(
@@ -707,7 +701,66 @@ def shop_detail(shop_id):
     )
 
 
+@main_bp.route('/shops/<int:shop_id>/claim')
+def claim_shop_page(shop_id):
+    """Dedicated Claim Shop & Contact Verification page."""
+    shop = Shop.query.filter(Shop.id == shop_id).first_or_404()
+
+    if not current_user.is_authenticated:
+        flash('Please log in to claim this shop.', 'info')
+        return redirect(url_for('main_bp.login', next=url_for('main_bp.claim_shop_page', shop_id=shop.id)))
+
+    from ..utils.phone_utils import normalize_ghana_phone, mask_phone_number
+
+    user = current_user
+    shop_is_owner = (shop.owner_id == user.id)
+
+    # Normalized phone comparisons
+    norm_user_phone = normalize_ghana_phone(user.phone) if user.phone else None
+    norm_shop_phone = normalize_ghana_phone(shop.phone) if shop.phone else None
+
+    # Normalized email comparisons
+    norm_user_email = user.email.strip().lower() if user.email else None
+    norm_shop_email = shop.email.strip().lower() if shop.email else None
+
+    phone_match = bool(user.is_phone_verified and norm_user_phone and norm_shop_phone and norm_user_phone == norm_shop_phone)
+    email_match = bool(user.is_email_verified and norm_user_email and norm_shop_email and norm_user_email == norm_shop_email)
+    is_eligible = bool(phone_match or email_match)
+
+    masked_shop_phone = mask_phone_number(shop.phone) if shop.phone else None
+    masked_user_phone = mask_phone_number(user.phone) if user.phone else None
+
+    masked_shop_email = None
+    if shop.email and '@' in shop.email:
+        parts = shop.email.split('@')
+        name = parts[0]
+        masked_shop_email = (name[0] + '***' + name[-1] if len(name) > 2 else name[0] + '***') + '@' + parts[1]
+
+    masked_user_email = None
+    if user.email and '@' in user.email:
+        parts = user.email.split('@')
+        name = parts[0]
+        masked_user_email = (name[0] + '***' + name[-1] if len(name) > 2 else name[0] + '***') + '@' + parts[1]
+
+    return render_template(
+        'buyer/claim_shop.html',
+        shop=shop,
+        user=user,
+        shop_is_owner=shop_is_owner,
+        phone_match=phone_match,
+        email_match=email_match,
+        is_eligible=is_eligible,
+        norm_user_phone=norm_user_phone,
+        norm_shop_phone=norm_shop_phone,
+        masked_shop_phone=masked_shop_phone,
+        masked_user_phone=masked_user_phone,
+        masked_shop_email=masked_shop_email,
+        masked_user_email=masked_user_email,
+    )
+
+
 @main_bp.route('/shops/<int:shop_id>/search')
+
 def shop_detail_search(shop_id):
     """Search products within a specific shop and return a product-card fragment."""
     shop = Shop.query.filter(
@@ -984,7 +1037,7 @@ def profile():
             current_user.address = cleaned_value('address')
             
             # Update timestamp
-            current_user.updated_at = datetime.now()
+            current_user.updated_at = datetime.now(timezone.utc)
             
             # Commit changes to database
             db.session.commit()
@@ -1003,7 +1056,7 @@ def profile():
     
     # Calculate membership duration
     if current_user.created_at:
-        days_since_creation = (datetime.now() - current_user.created_at.replace(tzinfo=None)).days
+        days_since_creation = (datetime.now(timezone.utc) - current_user.created_at).days
         if days_since_creation < 30:
             member_duration = f"{days_since_creation}d"
         elif days_since_creation < 365:
@@ -1782,7 +1835,7 @@ def admin_test_email():
         verification_code = str(secrets.randbelow(900000) + 100000)
         # Temporarily store on user object for the template (not persisted to DB for test)
         user.email_verification_code = verification_code
-        user.email_verification_expires = datetime.utcnow() + timedelta(minutes=15)
+        user.email_verification_expires = datetime.now(timezone.utc) + timedelta(minutes=15)
         db.session.commit()
         success, message = email_service.send_email_verification(user, verification_code)
 
@@ -1805,7 +1858,7 @@ def verify_email():
 
     verification_code = str(secrets.randbelow(900000) + 100000)
     user.email_verification_code = verification_code
-    user.email_verification_expires = datetime.utcnow() + timedelta(minutes=15)
+    user.email_verification_expires = datetime.now(timezone.utc) + timedelta(minutes=15)
     db.session.commit()
 
     success, message = email_service.send_email_verification(user, verification_code)

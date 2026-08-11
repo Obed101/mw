@@ -25,8 +25,8 @@ class SearchService:
         """Initialize the Meilisearch client using Flask configuration.
 
         Expected config keys (fallback to environment variables):
-        * ``MEILISEARCH_URL`` – e.g. ``http://127.0.0.1:7700``
-        * ``MEILISEARCH_MASTER_KEY`` – the master key for the instance
+        * ``MEILISEARCH_URL`` - e.g. ``http://127.0.0.1:7700``
+        * ``MEILISEARCH_MASTER_KEY`` - the master key for the instance
         """
         ms_url = app.config.get('MEILISEARCH_URL', 'http://127.0.0.1:7700')
         ms_key = app.config.get('MEILISEARCH_MASTER_KEY', 'masterKey')
@@ -46,7 +46,7 @@ class SearchService:
     def ensure_indexes(self):
         """Create any missing indexes defined in ``SEARCH_INDEXES``.
 
-        This method is idempotent – calling it repeatedly is safe.
+        This method is idempotent - calling it repeatedly is safe.
         """
         if not self.client:
             self.app.logger.warning('Search client not initialised; cannot ensure indexes')
@@ -66,6 +66,7 @@ class SearchService:
             idx = self.client.index(name)
             idx.update_searchable_attributes(cfg.get('searchable_attributes', []))
             idx.update_filterable_attributes(cfg.get('filterable_attributes', []))
+            idx.update_typo_tolerance(cfg.get('typo_tolerance', {'enabled': True}))
 
     # ---------------------------------------------------------------------
     # Document operations
@@ -84,9 +85,6 @@ class SearchService:
 
     def clear_documents(self, index_name):
         """Delete *all* documents from an index.
-
-        Meilisearch does not provide a direct ``clear`` call; we delete by
-        fetching all document IDs first.
         """
         if not self.client:
             current_app.logger.warning('Search client not initialised; cannot clear documents')
@@ -94,12 +92,12 @@ class SearchService:
         idx = self.client.index(index_name)
         # Retrieve IDs – limited to 1000 for safety (production would page).
         stats = idx.get_stats()
-        total = stats.get('numberOfDocuments', 0)
+        total = stats.number_of_documents
         if total == 0:
             return
         # Simple approach: fetch all docs with a wildcard query.
         res = idx.search('', {"limit": total, "attributesToRetrieve": ["id"]})
-        ids = [hit["id"] for hit in res.get('hits', [])]
+        ids = [hit["id"] for hit in res.get("hits", [])]
         if ids:
             idx.delete_documents(ids)
 

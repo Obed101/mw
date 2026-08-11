@@ -13,14 +13,14 @@ def seed_shops():
         return
     
     shops_data = [
-        {"name": "Craft Corner", "description": "Handmade crafts and artisanal goods", "region": "Central", "district": "Downtown", "town": "Craftville", "gps": "5.5600,-0.2057"},
-        {"name": "Tech Haven", "description": "Latest electronics and gadgets", "region": "North", "district": "Tech Park", "town": "Electronica", "gps": "5.6037,-0.1870"},
-        {"name": "Fashion Forward", "description": "Trendy clothing and accessories", "region": "East", "district": "Fashion District", "town": "Style City", "gps": "6.6885,-1.6244"},
-        {"name": "Green Grocer", "description": "Fresh produce and organic foods", "region": "South", "district": "Market Quarter", "town": "Farmington", "gps": "4.9340,-1.7137"},
-        {"name": "Handmade Boutique", "description": "Unique handmade items and gifts", "region": "West", "district": "Artisan Alley", "town": "Craftsbury", "gps": "9.4034,-0.8424"},
-        {"name": "Import Emporium", "description": "Exotic imports from around the world", "region": "Central", "district": "International Plaza", "town": "Global Town", "gps": "7.9465,-1.0232"},
-        {"name": "Jewelry Box", "description": "Fine jewelry and accessories", "region": "North", "district": "Luxury Lane", "town": "Gem City", "gps": "5.1053,-1.2466"},
-        {"name": "Sports Central", "description": "Sports equipment and athletic gear", "region": "East", "district": "Athletic Zone", "town": "Sportstown", "gps": "6.0900,-0.2600"},
+        {"name": "Craft Corner", "description": "Handmade crafts and artisanal goods", "region": "Central", "district": "Downtown", "town": "Craftville", "gps": "5.5600,-0.2057", "google_category": "Craft Store"},
+        {"name": "Tech Haven", "description": "Latest electronics and gadgets", "region": "North", "district": "Tech Park", "town": "Electronica", "gps": "5.6037,-0.1870", "google_category": "Electronics Store"},
+        {"name": "Fashion Forward", "description": "Trendy clothing and accessories", "region": "East", "district": "Fashion District", "town": "Style City", "gps": "6.6885,-1.6244", "google_category": "Clothing Store"},
+        {"name": "Green Grocer", "description": "Fresh produce and organic foods", "region": "South", "district": "Market Quarter", "town": "Farmington", "gps": "4.9340,-1.7137", "google_category": "Provision Store"},
+        {"name": "Handmade Boutique", "description": "Unique handmade items and gifts", "region": "West", "district": "Artisan Alley", "town": "Craftsbury", "gps": "9.4034,-0.8424", "google_category": "Gift Shop"},
+        {"name": "Import Emporium", "description": "Exotic imports from around the world", "region": "Central", "district": "International Plaza", "town": "Global Town", "gps": "7.9465,-1.0232", "google_category": "General Store"},
+        {"name": "Jewelry Box", "description": "Fine jewelry and accessories", "region": "North", "district": "Luxury Lane", "town": "Gem City", "gps": "5.1053,-1.2466", "google_category": "Jewelry Store"},
+        {"name": "Sports Central", "description": "Sports equipment and athletic gear", "region": "East", "district": "Athletic Zone", "town": "Sportstown", "gps": "6.0900,-0.2600", "google_category": "Sporting Goods Store"},
     ]
     
     # Create shops for each seller (cycle through shop data if needed)
@@ -48,7 +48,8 @@ def seed_shops():
                 ]),
                 phone_verified=random.choice([True, False]),
                 email_verified=random.choice([True, False]),
-                promoted=random.choice([True, False])
+                promoted=random.choice([True, False]),
+                google_category=shop_data.get('google_category', 'General Shop')
             )
             shop.replace_image_urls([f"https://example.com/images/shops/{seller.username}-cover.jpg"])
             

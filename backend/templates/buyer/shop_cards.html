@@ -25,7 +25,7 @@
                     </span>
                     {% endif %}
                 </p>
-                <p class="card-text text-muted mb-2 line-clamp-2 shop-card-description">{{ shop.description or 'Quality products and service' }}</p>
+                <p class="card-text text-muted mb-2 line-clamp-2 shop-card-description">{{ shop.google_category or 'General Shop' }}</p>
                 <div class="d-flex flex-column gap-2 mt-auto">
                     <small class="text-muted shop-card-stock text-dark">
                         <i class="bi bi-box-seam me-1"></i>{{ shop.products | selectattr('is_active') | list | length }} active products

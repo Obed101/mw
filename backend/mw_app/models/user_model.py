@@ -50,17 +50,17 @@ class User(db.Model, UserMixin):
     
     # Account status and timestamps
     is_email_verified = db.Column(db.Boolean, default=False)
-    email_verified_at = db.Column(db.DateTime)
+    email_verified_at = db.Column(db.DateTime(timezone=True))
     is_phone_verified = db.Column(db.Boolean, default=False)
-    phone_verified_at = db.Column(db.DateTime)
+    phone_verified_at = db.Column(db.DateTime(timezone=True))
     
     # Premium status
     premium = db.Column(db.Boolean, default=False)
     
-    last_login = db.Column(db.DateTime)
-    last_activity = db.Column(db.DateTime)
-    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
-    updated_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc), 
+    last_login = db.Column(db.DateTime(timezone=True))
+    last_activity = db.Column(db.DateTime(timezone=True))
+    created_at = db.Column(db.DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
+    updated_at = db.Column(db.DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), 
                          onupdate=lambda: datetime.now(timezone.utc))
     
     # Relationships
@@ -270,7 +270,7 @@ class UserBrowsingHistory(db.Model):
     category_id = db.Column(db.Integer, db.ForeignKey("category.id"), nullable=True)
     shop_id = db.Column(db.Integer, db.ForeignKey("shop.id"), nullable=True)
     interaction_type = db.Column(db.String(50), nullable=False, default='view')
-    viewed_at = db.Column(db.DateTime, default=datetime.now(timezone.utc), nullable=False)
+    viewed_at = db.Column(db.DateTime(timezone=True), default=datetime.now(timezone.utc), nullable=False)
     duration_seconds = db.Column(db.Integer, default=0)
     
     # Relationships
@@ -319,10 +319,10 @@ class AuthToken(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey('user.id', ondelete='CASCADE'), nullable=False)
     token = db.Column(db.String(255), nullable=False, index=True)
     token_type = db.Column(db.String(50), nullable=False)  # 'email_verification', 'password_reset', 'api'
-    expires_at = db.Column(db.DateTime, nullable=False)
+    expires_at = db.Column(db.DateTime(timezone=True), nullable=False)
     is_used = db.Column(db.Boolean, default=False, nullable=False)
-    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
-    used_at = db.Column(db.DateTime)
+    created_at = db.Column(db.DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
+    used_at = db.Column(db.DateTime(timezone=True))
     
     # Relationships
     user = db.relationship('User', back_populates='auth_tokens')

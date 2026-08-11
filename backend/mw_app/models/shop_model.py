@@ -49,15 +49,15 @@ class Shop(db.Model):
     phone = db.Column(db.String(20))
     email = db.Column(db.String(120))
     is_active = db.Column(db.Boolean, default=True)
-    created_at = db.Column(db.DateTime, default=datetime.now(timezone.utc))
-    last_updated = db.Column(db.DateTime, default=datetime.now(timezone.utc), onupdate=datetime.now(timezone.utc))
+    created_at = db.Column(db.DateTime(timezone=True), default=datetime.now(timezone.utc))
+    last_updated = db.Column(db.DateTime(timezone=True), default=datetime.now(timezone.utc), onupdate=datetime.now(timezone.utc))
     
     # Verification fields
     verification_status = db.Column(db.String(20), default=VERIFICATION_STATUS_PENDING, nullable=False)
     phone_verified = db.Column(db.Boolean, default=False)
     email_verified = db.Column(db.Boolean, default=False)
-    verification_requested_at = db.Column(db.DateTime)
-    verified_at = db.Column(db.DateTime)
+    verification_requested_at = db.Column(db.DateTime(timezone=True))
+    verified_at = db.Column(db.DateTime(timezone=True))
     verified_by = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=True)  # Admin who verified
     rejection_reason = db.Column(db.Text)
     verification_notes = db.Column(db.Text)  # Admin notes
@@ -76,7 +76,7 @@ class Shop(db.Model):
     source_reference = db.Column(db.String(255))
     import_batch = db.Column(db.String(100))
     data_quality_score = db.Column(db.SmallInteger, default=0)
-    claimed_at = db.Column(db.DateTime)
+    claimed_at = db.Column(db.DateTime(timezone=True))
     google_category = db.Column(db.String(100))
     plus_code = db.Column(db.String(30))
     landmark = db.Column(db.String(255))
@@ -157,7 +157,7 @@ class ShopImage(db.Model):
     storage_key = db.Column(db.String(512), nullable=False)
     sort_order = db.Column(db.Integer, nullable=False, default=0, index=True)
     is_primary = db.Column(db.Boolean, nullable=False, default=False, index=True)
-    created_at = db.Column(db.DateTime, default=datetime.now(timezone.utc), nullable=False)
+    created_at = db.Column(db.DateTime(timezone=True), default=datetime.now(timezone.utc), nullable=False)
 
     shop = db.relationship("Shop", back_populates="image_records")
 
@@ -175,7 +175,7 @@ class UserFollowShop(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
     shop_id = db.Column(db.Integer, db.ForeignKey("shop.id"), nullable=False)
-    followed_at = db.Column(db.DateTime, default=datetime.now(timezone.utc), nullable=False)
+    followed_at = db.Column(db.DateTime(timezone=True), default=datetime.now(timezone.utc), nullable=False)
     
     # Unique constraint: a user can only follow a shop once
     __table_args__ = (db.UniqueConstraint('user_id', 'shop_id', name='unique_user_shop_follow'),)
@@ -198,85 +198,143 @@ class UserFollowShop(db.Model):
 
 
 class VerificationOTP(db.Model):
-    """Track OTP codes for phone and email verification"""
+    """Track OTP codes for user, phone, email and shop verification"""
     id = db.Column(db.Integer, primary_key=True)
-    shop_id = db.Column(db.Integer, db.ForeignKey("shop.id"), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=True)
+    shop_id = db.Column(db.Integer, db.ForeignKey("shop.id"), nullable=True)
     otp_hash = db.Column(db.String(255), nullable=False)  # Hashed OTP
     otp_type = db.Column(db.String(20), nullable=False)  # 'phone' or 'email'
     contact_value = db.Column(db.String(120), nullable=False)  # phone number or email
-    expires_at = db.Column(db.DateTime, nullable=False)
-    verified_at = db.Column(db.DateTime)
+    expires_at = db.Column(db.DateTime(timezone=True), nullable=False)
+    resend_available_at = db.Column(db.DateTime(timezone=True))
+    attempts_count = db.Column(db.Integer, default=0, nullable=False)
+    verified_at = db.Column(db.DateTime(timezone=True))
     is_used = db.Column(db.Boolean, default=False)
-    created_at = db.Column(db.DateTime, default=datetime.now(timezone.utc), nullable=False)
+    created_at = db.Column(db.DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
     
-    # Relationship
+    # Relationships
     shop = db.relationship("Shop", backref="otp_requests")
+    user = db.relationship("User", backref="otp_requests")
     
     def __repr__(self):
-        return f'<VerificationOTP shop:{self.shop_id} type:{self.otp_type}>'
+        return f'<VerificationOTP user:{self.user_id} shop:{self.shop_id} type:{self.otp_type}>'
     
     @staticmethod
     def generate_otp():
-        """Generate a 6-digit OTP"""
+        """Generate a secure 6-digit OTP"""
         return ''.join([str(secrets.randbelow(10)) for _ in range(6)])
     
     @staticmethod
-    def create_otp(shop_id, otp_type, contact_value, expires_in_minutes=25):
-        """Create and store a new OTP"""
-        # Invalidate any existing active OTPs for this shop and type
-        VerificationOTP.query.filter_by(
-            shop_id=shop_id,
-            otp_type=otp_type,
-            is_used=False
-        ).update({'is_used': True})
+    def check_resend_cooldown(user_id=None, shop_id=None, otp_type='phone', contact_value=None):
+        """
+        Check if an active resend cooldown exists (3 minutes / 180 seconds).
+        Returns (is_in_cooldown: bool, remaining_seconds: int)
+        """
+        now = datetime.now(timezone.utc)
+        query = VerificationOTP.query.filter_by(otp_type=otp_type, is_used=False)
+        if user_id:
+            query = query.filter_by(user_id=user_id)
+        elif shop_id:
+            query = query.filter_by(shop_id=shop_id)
+        elif contact_value:
+            query = query.filter_by(contact_value=contact_value)
         
+        last_otp = query.order_by(VerificationOTP.created_at.desc()).first()
+        if last_otp and last_otp.resend_available_at:
+            resend_time = last_otp.resend_available_at
+            if now < resend_time:
+                remaining = int((resend_time - now).total_seconds())
+                return True, max(remaining, 1)
+        return False, 0
+
+    @staticmethod
+    def create_otp(shop_id=None, user_id=None, otp_type='phone', contact_value='', expires_in_minutes=10, cooldown_seconds=180):
+        """Create and store a new OTP with resend cooldown and expiration"""
+        now = datetime.now(timezone.utc)
+        
+        # Invalidate any existing active OTPs for this user/shop and type
+        query = VerificationOTP.query.filter_by(otp_type=otp_type, is_used=False)
+        if user_id:
+            query.filter_by(user_id=user_id).update({'is_used': True})
+        elif shop_id:
+            query.filter_by(shop_id=shop_id).update({'is_used': True})
+        elif contact_value:
+            query.filter_by(contact_value=contact_value).update({'is_used': True})
+            
         # Generate OTP
         otp_code = VerificationOTP.generate_otp()
         otp_hash = generate_password_hash(otp_code)
         
-        # Calculate expiration
-        expires_at = datetime.now(timezone.utc) + timedelta(minutes=expires_in_minutes)
+        # Expiration (10 mins default) and Cooldown (3 mins / 180 seconds)
+        expires_at = now + timedelta(minutes=expires_in_minutes)
+        resend_available_at = now + timedelta(seconds=cooldown_seconds)
         
         # Create OTP record
         otp = VerificationOTP(
             shop_id=shop_id,
+            user_id=user_id,
             otp_hash=otp_hash,
             otp_type=otp_type,
             contact_value=contact_value,
-            expires_at=expires_at
+            expires_at=expires_at,
+            resend_available_at=resend_available_at,
+            attempts_count=0
         )
         
         db.session.add(otp)
         db.session.commit()
         
-        return otp, otp_code  # Return both the record and the plain code
-    
+        return otp, otp_code
+
     def verify_otp(self, otp_code):
-        """Verify the OTP code"""
+        """Verify the OTP code with attempt limiting"""
+        now = datetime.now(timezone.utc)
+        expires_at = self.expires_at
+
         if self.is_used:
-            return False, "OTP has already been used"
+            return False, "This verification code has already been used."
         
-        if datetime.now(timezone.utc) > self.expires_at:
-            return False, "OTP has expired"
+        if now > expires_at:
+            return False, "Verification code has expired. Please request a new code."
+
+        if self.attempts_count >= 5:
+            self.is_used = True
+            db.session.commit()
+            return False, "Maximum verification attempts reached. Please request a new code."
         
-        if not check_password_hash(self.otp_hash, otp_code):
-            return False, "Invalid OTP code"
+        if not check_password_hash(self.otp_hash, str(otp_code).strip()):
+            self.attempts_count += 1
+            if self.attempts_count >= 5:
+                self.is_used = True
+            db.session.commit()
+            return False, f"Invalid verification code. ({5 - self.attempts_count} attempts remaining)"
         
-        # Mark as used
+        # Mark as used & verified
         self.is_used = True
-        self.verified_at = datetime.now(timezone.utc)
+        self.verified_at = now
         db.session.commit()
         
-        return True, "OTP verified successfully"
+        return True, "Verification successful."
     
     @staticmethod
-    def get_active_otp(shop_id, otp_type):
-        """Get active (unused, not expired) OTP for a shop"""
+    def get_active_otp(shop_id=None, otp_type='phone', user_id=None, contact_value=None):
+        """Get active (unused, not expired) OTP"""
         now = datetime.now(timezone.utc)
-        return VerificationOTP.query.filter_by(
-            shop_id=shop_id,
+        query = VerificationOTP.query.filter_by(
             otp_type=otp_type,
             is_used=False
-        ).filter(
-            VerificationOTP.expires_at > now
-        ).order_by(VerificationOTP.created_at.desc()).first()
+        )
+        if user_id:
+            query = query.filter_by(user_id=user_id)
+        elif shop_id:
+            query = query.filter_by(shop_id=shop_id)
+        if contact_value:
+            query = query.filter_by(contact_value=contact_value)
+
+        candidates = query.order_by(VerificationOTP.created_at.desc()).all()
+        for candidate in candidates:
+            exp = candidate.expires_at
+            if exp > now and candidate.attempts_count < 5:
+                return candidate
+        return None
+

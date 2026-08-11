@@ -1,0 +1,535 @@
+{% extends "base.html" %}
+
+{% block title %}Claim Shop - {{ shop.name }} | Market Window{% endblock %}
+
+{% block content %}
+<div class="container py-4 py-lg-5">
+    <!-- Breadcrumbs -->
+    <nav aria-label="breadcrumb" class="mb-4">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{{ url_for('main_bp.index') }}">Home</a></li>
+            <li class="breadcrumb-item"><a href="{{ url_for('main_bp.shops') }}">Shops</a></li>
+            <li class="breadcrumb-item"><a href="{{ url_for('main_bp.shop_detail', shop_id=shop.id) }}">{{ shop.name }}</a></li>
+            <li class="breadcrumb-item active" aria-current="page">Claim Shop</li>
+        </ol>
+    </nav>
+
+    <div class="row justify-content-center">
+        <div class="col-lg-10 col-xl-9">
+            <!-- Header Banner -->
+            <div class="card border-0 shadow-sm rounded-4 overflow-hidden mb-4 bg-dark bg-gradient text-dark">
+                <div class="card-body p-4 p-md-5">
+                    <div class="d-flex align-items-center gap-3 mb-3">
+                        <span class="badge bg-warning text-dark px-3 py-2 rounded-pill fs-7 fw-bold text-uppercase">Unclaimed Shop</span>
+                        {% if shop_is_owner %}
+                        <span class="badge bg-success px-3 py-2 rounded-pill fs-7 fw-bold">Currently Owned</span>
+                        {% endif %}
+                    </div>
+                    <h1 class="h2 fw-bold text-white mb-2">{{ shop.name }}</h1>
+                    <p class="text-white-50 mb-0">
+                        <i class="bi bi-geo-alt me-1"></i>{{ shop.town or shop.region or 'Ghana' }}
+                        {% if shop.address %} &bull; {{ shop.address }}{% endif %}
+                    </p>
+                </div>
+            </div>
+
+            <!-- Main Claim & Verification Card -->
+            <div class="card border-0 shadow-sm rounded-4 mb-4">
+                <div class="card-body p-4 p-md-5">
+                    
+                    <!-- Section 1: Shop vs User Details Overview -->
+                    <div class="row g-4 mb-4">
+                        <!-- Shop Contact Info -->
+                        <div class="col-md-6">
+                            <div class="p-3 p-md-4 rounded-4 bg-light border h-100">
+                                <h6 class="fw-bold text-dark mb-3">
+                                    <i class="bi bi-shop me-2 text-primary"></i>Shop Contact Info
+                                </h6>
+                                <div class="vstack gap-2 fs-6">
+                                    <div>
+                                        <span class="text-muted small d-block">Phone Number</span>
+                                        <strong class="font-monospace">{{ masked_shop_phone or 'Not listed' }}</strong>
+                                    </div>
+                                    <div>
+                                        <span class="text-muted small d-block">Email Address</span>
+                                        <strong>{{ masked_shop_email or 'Not listed' }}</strong>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- User Contact Info -->
+                        <div class="col-md-6">
+                            <div class="p-3 p-md-4 rounded-4 bg-light border h-100">
+                                <h6 class="fw-bold text-dark mb-3">
+                                    <i class="bi bi-person-badge me-2 text-primary"></i>Your Contacts
+                                </h6>
+                                <div class="vstack gap-2 fs-6">
+                                    <div>
+                                        <span class="text-muted small d-block">Your Phone</span>
+                                        <div class="d-flex align-items-center gap-2">
+                                            <strong class="font-monospace">{{ masked_user_phone or 'No phone added' }}</strong>
+                                            {% if user.is_phone_verified %}
+                                            <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill"><i class="bi bi-check-circle-fill me-1"></i>Verified</span>
+                                            {% else %}
+                                            <span class="badge bg-warning-subtle text-warning border border-warning-subtle rounded-pill"><i class="bi bi-exclamation-circle me-1"></i>Unverified</span>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <span class="text-muted small d-block">Your Email</span>
+                                        <div class="d-flex align-items-center gap-2">
+                                            <strong>{{ masked_user_email or user.email }}</strong>
+                                            {% if user.is_email_verified %}
+                                            <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill"><i class="bi bi-check-circle-fill me-1"></i>Verified</span>
+                                            {% else %}
+                                            <span class="badge bg-warning-subtle text-warning border border-warning-subtle rounded-pill"><i class="bi bi-exclamation-circle me-1"></i>Unverified</span>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <hr class="my-4 text-muted opacity-25">
+
+                    <!-- Section 2: Contact Verification Requirement Notice & Verification Tabs -->
+                    {% if not (user.is_phone_verified or user.is_email_verified) %}
+                    <div class="alert alert-warning border-0 rounded-4 p-4 mb-4">
+                        <div class="d-flex align-items-start gap-3">
+                            <i class="bi bi-shield-lock-fill fs-3 text-warning flex-shrink-0"></i>
+                            <div>
+                                <h5 class="fw-bold alert-heading mb-1">Contact Verification Required</h5>
+                                <p class="mb-0 text-secondary">
+                                    To claim ownership of a shop listing on Market Window, you must verify your phone number via SMS OTP or your email address first.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    <!-- Verification Accordion / Card -->
+                    <div class="mb-5">
+                        <h5 class="fw-bold mb-3">1. Verify Your Contact Details</h5>
+
+                        <ul class="nav nav-pills nav-fill gap-2 p-1 bg-light rounded-4 mb-3" id="verifyTabs" role="tablist">
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link active rounded-3 py-2 fw-semibold" id="phone-tab" data-bs-toggle="pill" data-bs-target="#phone-verify" type="button" role="tab">
+                                    <i class="bi bi-phone me-2"></i>Phone SMS Verification
+                                </button>
+                            </li>
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link rounded-3 py-2 fw-semibold" id="email-tab" data-bs-toggle="pill" data-bs-target="#email-verify" type="button" role="tab">
+                                    <i class="bi bi-envelope me-2"></i>Email Verification
+                                </button>
+                            </li>
+                        </ul>
+
+                        <div class="tab-content" id="verifyTabsContent">
+                            <!-- Phone Verification Panel -->
+                            <div class="tab-pane fade show active" id="phone-verify" role="tabpanel">
+                                <div class="card border rounded-4 p-4">
+                                    {% if user.is_phone_verified %}
+                                    <div class="text-center py-3">
+                                        <i class="bi bi-patch-check-fill fs-1 text-success mb-2 d-block"></i>
+                                        <h6 class="fw-bold text-success">Your phone number is verified!</h6>
+                                        <p class="text-muted small mb-0">{{ masked_user_phone }}</p>
+                                    </div>
+                                    {% else %}
+                                    <div id="phone-step-1">
+                                        <label for="phone-input" class="form-label fw-semibold">Enter your Ghanaian phone number</label>
+                                        <div class="input-group mb-3">
+                                            <span class="input-group-text bg-light fw-bold">+233</span>
+                                            <input type="tel" class="form-control form-control-lg" id="phone-input" placeholder="0553995047" value="{{ user.phone or '' }}">
+                                            <button class="btn btn-primary px-4 fw-semibold" type="button" id="btn-send-phone-otp">
+                                                Send SMS OTP
+                                            </button>
+                                        </div>
+                                        <div class="form-text">Formats accepted: 0553995047 or 233553995047</div>
+                                    </div>
+
+                                    <!-- Phone OTP Entry Form (Hidden until code sent) -->
+                                    <div id="phone-step-2" class="d-none mt-3 text-center">
+                                        <div class="alert alert-info border-0 rounded-3 text-start mb-3">
+                                            <i class="bi bi-info-circle me-1"></i> We sent a 6-digit code to <strong id="sent-phone-display"></strong>.
+                                        </div>
+                                        <label class="form-label fw-semibold">Enter 6-Digit Code</label>
+                                        <div class="d-flex justify-content-center gap-2 mb-3">
+                                            <input type="text" maxlength="6" class="form-control form-control-lg text-center font-monospace tracking-widest fs-4" id="phone-otp-code" placeholder="000000" style="max-width: 220px; letter-spacing: 0.5rem;">
+                                        </div>
+                                        
+                                        <div class="d-flex justify-content-center align-items-center gap-3">
+                                            <button class="btn btn-success px-4 fw-semibold" id="btn-verify-phone-otp">
+                                                Verify Code
+                                            </button>
+                                            <button class="btn btn-outline-secondary" id="btn-resend-phone-otp" disabled>
+                                                Resend in <span id="phone-countdown">03:00</span>
+                                            </button>
+                                        </div>
+                                    </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+
+                            <!-- Email Verification Panel -->
+                            <div class="tab-pane fade" id="email-verify" role="tabpanel">
+                                <div class="card border rounded-4 p-4">
+                                    {% if user.is_email_verified %}
+                                    <div class="text-center py-3">
+                                        <i class="bi bi-patch-check-fill fs-1 text-success mb-2 d-block"></i>
+                                        <h6 class="fw-bold text-success">Your email address is verified!</h6>
+                                        <p class="text-muted small mb-0">{{ user.email }}</p>
+                                    </div>
+                                    {% else %}
+                                    <div id="email-step-1">
+                                        <label for="email-input" class="form-label fw-semibold">Email address</label>
+                                        <div class="input-group mb-3">
+                                            <input type="email" class="form-control form-control-lg" id="email-input" value="{{ user.email }}" readonly>
+                                            <button class="btn btn-primary px-4 fw-semibold" type="button" id="btn-send-email-otp">
+                                                Send Email OTP
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    <!-- Email OTP Entry Form -->
+                                    <div id="email-step-2" class="d-none mt-3 text-center">
+                                        <div class="alert alert-info border-0 rounded-3 text-start mb-3">
+                                            <i class="bi bi-info-circle me-1"></i> We sent a verification code to <strong>{{ user.email }}</strong>.
+                                        </div>
+                                        <label class="form-label fw-semibold">Enter 6-Digit Code</label>
+                                        <div class="d-flex justify-content-center gap-2 mb-3">
+                                            <input type="text" maxlength="6" class="form-control form-control-lg text-center font-monospace tracking-widest fs-4" id="email-otp-code" placeholder="000000" style="max-width: 220px; letter-spacing: 0.5rem;">
+                                        </div>
+                                        
+                                        <div class="d-flex justify-content-center align-items-center gap-3">
+                                            <button class="btn btn-success px-4 fw-semibold" id="btn-verify-email-otp">
+                                                Verify Code
+                                            </button>
+                                            <button class="btn btn-outline-secondary" id="btn-resend-email-otp" disabled>
+                                                Resend in <span id="email-countdown">03:00</span>
+                                            </button>
+                                        </div>
+                                    </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Alert Feedback Box -->
+                    <div id="claim-alert-container"></div>
+
+                    <!-- Section 3: Contact Match & Eligibility Status -->
+                    <div class="mb-4">
+                        <h5 class="fw-bold mb-3">2. Eligibility & Contact Match Status</h5>
+
+                        {% if is_eligible %}
+                        <div class="alert alert-success border-0 rounded-4 p-4">
+                            <div class="d-flex align-items-start gap-3">
+                                <i class="bi bi-check-circle-fill fs-2 text-success flex-shrink-0"></i>
+                                <div>
+                                    <h6 class="fw-bold alert-heading mb-1">Eligible to Claim This Shop!</h6>
+                                    <p class="mb-0 text-secondary">
+                                        {% if phone_match %}
+                                        Your verified phone number matches the contact number listed for <strong>{{ shop.name }}</strong>.
+                                        {% elif email_match %}
+                                        Your verified email address matches the contact email listed for <strong>{{ shop.name }}</strong>.
+                                        {% endif %}
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                        {% else %}
+                        <div class="alert alert-danger border-0 rounded-4 p-4">
+                            <div class="d-flex align-items-start gap-3">
+                                <i class="bi bi-shield-x fs-2 text-danger flex-shrink-0"></i>
+                                <div>
+                                    <h6 class="fw-bold alert-heading mb-1">Not Currently Eligible</h6>
+                                    <p class="mb-0 text-secondary">
+                                        {% if not (user.is_phone_verified or user.is_email_verified) %}
+                                        Please verify your phone or email above to check eligibility.
+                                        {% else %}
+                                        Your verified phone/email contact does not match the stored contact for <strong>{{ shop.name }}</strong>.
+                                        Only users controlling the exact matching contact number or email can claim this listing.
+                                        {% endif %}
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    <!-- Section 4: Action Button -->
+                    <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                        <a href="{{ url_for('main_bp.shop_detail', shop_id=shop.id) }}" class="btn btn-outline-secondary btn-lg px-4 me-md-2 rounded-3">
+                            Cancel
+                        </a>
+                        {% if shop_is_owner %}
+                        <button class="btn btn-success btn-lg px-5 rounded-3 fw-bold" disabled>
+                            <i class="bi bi-check-circle me-2"></i>You Already Own This Shop
+                        </button>
+                        {% else %}
+                        <button class="btn btn-primary btn-lg px-5 rounded-3 fw-bold" id="btn-submit-claim" {% if not is_eligible %}disabled{% endif %}>
+                            <i class="bi bi-shield-check me-2"></i>Confirm & Claim Shop
+                        </button>
+                        {% endif %}
+                    </div>
+
+                </div>
+            </div>
+            
+            <!-- Clarification Notice -->
+            <div class="text-center text-muted small px-3">
+                <i class="bi bi-info-circle me-1"></i> Notice: Claiming a shop assigns listing management and seller control to your account. It does not mean Market Window has officially verified the shop.
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const shopId = {{ shop.id }};
+    const alertContainer = document.getElementById('claim-alert-container');
+    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute("content") || '';
+    
+    function showAlert(message, type = 'danger') {
+        alertContainer.innerHTML = `
+            <div class="alert alert-${type} alert-dismissible fade show rounded-3 mb-4" role="alert">
+                <i class="bi ${type === 'success' ? 'bi-check-circle-fill' : 'bi-exclamation-triangle-fill'} me-2"></i>
+                ${message}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+        `;
+    }
+
+    function startTimer(durationSeconds, displayEl, buttonEl) {
+        let remaining = durationSeconds;
+        buttonEl.disabled = true;
+        
+        const interval = setInterval(function() {
+            const minutes = Math.floor(remaining / 60);
+            const seconds = remaining % 60;
+            displayEl.textContent = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+            
+            if (--remaining < 0) {
+                clearInterval(interval);
+                buttonEl.disabled = false;
+                displayEl.textContent = '00:00';
+            }
+        }, 1000);
+    }
+
+    async function apiPost(url, payload = {}) {
+        const headers = {
+            'Content-Type': 'application/json'
+        };
+        if (csrfToken) {
+            headers['X-CSRFToken'] = csrfToken;
+        }
+
+        const res = await fetch(url, {
+            method: 'POST',
+            headers: headers,
+            body: JSON.stringify(payload)
+        });
+
+        let data = {};
+        const contentType = res.headers.get('content-type') || '';
+        if (contentType.includes('application/json')) {
+            try {
+                data = await res.json();
+            } catch (e) {
+                data = {};
+            }
+        } else {
+            const text = await res.text();
+            data = { message: `HTTP Error ${res.status}: ${res.statusText}` };
+        }
+
+        return { ok: res.ok, status: res.status, data: data };
+    }
+
+    // --- Phone OTP Handlers ---
+    const btnSendPhone = document.getElementById('btn-send-phone-otp');
+    const phoneInput = document.getElementById('phone-input');
+    const phoneStep2 = document.getElementById('phone-step-2');
+    const sentPhoneDisplay = document.getElementById('sent-phone-display');
+    const btnVerifyPhone = document.getElementById('btn-verify-phone-otp');
+    const phoneOtpCode = document.getElementById('phone-otp-code');
+    const btnResendPhone = document.getElementById('btn-resend-phone-otp');
+    const phoneCountdown = document.getElementById('phone-countdown');
+
+    if (btnSendPhone) {
+        btnSendPhone.addEventListener('click', async function() {
+            const phoneVal = phoneInput.value.trim();
+            if (!phoneVal) {
+                showAlert('Please enter a valid phone number.', 'warning');
+                return;
+            }
+            btnSendPhone.disabled = true;
+            btnSendPhone.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Sending...';
+
+            try {
+                const { ok, status, data } = await apiPost('/api/auth/verify-phone/request-otp', { phone: phoneVal });
+                
+                if (ok && data.success) {
+                    phoneStep2.classList.remove('d-none');
+                    sentPhoneDisplay.textContent = data.masked_phone || phoneVal;
+                    showAlert(data.message, 'success');
+                    startTimer(data.cooldown_seconds || 180, phoneCountdown, btnResendPhone);
+                } else {
+                    showAlert(data.message || 'Failed to send SMS OTP.', status === 429 ? 'warning' : 'danger');
+                    if (data.in_cooldown && data.cooldown_seconds) {
+                        phoneStep2.classList.remove('d-none');
+                        startTimer(data.cooldown_seconds, phoneCountdown, btnResendPhone);
+                    }
+                }
+            } catch (err) {
+                showAlert('Network error while requesting phone code.', 'danger');
+            } finally {
+                btnSendPhone.disabled = false;
+                btnSendPhone.textContent = 'Send SMS OTP';
+            }
+        });
+    }
+
+    if (btnResendPhone) {
+        btnResendPhone.addEventListener('click', function() {
+            if (btnSendPhone) btnSendPhone.click();
+        });
+    }
+
+    if (btnVerifyPhone) {
+        btnVerifyPhone.addEventListener('click', async function() {
+            const code = phoneOtpCode.value.trim();
+            if (!code || code.length !== 6) {
+                showAlert('Please enter the 6-digit code sent to your phone.', 'warning');
+                return;
+            }
+            btnVerifyPhone.disabled = true;
+            btnVerifyPhone.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Verifying...';
+
+            try {
+                const { ok, status, data } = await apiPost('/api/auth/verify-phone/verify-otp', { otp: code });
+                
+                if (ok && data.success) {
+                    showAlert('Phone number verified! Reloading page status...', 'success');
+                    setTimeout(() => window.location.reload(), 1200);
+                } else {
+                    showAlert(data.message || 'Invalid verification code.', 'danger');
+                }
+            } catch (err) {
+                showAlert('Network error while verifying code.', 'danger');
+            } finally {
+                btnVerifyPhone.disabled = false;
+                btnVerifyPhone.textContent = 'Verify Code';
+            }
+        });
+    }
+
+    // --- Email OTP Handlers ---
+    const btnSendEmail = document.getElementById('btn-send-email-otp');
+    const emailStep2 = document.getElementById('email-step-2');
+    const btnVerifyEmail = document.getElementById('btn-verify-email-otp');
+    const emailOtpCode = document.getElementById('email-otp-code');
+    const btnResendEmail = document.getElementById('btn-resend-email-otp');
+    const emailCountdown = document.getElementById('email-countdown');
+
+    if (btnSendEmail) {
+        btnSendEmail.addEventListener('click', async function() {
+            btnSendEmail.disabled = true;
+            btnSendEmail.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Sending...';
+
+            try {
+                const { ok, status, data } = await apiPost('/api/auth/verify-email/request-otp', {});
+
+                if (ok && data.success) {
+                    emailStep2.classList.remove('d-none');
+                    showAlert(data.message, 'success');
+                    startTimer(data.cooldown_seconds || 180, emailCountdown, btnResendEmail);
+                } else {
+                    showAlert(data.message || 'Failed to send email OTP.', status === 429 ? 'warning' : 'danger');
+                    if (data.in_cooldown && data.cooldown_seconds) {
+                        emailStep2.classList.remove('d-none');
+                        startTimer(data.cooldown_seconds, emailCountdown, btnResendEmail);
+                    }
+                }
+            } catch (err) {
+                showAlert('Network error while requesting email code.', 'danger');
+            } finally {
+                btnSendEmail.disabled = false;
+                btnSendEmail.textContent = 'Send Email OTP';
+            }
+        });
+    }
+
+    if (btnResendEmail) {
+        btnResendEmail.addEventListener('click', function() {
+            if (btnSendEmail) btnSendEmail.click();
+        });
+    }
+
+    if (btnVerifyEmail) {
+        btnVerifyEmail.addEventListener('click', async function() {
+            const code = emailOtpCode.value.trim();
+            if (!code || code.length !== 6) {
+                showAlert('Please enter the 6-digit code sent to your email.', 'warning');
+                return;
+            }
+            btnVerifyEmail.disabled = true;
+            btnVerifyEmail.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Verifying...';
+
+            try {
+                const { ok, status, data } = await apiPost('/api/auth/verify-email/verify-otp', { otp: code });
+
+                if (ok && data.success) {
+                    showAlert('Email address verified! Reloading page status...', 'success');
+                    setTimeout(() => window.location.reload(), 1200);
+                } else {
+                    showAlert(data.message || 'Invalid verification code.', 'danger');
+                }
+            } catch (err) {
+                showAlert('Network error while verifying code.', 'danger');
+            } finally {
+                btnVerifyEmail.disabled = false;
+                btnVerifyEmail.textContent = 'Verify Code';
+            }
+        });
+    }
+
+    // --- Submit Claim Handler ---
+    const btnSubmitClaim = document.getElementById('btn-submit-claim');
+    if (btnSubmitClaim) {
+        btnSubmitClaim.addEventListener('click', async function() {
+            if (!confirm('Are you sure you want to claim ownership of this shop?')) {
+                return;
+            }
+            btnSubmitClaim.disabled = true;
+            btnSubmitClaim.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Processing Claim...';
+
+            try {
+                const { ok, status, data } = await apiPost(`/api/seller/shop/${shopId}/claim`, {});
+
+                if (ok && data.success) {
+                    showAlert(data.message || 'Shop claimed successfully!', 'success');
+                    setTimeout(() => {
+                        window.location.href = `/shops/${shopId}`;
+                    }, 1500);
+                } else {
+                    showAlert(data.message || 'Failed to claim shop.', 'danger');
+                    btnSubmitClaim.disabled = false;
+                    btnSubmitClaim.innerHTML = '<i class="bi bi-shield-check me-2"></i>Confirm & Claim Shop';
+                }
+            } catch (err) {
+                showAlert('Network error occurred while submitting claim request.', 'danger');
+                btnSubmitClaim.disabled = false;
+                btnSubmitClaim.innerHTML = '<i class="bi bi-shield-check me-2"></i>Confirm & Claim Shop';
+            }
+        });
+    }
+});
+</script>
+{% endblock %}
+

@@ -518,15 +518,6 @@ def delete_product(product_id):
     return redirect(url_for('mw_admin_bp.products'))
 
 
-# ---------------------------------------------------------------------------
-# Settings
-# ---------------------------------------------------------------------------
-
-@mw_admin_bp.route('/settings')
-@admin_required
-def settings():
-    return render_template('admin/settings.html')
-
 
 @mw_admin_bp.route('/service-keywords', methods=['GET'])
 @admin_required
@@ -723,3 +714,42 @@ def analytics():
         total_searches=total_searches,
         total_saved_searches=total_saved_searches
     )
+
+
+# ---------------------------------------------------------------------------
+# Settings
+# ---------------------------------------------------------------------------
+
+@mw_admin_bp.route('/settings')
+@admin_required
+def settings():
+    return render_template('admin/settings.html')
+
+
+@mw_admin_bp.route('/settings/ai-chat', methods=['POST'])
+@admin_required
+def ai_chat():
+    """Quick AI chat endpoint for testing the Groq model from the admin panel."""
+    from ..services.ai_service import AIService, AIServiceError
+
+    data = request.get_json(silent=True) or {}
+    message = (data.get('message') or '').strip()
+    if not message:
+        return jsonify(success=False, error='Message is required.'), 400
+
+    # Accept up to the last 2 prior exchanges for minimal context
+    history = data.get('history', [])
+    if not isinstance(history, list):
+        history = []
+    history = history[-4:]  # 2 exchanges = 4 messages (user+assistant each)
+
+    try:
+        ai = AIService()
+        messages = history + [{"role": "user", "content": message}]
+        reply = ai._call_groq(messages)
+        return jsonify(success=True, reply=reply)
+    except AIServiceError as e:
+        return jsonify(success=False, error=str(e)), 502
+    except Exception as e:
+        return jsonify(success=False, error='An unexpected error occurred.'), 500
+

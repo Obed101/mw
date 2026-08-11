@@ -14,8 +14,8 @@ class Category(db.Model):
     parent_id = db.Column(db.Integer, db.ForeignKey('category.id'), nullable=True)
     description = db.Column(db.Text)
     is_active = db.Column(db.Boolean, default=True)
-    created_at = db.Column(db.DateTime, default=datetime.now(timezone.utc))
-    updated_at = db.Column(db.DateTime, default=datetime.now(timezone.utc), onupdate=datetime.now(timezone.utc))
+    created_at = db.Column(db.DateTime(timezone=True), default=datetime.now(timezone.utc))
+    updated_at = db.Column(db.DateTime(timezone=True), default=datetime.now(timezone.utc), onupdate=datetime.now(timezone.utc))
     
     # Self-referential relationships
     parent = db.relationship('Category', remote_side=[id], backref='children')
