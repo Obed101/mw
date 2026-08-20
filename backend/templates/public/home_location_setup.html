@@ -1,0 +1,690 @@
+{% extends "base.html" %}
+
+{% block title %}Set Your Home Location - Market Window{% endblock %}
+
+{% block styles %}
+<link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+    crossorigin=""
+>
+<style>
+    [x-cloak] {
+        display: none !important;
+    }
+
+    .location-setup-shell {
+        --setup-ink: #172033;
+        --setup-muted: #667085;
+        --setup-line: #dde3f2;
+        --setup-surface: #ffffff;
+        --setup-surface-soft: #f7f8ff;
+        --setup-accent: #4f7cff;
+        --setup-accent-deep: #7b61d9;
+        --setup-accent-soft: #eef1ff;
+        --setup-mint: #635bca;
+        max-width: 680px;
+        margin: 0 auto;
+    }
+
+    .location-setup-shell .hero-card {
+        background:
+            radial-gradient(circle at top left, rgba(79, 124, 255, 0.12), transparent 42%),
+            radial-gradient(circle at right center, rgba(123, 97, 217, 0.08), transparent 36%),
+            linear-gradient(145deg, #f6f8ff 0%, #ffffff 55%, #f8f3ff 100%);
+        border: 1px solid rgba(92, 103, 222, 0.14);
+        border-radius: 1.5rem;
+        padding: 2rem;
+        box-shadow: 0 18px 40px rgba(15, 23, 42, 0.06);
+        text-align: center;
+    }
+
+    .location-setup-shell .hero-icon {
+        width: 4rem;
+        height: 4rem;
+        margin: 0 auto 1.5rem;
+        border-radius: 999px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        background: rgba(99, 91, 202, 0.12);
+        color: var(--setup-mint);
+        font-size: 1.8rem;
+    }
+
+    .location-setup-shell .hero-title {
+        color: var(--setup-ink);
+        font-size: 1.75rem;
+        font-weight: 800;
+        margin-bottom: 0.75rem;
+    }
+
+    .location-setup-shell .hero-subtitle {
+        color: var(--setup-muted);
+        font-size: 1rem;
+        max-width: 32rem;
+        margin: 0 auto;
+        line-height: 1.6;
+    }
+
+    .location-setup-shell .setup-card {
+        background: var(--setup-surface);
+        border: 1px solid var(--setup-line);
+        border-radius: 1.5rem;
+        box-shadow: 0 14px 32px rgba(15, 23, 42, 0.05);
+        padding: 2rem;
+        margin-top: 2rem;
+    }
+
+    .location-setup-shell .location-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.75rem;
+        border-radius: 999px;
+        padding: 0.75rem 1.25rem;
+        background: #f8fafc;
+        border: 1px solid var(--setup-line);
+        color: var(--setup-muted);
+        font-size: 0.95rem;
+        transition: all 0.3s ease;
+    }
+
+    .location-setup-shell .location-pill.is-set {
+        background: rgba(241, 243, 255, 0.98);
+        color: var(--setup-mint);
+        border-color: rgba(99, 91, 202, 0.22);
+        box-shadow: 0 4px 12px rgba(99, 91, 202, 0.12);
+    }
+
+    .location-setup-shell .map-picker {
+        min-height: 350px;
+        border-radius: 1.25rem;
+        border: 1px solid var(--setup-line);
+        overflow: hidden;
+        background: #eef4fb;
+        margin-top: 1.5rem;
+    }
+
+    .location-setup-shell .map-action-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 1rem;
+        margin-top: 1.5rem;
+    }
+
+    .location-setup-shell .btn-pill {
+        border-radius: 999px;
+        padding-left: 1.5rem;
+        padding-right: 1.5rem;
+        min-height: 3.25rem;
+        font-weight: 700;
+        transition: all 0.3s ease;
+    }
+
+    .location-setup-shell .btn-primary.btn-pill {
+        box-shadow: 0 16px 30px rgba(92, 103, 222, 0.22);
+    }
+
+    .location-setup-shell .btn-primary.btn-pill:hover {
+        box-shadow: 0 18px 34px rgba(92, 103, 222, 0.26);
+        transform: translateY(-1px);
+    }
+
+    .location-setup-shell .form-label {
+        color: var(--setup-ink);
+        font-size: 0.9rem;
+        font-weight: 700;
+        margin-bottom: 0.5rem;
+    }
+
+    .location-setup-shell .form-control {
+        min-height: 3.25rem;
+        border-radius: 1rem;
+        border-color: #d6dae3;
+        padding: 0.85rem 1rem;
+        font-size: 1rem;
+        transition: all 0.3s ease;
+    }
+
+    .location-setup-shell .form-control:focus {
+        border-color: rgba(79, 124, 255, 0.45);
+        box-shadow: 0 0 0 0.2rem rgba(92, 103, 222, 0.12);
+    }
+
+    .location-setup-shell .info-card {
+        background: linear-gradient(180deg, #fcfdff 0%, #f6f7ff 100%);
+        border: 1px solid var(--setup-line);
+        border-radius: 1.15rem;
+        padding: 1.25rem;
+        margin-top: 1.5rem;
+    }
+
+    .location-setup-shell .info-card .info-icon {
+        color: var(--setup-accent);
+        font-size: 1.5rem;
+        margin-bottom: 0.75rem;
+    }
+
+    .location-setup-shell .info-card .info-title {
+        color: var(--setup-ink);
+        font-weight: 700;
+        font-size: 1rem;
+        margin-bottom: 0.5rem;
+    }
+
+    .location-setup-shell .info-card .info-text {
+        color: var(--setup-muted);
+        font-size: 0.9rem;
+        line-height: 1.5;
+    }
+
+    .location-setup-shell .loading-spinner {
+        animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+        from { transform: rotate(0deg); }
+        to { transform: rotate(360deg); }
+    }
+
+    @media (max-width: 767.98px) {
+        .location-setup-shell .hero-card,
+        .location-setup-shell .setup-card {
+            padding: 1.5rem;
+        }
+
+        .location-setup-shell .map-picker {
+            min-height: 300px;
+        }
+
+        .location-setup-shell .map-action-row {
+            flex-direction: column;
+        }
+
+        .location-setup-shell .btn-pill {
+            width: 100%;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div
+    class="container py-5 location-setup-shell"
+    x-data='homeLocationSetup({
+        csrfToken: {{ csrf_token()|tojson }},
+        reverseGeocodeUrl: {{ url_for("seller_template_bp.reverse_geocode_shop_location")|tojson }},
+        saveLocationUrl: {{ url_for("main_bp.save_home_location")|tojson }},
+        currentUser: {{ current_user.to_dict()|tojson }},
+    })'
+    hx-headers='{"X-CSRFToken": "{{ csrf_token() }}"}'
+>
+    <div class="hero-card">
+        <div class="hero-icon">
+            <i class="bi bi-geo-alt-fill"></i>
+        </div>
+        <h1 class="hero-title">Set Your Home Location</h1>
+        <p class="hero-subtitle">
+            We'll show you shops and products around you. It only takes a moment.
+        </p>
+    </div>
+
+    <div class="setup-card">
+        <div class="d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3 mb-4">
+            <div class="location-pill" :class="{ 'is-set': !!form.gps }">
+                <i class="bi" :class="form.gps ? 'bi-geo-alt-fill' : 'bi-crosshair'"></i>
+                <div>
+                    <div class="fw-semibold" x-text="form.town || form.district || form.region || (locationLookupLoading ? 'Detecting location...' : 'Select your location')"></div>
+                    <div class="small text-muted" x-show="detectedLocationText" x-cloak>
+                        <span x-text="detectedLocationText"></span>
+                    </div>
+                </div>
+            </div>
+            <div class="map-action-row">
+                <button 
+                    type="button" 
+                    class="btn btn-outline-primary btn-pill" 
+                    @click="useCurrentLocation()" 
+                    :disabled="locating"
+                >
+                    <i class="bi" :class="locating ? 'bi-arrow-repeat loading-spinner' : 'bi-crosshair'"></i>
+                    <span x-text="locating ? 'Finding you...' : 'Use Current Location'"></span>
+                </button>
+                <button 
+                    type="button" 
+                    class="btn btn-outline-primary btn-pill" 
+                    @click="clearLocation()" 
+                    x-show="form.gps" 
+                    x-cloak
+                >
+                    Clear Pin
+                </button>
+            </div>
+        </div>
+
+        <!-- Location permission prompt / warning banner -->
+        <div class="alert alert-warning border-0 shadow-sm mb-3 d-flex align-items-start gap-3" x-show="locationPermissionDenied" x-cloak>
+            <i class="bi bi-geo-alt-fill text-warning fs-4 flex-shrink-0 mt-1"></i>
+            <div class="flex-grow-1">
+                <div class="fw-bold mb-1">Please allow location access</div>
+                <div class="small" x-text="locationPermissionMessage"></div>
+                <div class="mt-2 d-flex flex-wrap gap-2 align-items-center">
+                    <button type="button" class="btn btn-sm btn-warning fw-semibold rounded-pill px-3" @click="useCurrentLocation()">
+                        <i class="bi bi-crosshair me-1"></i> Allow Location Access
+                    </button>
+                    <span class="small text-muted">Or tap anywhere on the map to pin manually</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="map-picker" x-ref="locationMap"></div>
+        <p class="text-muted small mt-3 mb-0 text-center">
+            <i class="bi bi-info-circle me-1"></i>
+            Tap anywhere on the map to place your home location pin
+        </p>
+
+        <div class="mt-4">
+            <div class="d-flex flex-column flex-sm-row justify-content-between gap-2 align-items-sm-center mb-3">
+                <label class="form-label mb-0">Detected location</label>
+                <span class="text-muted small">Auto-filled from the pin. Edit only if needed.</span>
+            </div>
+            <div class="row g-3">
+                <div class="col-12 col-md-4">
+                    <label class="form-label small fw-bold" for="user-region">Region</label>
+                    <input 
+                        id="user-region" 
+                        type="text" 
+                        name="region" 
+                        class="form-control" 
+                        x-model="form.region" 
+                        placeholder="Auto-filled"
+                    >
+                </div>
+                <div class="col-12 col-md-4">
+                    <label class="form-label small fw-bold" for="user-district">District</label>
+                    <input 
+                        id="user-district" 
+                        type="text" 
+                        name="district" 
+                        class="form-control" 
+                        x-model="form.district" 
+                        placeholder="Auto-filled"
+                    >
+                </div>
+                <div class="col-12 col-md-4">
+                    <label class="form-label small fw-bold" for="user-town">Town / City</label>
+                    <input 
+                        id="user-town" 
+                        type="text" 
+                        name="town" 
+                        class="form-control" 
+                        x-model="form.town" 
+                        placeholder="Auto-filled"
+                    >
+                </div>
+            </div>
+            <div class="text-muted small mt-2" x-show="locationLookupLoading || locationLookupError" x-cloak>
+                <template x-if="locationLookupLoading">
+                    <span><i class="bi bi-arrow-repeat loading-spinner me-1"></i>Detecting nearby town and district...</span>
+                </template>
+                <template x-if="!locationLookupLoading && locationLookupError">
+                    <span class="text-warning" x-text="locationLookupError"></span>
+                </template>
+            </div>
+        </div>
+
+        <div class="info-card">
+            <div class="info-icon">
+                <i class="bi bi-shield-check"></i>
+            </div>
+            <div class="info-title">Your location helps us serve you better</div>
+            <div class="info-text">
+                We use your location to show you nearby shops, products, and services. 
+                Your location data is stored securely and never shared with third parties.
+            </div>
+        </div>
+
+        <div class="d-flex flex-column flex-sm-row gap-3 mt-4">
+            <button 
+                type="button" 
+                class="btn btn-primary btn-pill flex-grow-1" 
+                @click="saveLocation()"
+                :disabled="saving || !form.region || !form.district || !form.town"
+            >
+                <i class="bi" :class="saving ? 'bi-arrow-repeat loading-spinner' : 'bi-check-lg'"></i>
+                <span x-text="saving ? 'Saving...' : 'Save Location'"></span>
+            </button>
+            <button 
+                type="button" 
+                class="btn btn-outline-secondary btn-pill" 
+                @click="skipForNow()"
+            >
+                Skip for Now
+            </button>
+        </div>
+    </div>
+
+    <div id="location-feedback" class="mt-4"></div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script
+    src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+    integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+    crossorigin=""
+></script>
+<script>
+    function homeLocationSetup(config) {
+        return {
+            csrfToken: config.csrfToken,
+            reverseGeocodeUrl: config.reverseGeocodeUrl,
+            saveLocationUrl: config.saveLocationUrl,
+            currentUser: config.currentUser || {},
+            
+            locating: false,
+            saving: false,
+            locationLookupLoading: false,
+            locationLookupError: '',
+            locationLookupRequestId: 0,
+            detectedLocationText: '',
+            locationPermissionDenied: false,
+            locationPermissionMessage: '',
+            
+            map: null,
+            marker: null,
+            
+            form: {
+                region: config.currentUser.region || '',
+                district: config.currentUser.district || '',
+                town: config.currentUser.town || '',
+                gps: config.currentUser.latitude && config.currentUser.longitude ? `${config.currentUser.latitude},${config.currentUser.longitude}` : '', // Format: "lat,lng"
+            },
+
+            init() {
+                this.$nextTick(() => {
+                    this.initMap();
+                    if (this.form.gps) {
+                        this.placeMarkerFromValue(this.form.gps);
+                    } else {
+                        this.autoLocateUser();
+                    }
+                });
+            },
+
+            autoLocateUser() {
+                this.useCurrentLocation(true);
+            },
+
+            initMap() {
+                if (!window.L || !this.$refs.locationMap || this.map) {
+                    return;
+                }
+
+                // Use Ghana center as initial fallback
+                const fallback = [5.603717, -0.186964];
+                this.map = L.map(this.$refs.locationMap, {
+                    zoomControl: true,
+                    scrollWheelZoom: false,
+                }).setView(fallback, 6);
+
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                    attribution: '&copy; OpenStreetMap contributors',
+                }).addTo(this.map);
+
+                this.map.on('click', (event) => {
+                    this.placeMarker(event.latlng.lat, event.latlng.lng, true);
+                });
+
+                this.refreshMap();
+            },
+
+            refreshMap() {
+                if (!this.map) {
+                    return;
+                }
+                window.setTimeout(() => this.map.invalidateSize(), 120);
+            },
+
+            parseGps(rawValue) {
+                const rawText = String(rawValue || '').trim();
+                const match = rawText.match(/^\s*(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)\s*$/);
+                if (!match) {
+                    return null;
+                }
+
+                const lat = Number(match[1]);
+                const lng = Number(match[2]);
+                if (Number.isNaN(lat) || Number.isNaN(lng)) {
+                    return null;
+                }
+                if (lat < -90 || lat > 90 || lng < -180 || lng > 180) {
+                    return null;
+                }
+                return [lat, lng];
+            },
+
+            syncDetectedLocationText() {
+                const pieces = [this.form.district, this.form.region]
+                    .map((part) => String(part || '').trim())
+                    .filter(Boolean);
+                this.detectedLocationText = pieces.length ? pieces.join(', ') : '';
+            },
+
+            async lookupLocationFromGps(gpsValue) {
+                const parsed = this.parseGps(gpsValue);
+                if (!parsed) {
+                    return;
+                }
+
+                const requestId = ++this.locationLookupRequestId;
+                this.locationLookupLoading = true;
+                this.locationLookupError = '';
+                this.form.region = '';
+                this.form.district = '';
+                this.form.town = '';
+                this.syncDetectedLocationText();
+
+                try {
+                    const url = new URL(this.reverseGeocodeUrl, window.location.origin);
+                    url.searchParams.set('lat', parsed[0].toFixed(6));
+                    url.searchParams.set('lng', parsed[1].toFixed(6));
+
+                    const response = await fetch(url.toString(), {
+                        headers: { 'Accept': 'application/json' },
+                    });
+                    const data = await response.json();
+
+                    if (requestId !== this.locationLookupRequestId) {
+                        return;
+                    }
+
+                    if (!response.ok || !data.success) {
+                        throw new Error(data.message || 'Could not detect location.');
+                    }
+
+                    const location = data.location || {};
+                    this.form.region = location.region || '';
+                    this.form.district = location.district || '';
+                    this.form.town = location.town || '';
+                    this.syncDetectedLocationText();
+                } catch (error) {
+                    if (requestId === this.locationLookupRequestId) {
+                        this.locationLookupError = error?.message || 'Could not detect location.';
+                    }
+                } finally {
+                    if (requestId === this.locationLookupRequestId) {
+                        this.locationLookupLoading = false;
+                    }
+                }
+            },
+
+            placeMarkerFromValue(rawValue) {
+                const parsed = this.parseGps(rawValue);
+                if (!parsed || !this.map) {
+                    return;
+                }
+                this.placeMarker(parsed[0], parsed[1], true);
+            },
+
+            placeMarker(lat, lng, centerMap) {
+                if (!this.map) {
+                    return;
+                }
+
+                const normalizedLat = Number(lat);
+                const normalizedLng = Number(lng);
+                if (!this.marker) {
+                    this.marker = L.marker([normalizedLat, normalizedLng], {
+                        draggable: true,
+                    }).addTo(this.map);
+                    this.marker.on('dragend', () => {
+                        const point = this.marker.getLatLng();
+                        this.setGps(point.lat, point.lng, false);
+                        this.lookupLocationFromGps(this.form.gps);
+                    });
+                } else {
+                    this.marker.setLatLng([normalizedLat, normalizedLng]);
+                }
+
+                this.setGps(normalizedLat, normalizedLng, centerMap);
+                this.lookupLocationFromGps(this.form.gps);
+            },
+
+            setGps(lat, lng, centerMap) {
+                this.form.gps = Number(lat).toFixed(6) + ',' + Number(lng).toFixed(6);
+                if (this.map && centerMap) {
+                    this.map.setView([Number(lat), Number(lng)], 16);
+                }
+            },
+
+            clearLocation() {
+                this.form.gps = '';
+                this.form.region = '';
+                this.form.district = '';
+                this.form.town = '';
+                this.detectedLocationText = '';
+                this.locationLookupError = '';
+                this.locationLookupRequestId += 1;
+                this.locationLookupLoading = false;
+                if (this.map && this.marker) {
+                    this.map.removeLayer(this.marker);
+                    this.marker = null;
+                }
+            },
+
+            useCurrentLocation(isAuto = false) {
+                if (!navigator.geolocation) {
+                    this.locationPermissionDenied = true;
+                    this.locationPermissionMessage = 'Location access is not available in this browser. Please tap on the map to choose your location.';
+                    if (!isAuto) {
+                        this.pushFeedback('danger', 'Location access is not available in this browser.');
+                    }
+                    return;
+                }
+
+                this.locating = true;
+                navigator.geolocation.getCurrentPosition(
+                    (position) => {
+                        this.locating = false;
+                        this.locationPermissionDenied = false;
+                        this.locationPermissionMessage = '';
+                        const lat = position.coords.latitude;
+                        const lng = position.coords.longitude;
+                        this.placeMarker(lat, lng, true);
+                        if (this.map) {
+                            this.map.setView([lat, lng], 16);
+                        }
+                    },
+                    (error) => {
+                        this.locating = false;
+                        this.locationPermissionDenied = true;
+                        this.locationPermissionMessage = this.getGeolocationErrorMessage(error);
+                        if (!isAuto) {
+                            this.pushFeedback('warning', this.locationPermissionMessage);
+                        }
+                    },
+                    {
+                        enableHighAccuracy: true,
+                        timeout: 12000,
+                        maximumAge: 30000,
+                    }
+                );
+            },
+
+            getGeolocationErrorMessage(error) {
+                switch(error?.code) {
+                    case 1: // PERMISSION_DENIED
+                        return 'Location access was not granted. Please allow location access in your browser / device settings so we can automatically zoom to your area for easy pinning, or tap the map to place your pin manually.';
+                    case 2: // POSITION_UNAVAILABLE
+                        return 'Location information is currently unavailable. Please verify GPS / network settings or tap the map to place your pin.';
+                    case 3: // TIMEOUT
+                        return 'Location request timed out. Please tap "Use Current Location" to try again, or tap the map to place your pin manually.';
+                    default:
+                        return 'Could not get your current location. Please allow location access or select your location manually on the map.';
+                }
+            },
+
+            async saveLocation() {
+                if (!this.form.region || !this.form.district || !this.form.town) {
+                    this.pushFeedback('warning', 'Please complete all location fields.');
+                    return;
+                }
+
+                this.saving = true;
+                try {
+                    const response = await fetch(this.saveLocationUrl, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRFToken': this.csrfToken || '',
+                        },
+                        body: JSON.stringify({
+                            region: this.form.region,
+                            district: this.form.district,
+                            town: this.form.town,
+                            gps: this.form.gps,
+                        }),
+                    });
+
+                    const data = await response.json();
+                    if (!response.ok || !data.success) {
+                        throw new Error(data.message || 'Unable to save location.');
+                    }
+
+                    this.pushFeedback('success', 'Location saved successfully!');
+                    
+                    // Redirect to home page after successful save
+                    setTimeout(() => {
+                        window.location.href = '/';
+                    }, 1500);
+                } catch (error) {
+                    this.pushFeedback('danger', error.message || 'Unable to save location.');
+                } finally {
+                    this.saving = false;
+                }
+            },
+
+            skipForNow() {
+                // Redirect to home page
+                window.location.href = '/';
+            },
+
+            pushFeedback(tone, message) {
+                const feedbackNode = document.getElementById('location-feedback');
+                if (!feedbackNode) {
+                    return;
+                }
+
+                feedbackNode.innerHTML =
+                    '<div class="alert alert-' + (tone === 'success' ? 'success' : tone === 'warning' ? 'warning' : 'danger') + ' border-0 shadow-sm mb-0" role="alert">' +
+                    '<div class="d-flex align-items-center gap-2">' +
+                    '<i class="bi ' + (tone === 'success' ? 'bi-check-circle-fill' : tone === 'warning' ? 'bi-exclamation-triangle-fill' : 'bi-x-circle-fill') + '"></i>' +
+                    '<span>' + message + '</span>' +
+                    '</div></div>';
+            },
+        };
+    }
+</script>
+{% endblock %}

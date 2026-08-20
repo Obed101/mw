@@ -433,7 +433,7 @@
                             <i class="bi bi-shop-window me-2 text-primary"></i>My Shops
                         </h5>
                         <a href="{{ url_for('main_bp.add_shop', new=1) }}" class="btn btn-sm btn-primary">
-                            <i class="bi bi-plus-lg me-1"></i>Add Shop
+                            <i class="bi bi-plus-lg me-1"></i>Add a Shop
                         </a>
                         <a href="{{ url_for('main_bp.dropbox') }}" class="btn btn-sm btn-primary">
                             <i class="bi bi-cloud-arrow-up me-1"></i>Upload Files
@@ -490,7 +490,7 @@
                         <i class="bi bi-clock-history me-2 text-primary"></i>Recent Activity
                     </h5>
                 </div>
-                <div class="card-body p-4">
+                <div class="card-body p-4" style="max-height: 400px; overflow-y: auto;">
                     {% for activity in recent_activity %}
                     <div class="activity-item">
                         <div class="d-flex align-items-start">

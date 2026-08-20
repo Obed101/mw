@@ -6,148 +6,147 @@ from datetime import datetime, timezone
 from sqlalchemy import func
 from ..extensions import db, token_blacklist
 from ..models.user_model import User, USER_STATUS_ACTIVE, USER_ROLE_ADMIN, USER_ROLE_SELLER, USER_ROLE_BUYER, AuthToken
+from ..models.engagement_model import Notification
 from ..services.analytics_service import track_event
+
+# Notification types - defined as module-level constants for import
+NOTIFICATION_TYPE_LOCATION_SETUP = 'home_location_setup'
+NOTIFICATION_TYPE_PHONE_SETUP = 'phone_number_setup'
 
 auth_bp = Blueprint('auth', __name__, url_prefix='/api/auth')
 
 @auth_bp.route('/register', methods=['POST'])
 def register():
-    """Register a new user"""
+    """Register a new user.
+
+    Accepts:
+      - full_name (required): auto-split into first_name / last_name; username generated from it
+      - email (optional): stored as-is; left NULL if not provided
+      - password + confirm_password (required for non-OAuth)
+      - phone (optional)
+      - is_oauth (bool): skip password validation for OAuth flow
+      - terms (required)
+    """
+    from ..utils.username_utils import generate_username
+
     # Handle both JSON and form data
     if request.is_json:
         data = request.get_json()
     else:
         data = request.form.to_dict()
-    
-    # Check if this is OAuth registration (no password required)
+
     is_oauth = data.get('is_oauth', False)
-    
-    # Validate required fields
-    if is_oauth:
-        required = ['username', 'email']
-    else:
-        required = ['username', 'email', 'password', 'confirm_password']
-    
-    if not all(field in data for field in required):
-        error_msg = "Missing required fields"
+
+    # ── Required field validation ─────────────────────────────────────────────
+    if not data.get('full_name', '').strip():
+        error_msg = "Full name is required"
         if request.is_json:
             return jsonify({"error": error_msg}), 400
-        else:
+        flash(error_msg, 'error')
+        return redirect(url_for('main_bp.register'))
+
+    if not is_oauth:
+        if not data.get('password'):
+            error_msg = "Password is required"
+            if request.is_json:
+                return jsonify({"error": error_msg}), 400
             flash(error_msg, 'error')
             return redirect(url_for('main_bp.register'))
-    
-    # Validate password confirmation (only for non-OAuth users)
-    if not is_oauth:
-        if data['password'] != data['confirm_password']:
+
+        if data.get('password') != data.get('confirm_password'):
             error_msg = "Passwords do not match"
             if request.is_json:
                 return jsonify({"error": error_msg}), 400
-            else:
-                flash(error_msg, 'error')
-                return redirect(url_for('main_bp.register'))
-    
-    # Validate terms agreement
-    if 'terms' not in data or not data['terms']:
+            flash(error_msg, 'error')
+            return redirect(url_for('main_bp.register'))
+
+    # ── Terms ─────────────────────────────────────────────────────────────────
+    if not data.get('terms'):
         error_msg = "You must agree to the terms of service"
         if request.is_json:
             return jsonify({"error": error_msg}), 400
-        else:
-            flash(error_msg, 'error')
-            return redirect(url_for('main_bp.register'))
-    
-    # Default role to buyer if omitted from UI/form
-    role = (data.get('role') or USER_ROLE_BUYER).strip()
+        flash(error_msg, 'error')
+        return redirect(url_for('main_bp.register'))
 
-    # Validate role
+    # ── Role ──────────────────────────────────────────────────────────────────
+    role = (data.get('role') or USER_ROLE_BUYER).strip()
     valid_roles = [USER_ROLE_ADMIN, USER_ROLE_SELLER, USER_ROLE_BUYER]
     if role not in valid_roles:
         error_msg = "Invalid role"
         if request.is_json:
             return jsonify({"error": error_msg}), 400
-        else:
-            flash(error_msg, 'error')
-            return redirect(url_for('main_bp.register'))
-    
-    # Check if user already exists
-    if User.query.filter_by(email=data['email']).first():
+        flash(error_msg, 'error')
+        return redirect(url_for('main_bp.register'))
+
+    # ── Email uniqueness (only if provided) ───────────────────────────────────
+    email = (data.get('email') or '').strip().lower() or None
+    if email and User.query.filter(func.lower(User.email) == email).first():
         error_msg = "Email already registered"
         if request.is_json:
             return jsonify({"error": error_msg}), 400
-        else:
-            flash(error_msg, 'error')
-            return redirect(url_for('main_bp.register'))
-    
-    if User.query.filter_by(username=data['username']).first():
-        error_msg = "Username already taken"
-        if request.is_json:
-            return jsonify({"error": error_msg}), 400
-        else:
-            flash(error_msg, 'error')
-            return redirect(url_for('main_bp.register'))
-    
-    # Create new user
+        flash(error_msg, 'error')
+        return redirect(url_for('main_bp.register'))
+
+    # ── Auto-generate username from full name ─────────────────────────────────
+    full_name = data['full_name'].strip()
+    username, first_name, last_name = generate_username(full_name)
+
+    # ── Create user ───────────────────────────────────────────────────────────
     try:
         user = User(
-            username=data['username'],
-            email=data['email'],
+            username=username,
+            email=email,
+            first_name=first_name,
+            last_name=last_name,
             role=role,
             status=USER_STATUS_ACTIVE
         )
-        
-        # Set password only for non-OAuth users
+
         if not is_oauth:
             user.set_password(data['password'])
-        
-        # Add optional fields
-        if 'first_name' in data and data['first_name']:
-            user.first_name = data['first_name']
-        if 'last_name' in data and data['last_name']:
-            user.last_name = data['last_name']
-        if 'phone' in data and data['phone']:
-            user.phone = data['phone']
-        if 'region' in data and data['region']:
+
+        # Optional extra fields
+        if data.get('phone'):
+            user.phone = data['phone'].strip()
+        if data.get('region'):
             user.region = data['region']
-        if 'district' in data and data['district']:
+        if data.get('district'):
             user.district = data['district']
-        if 'town' in data and data['town']:
+        if data.get('town'):
             user.town = data['town']
-        
+
         db.session.add(user)
         db.session.commit()
-        
-        # Log user in automatically after registration
+
         user.update_last_login()
-        
-        # Log user in with Flask-Login for session management
         login_user(user)
         track_event('signup', user)
-        
-        # Generate tokens for API usage
+
         access_token = create_access_token(identity=user.id)
         refresh_token = create_refresh_token(identity=user.id)
-        
-        send_welcome_email(user)
 
-        # Handle form vs API responses
+        send_welcome_email(user)
+        _check_and_create_location_notification(user)
+        _check_and_create_phone_notification(user)
+
         if request.is_json:
             return jsonify({
                 "message": "User registered successfully",
                 "user": user.to_dict(),
+                "username": username,
                 "access_token": access_token,
                 "refresh_token": refresh_token
             }), 201
         else:
-            # For form submissions, flash message and redirect
-            flash('Registration successful! You are now logged in.', 'success')
+            flash(f'Account created! Your username is <strong>{username}</strong>', 'success')
             return redirect(url_for('main_bp.login'))
-        
+
     except Exception as e:
         db.session.rollback()
         if request.is_json:
             return jsonify({"error": str(e)}), 500
-        else:
-            flash('An error occurred during registration. Please try again.', 'error')
-            return redirect(url_for('main_bp.register'))
+        flash('An error occurred during registration. Please try again.', 'error')
+        return redirect(url_for('main_bp.register'))
 
 @auth_bp.route('/login', methods=['POST'])
 def login():
@@ -224,6 +223,10 @@ def login():
     # Generate tokens for API usage
     access_token = create_access_token(identity=user.id)
     refresh_token = create_refresh_token(identity=user.id)
+    
+    # Check if user needs location or phone setup notification
+    _check_and_create_location_notification(user)
+    _check_and_create_phone_notification(user)
     
     # Handle form vs API responses
     if request.is_json:
@@ -328,6 +331,62 @@ def get_current_user():
     return jsonify(user.to_dict()) if user else ({"error": "User not found"}, 404)
 
 
+def _check_and_create_location_notification(user):
+    """Check if user needs location setup notification and create if needed"""
+    # Check if user already has all location fields
+    if user.region and user.district and user.town:
+        return
+    
+    # Check if location setup notification already exists
+    existing_notification = Notification.query.filter_by(
+        recipient_user_id=user.id,
+        notification_type=NOTIFICATION_TYPE_LOCATION_SETUP,
+        is_read=False
+    ).first()
+    
+    if existing_notification:
+        return  # Don't create duplicate notifications
+    
+    # Create the location setup notification
+    # NOTE: payload column is db.Text — must use set_payload() to JSON-serialize the dict
+    notification = Notification(
+        recipient_user_id=user.id,
+        notification_type=NOTIFICATION_TYPE_LOCATION_SETUP,
+        title='Set your home location',
+        message='Set your home location so we can show you shops and products around you.',
+    )
+    notification.set_payload({'action_url': url_for('main_bp.home_location_setup')})
+    db.session.add(notification)
+    db.session.commit()
+
+
+def _check_and_create_phone_notification(user):
+    """Check if user needs phone number setup notification and create if needed"""
+    if user.phone:
+        return
+    
+    # Check if phone setup notification already exists and is unread
+    existing_notification = Notification.query.filter_by(
+        recipient_user_id=user.id,
+        notification_type=NOTIFICATION_TYPE_PHONE_SETUP,
+        is_read=False
+    ).first()
+    
+    if existing_notification:
+        return  # Don't create duplicate notifications
+    
+    # Create the phone setup notification
+    notification = Notification(
+        recipient_user_id=user.id,
+        notification_type=NOTIFICATION_TYPE_PHONE_SETUP,
+        title='Add your phone number',
+        message='Please add your phone number so buyers can contact you easily when necessary.',
+    )
+    notification.set_payload({'action_url': url_for('main_bp.profile'), 'icon': 'phone'})
+    db.session.add(notification)
+    db.session.commit()
+
+
 # --- CONTACT VERIFICATION ROUTES (PHONE & EMAIL) ---
 
 @auth_bp.route('/verify-phone/request-otp', methods=['POST'])
@@ -353,6 +412,9 @@ def request_user_phone_otp():
     existing = User.query.filter(User.phone == normalized_phone, User.id != current_user.id).first()
     if existing:
         return jsonify({'success': False, 'message': 'That phone number is already registered to another account'}), 400
+    if not existing and not current_user.phone == normalized_phone:
+        current_user.phone = normalized_phone
+        db.session.commit()
 
     # Check server-side 180s cooldown
     is_in_cooldown, remaining_seconds = VerificationOTP.check_resend_cooldown(

@@ -28,28 +28,20 @@ class LoginForm(FlaskForm):
     remember = BooleanField('Remember me')
 
 class RegistrationForm(FlaskForm):
-    username = StringField('Username', validators=[DataRequired(), Length(min=3, max=80)])
-    email = StringField('Email', validators=[DataRequired(), Email()])
-    first_name = StringField('First Name', validators=[DataRequired(), Length(min=2, max=50)])
-    last_name = StringField('Last Name', validators=[DataRequired(), Length(min=2, max=50)])
+    full_name = StringField('Full Name', validators=[DataRequired(), Length(min=2, max=150)])
+    email = StringField('Email Address', validators=[Optional(), Email()])
     password = PasswordField('Password', validators=[DataRequired(), Length(min=6)])
     confirm_password = PasswordField('Confirm Password', validators=[DataRequired(), EqualTo('password')])
-    role = SelectField('Account Type', choices=[('buyer', 'Buyer'), ('seller', 'Seller')], validators=[DataRequired()])
     terms = BooleanField('I agree to the Terms of Service and Privacy Policy', validators=[DataRequired()])
-    
-    def validate_username(self, username):
-        if User is None:
-            return  # Skip validation if User model not available
-        user = User.query.filter_by(username=username.data).first()
-        if user:
-            raise ValidationError('That username is already taken. Please choose a different one.')
-    
+
     def validate_email(self, email):
+        if not email.data:
+            return  # Email is optional
         if User is None:
-            return  # Skip validation if User model not available
+            return
         user = User.query.filter_by(email=email.data).first()
         if user:
-            raise ValidationError('That email is already registered. Please choose a different one.')
+            raise ValidationError('That email is already registered. Please use a different one or sign in.')
 
 class ShopForm(FlaskForm):
     name = StringField('Shop Name', validators=[DataRequired(), Length(min=3, max=100)])

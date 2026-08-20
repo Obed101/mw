@@ -3,141 +3,907 @@
 {% block title %}Create Account - Market Window{% endblock %}
 
 {% block content %}
-<section class="auth-shell py-5">
-    <div class="container">
+<section class="auth-shell">
+    <div class="auth-bg-orb auth-orb-1"></div>
+    <div class="auth-bg-orb auth-orb-2"></div>
+
+    <div class="container auth-container">
         <div class="row justify-content-center">
-            <div class="col-lg-7 col-md-10">
-                <div class="card auth-card border-0 shadow-lg">
-                    <div class="card-body p-4 p-md-5">
-                        <div class="text-center mb-4">
-                            <h1 class="h3 fw-bold mb-2">Create Your Account</h1>
-                            <p class="text-muted mb-0">Fastest way to start is Google sign-up</p>
+            <div class="col-lg-6 col-md-9">
+
+                <!-- ── SIGNUP FORM CARD ──────────────────────────────────── -->
+                <div class="auth-card glass-card" id="signup-card">
+                    <div class="auth-card-header">
+                        <div class="auth-brand-icon">
+                            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M20 7H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2z"/>
+                                <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/>
+                            </svg>
+                        </div>
+                        <h1 class="auth-title">Create your account</h1>
+                        <p class="auth-subtitle">Join thousands of shoppers on Market Window</p>
+                    </div>
+
+                    <!-- Google Sign-Up (recommended) -->
+                    <div class="auth-google-wrap">
+                        <span class="auth-google-label">Recommended — fastest sign-up</span>
+                        <a href="/oauth/login" class="btn-google-signup" id="btn-google">
+                            <svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true">
+                                <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                                <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                                <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+                                <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+                            </svg>
+                            Continue with Google
+                        </a>
+                    </div>
+
+                    <div class="auth-divider">
+                        <span>or sign up with email</span>
+                    </div>
+
+                    <!-- Error banner -->
+                    <div class="auth-error-banner" id="error-banner" style="display:none;" role="alert">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                        <span id="error-text"></span>
+                    </div>
+
+                    <form id="signup-form" novalidate>
+                        {{ form.hidden_tag() }}
+                        <input type="hidden" name="role" value="buyer">
+
+                        <!-- Full Name -->
+                        <div class="auth-field" id="field-full_name">
+                            <label class="auth-label" for="full_name">Full Name</label>
+                            <div class="auth-input-wrap">
+                                <svg class="auth-input-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                                <input
+                                    type="text"
+                                    id="full_name"
+                                    name="full_name"
+                                    class="auth-input"
+                                    placeholder="e.g. John Doe"
+                                    autocomplete="name"
+                                    required
+                                >
+                            </div>
+                            <div class="auth-field-error" id="err-full_name"></div>
                         </div>
 
-                        <div class="mb-4">
-                            <div class="small fw-semibold text-muted mb-2">Recommended</div>
-                            <a href="/oauth/login" class="btn btn-google w-100 auth-google-btn">
-                                <svg class="me-2" width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">
-                                    <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
-                                    <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-                                    <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
-                                    <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
-                                </svg>
-                                Continue with Google
-                            </a>
+                        <!-- Email (optional) -->
+                        <div class="auth-field" id="field-email">
+                            <label class="auth-label" for="email">
+                                Email Address
+                                <span class="auth-optional-badge">recommended</span>
+                            </label>
+                            <div class="auth-input-wrap">
+                                <svg class="auth-input-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+                                <input
+                                    type="email"
+                                    id="email"
+                                    name="email"
+                                    class="auth-input"
+                                    placeholder="you@example.com"
+                                    autocomplete="email"
+                                >
+                            </div>
+                            <p class="auth-hint">Skip email to sign up with just your name & password.</p>
+                            <div class="auth-field-error" id="err-email"></div>
                         </div>
 
-                        <div class="d-flex align-items-center gap-2 mb-4">
-                            <hr class="flex-grow-1 my-0">
-                            <span class="text-muted small">or sign up with email</span>
-                            <hr class="flex-grow-1 my-0">
+                        <!-- Password -->
+                        <div class="auth-field" id="field-password">
+                            <label class="auth-label" for="password">Password</label>
+                            <div class="auth-input-wrap">
+                                <svg class="auth-input-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                                <input
+                                    type="password"
+                                    id="password"
+                                    name="password"
+                                    class="auth-input"
+                                    placeholder="Minimum 6 characters"
+                                    autocomplete="new-password"
+                                    required
+                                >
+                                <button type="button" class="auth-pw-toggle" aria-label="Toggle password visibility" onclick="togglePassword('password')">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                                </button>
+                            </div>
+                            <div class="auth-strength-bar">
+                                <div class="auth-strength-fill" id="strength-fill"></div>
+                            </div>
+                            <div class="auth-field-error" id="err-password"></div>
                         </div>
 
-                        <form action="/api/auth/register" method="POST" class="auth-form" data-loading-message="Creating your account...">
-                            {{ form.hidden_tag() }}
-                            <input type="hidden" name="role" value="buyer">
-
-                            <div class="row">
-                                <div class="col-md-6 mb-3">
-                                    {{ form.username.label(class="form-label fw-semibold") }}
-                                    {{ form.username(class="form-control form-control-lg", placeholder="Choose a username") }}
-                                    {% if form.username.errors %}
-                                    <div class="text-danger small mt-1">
-                                        {% for error in form.username.errors %}
-                                        {{ error }}
-                                        {% endfor %}
-                                    </div>
-                                    {% endif %}
-                                </div>
-                                <div class="col-md-6 mb-3">
-                                    {{ form.email.label(class="form-label fw-semibold") }}
-                                    {{ form.email(class="form-control form-control-lg", placeholder="you@example.com") }}
-                                    {% if form.email.errors %}
-                                    <div class="text-danger small mt-1">
-                                        {% for error in form.email.errors %}
-                                        {{ error }}
-                                        {% endfor %}
-                                    </div>
-                                    {% endif %}
-                                </div>
+                        <!-- Confirm Password -->
+                        <div class="auth-field" id="field-confirm_password">
+                            <label class="auth-label" for="confirm_password">Confirm Password</label>
+                            <div class="auth-input-wrap">
+                                <svg class="auth-input-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 12l2 2 4-4"/><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                                <input
+                                    type="password"
+                                    id="confirm_password"
+                                    name="confirm_password"
+                                    class="auth-input"
+                                    placeholder="Repeat your password"
+                                    autocomplete="new-password"
+                                    required
+                                >
+                                <button type="button" class="auth-pw-toggle" aria-label="Toggle confirm password visibility" onclick="togglePassword('confirm_password')">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                                </button>
                             </div>
+                            <div class="auth-field-error" id="err-confirm_password"></div>
+                        </div>
 
-                            <div class="row">
-                                <div class="col-md-6 mb-3">
-                                    {{ form.first_name.label(class="form-label fw-semibold") }}
-                                    {{ form.first_name(class="form-control form-control-lg", placeholder="First name") }}
-                                </div>
-                                <div class="col-md-6 mb-3">
-                                    {{ form.last_name.label(class="form-label fw-semibold") }}
-                                    {{ form.last_name(class="form-control form-control-lg", placeholder="Last name") }}
-                                </div>
-                            </div>
+                        <!-- Terms -->
+                        <div class="auth-terms-wrap">
+                            <label class="auth-checkbox-label">
+                                <input type="checkbox" id="terms" name="terms" class="auth-checkbox" required>
+                                <span class="auth-checkbox-custom"></span>
+                                <span class="auth-terms-text">
+                                    I agree to the <a href="/terms" target="_blank">Terms of Service</a> and <a href="/privacy" target="_blank">Privacy Policy</a>
+                                </span>
+                            </label>
+                            <div class="auth-field-error" id="err-terms"></div>
+                        </div>
 
-                            <div class="row">
-                                <div class="col-md-6 mb-3">
-                                    {{ form.password.label(class="form-label fw-semibold") }}
-                                    {{ form.password(class="form-control form-control-lg", placeholder="Create password") }}
-                                </div>
-                                <div class="col-md-6 mb-3">
-                                    {{ form.confirm_password.label(class="form-label fw-semibold") }}
-                                    {{ form.confirm_password(class="form-control form-control-lg", placeholder="Confirm password") }}
-                                </div>
-                            </div>
+                        <button type="submit" class="auth-submit-btn" id="submit-btn">
+                            <span id="btn-label">Create My Account</span>
+                            <svg id="btn-spinner" class="auth-spinner" viewBox="0 0 24 24" width="18" height="18" style="display:none;"><circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="3" stroke-dasharray="30 60"/></svg>
+                        </button>
+                    </form>
 
-                            <div class="alert alert-light border small mb-3">
-                                Account type is set automatically.
-                            </div>
+                    <p class="auth-footer-link">
+                        Already have an account? <a href="/login">Sign in</a>
+                    </p>
+                </div>
 
-                            <div class="mb-3 form-check">
-                                {{ form.terms(class="form-check-input") }}
-                                {{ form.terms.label(class="form-check-label") }}
-                                {% if form.terms.errors %}
-                                <div class="text-danger small mt-1">
-                                    {% for error in form.terms.errors %}
-                                    {{ error }}
-                                    {% endfor %}
-                                </div>
-                                {% endif %}
-                            </div>
+                <!-- ── USERNAME REVEAL CARD ──────────────────────────────── -->
+                <div class="auth-card glass-card reveal-card" id="reveal-card" style="display:none;" aria-live="polite">
+                    <div class="reveal-success-icon">
+                        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                    </div>
 
-                            <button type="submit" class="btn btn-primary w-100 btn-lg">
-                                Create Account
+                    <h2 class="reveal-title">Account created! 🎉</h2>
+                    <p class="reveal-subtitle">Welcome to Market Window, <strong id="reveal-first-name"></strong>.</p>
+
+                    <div class="username-reveal-box">
+                        <div class="username-reveal-label">Your username</div>
+                        <div class="username-chip-wrap">
+                            <span class="username-chip" id="reveal-username"></span>
+                            <button class="copy-btn" id="copy-btn" onclick="copyUsername()" title="Copy username">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                                <span id="copy-label">Copy</span>
                             </button>
-                        </form>
+                        </div>
+                    </div>
 
-                        <p class="text-center mb-0 mt-4">
-                            Already have an account?
-                            <a href="/login" class="fw-semibold text-decoration-none">Sign in</a>
+                    <div class="reveal-info-box">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                        <p>
+                            Remember this username — you'll use it with your password to sign in if you don't use Google.
+                            We've saved it for you so don't worry!
                         </p>
                     </div>
+
+                    <a href="/" class="auth-submit-btn reveal-cta" id="reveal-cta">
+                        Start Shopping →
+                    </a>
+                    <p class="reveal-signin-hint">
+                        <a href="/login">Go to sign in page instead</a>
+                    </p>
                 </div>
+
             </div>
         </div>
     </div>
 </section>
 {% endblock %}
 
+
+{% block scripts %}
+<script>
+// ── Password strength meter ─────────────────────────────────────────────────
+const passwordInput = document.getElementById('password');
+const strengthFill = document.getElementById('strength-fill');
+
+passwordInput.addEventListener('input', () => {
+    const val = passwordInput.value;
+    let strength = 0;
+    if (val.length >= 6) strength++;
+    if (val.length >= 10) strength++;
+    if (/[A-Z]/.test(val)) strength++;
+    if (/[0-9]/.test(val)) strength++;
+    if (/[^A-Za-z0-9]/.test(val)) strength++;
+
+    const widths = ['0%', '20%', '40%', '65%', '85%', '100%'];
+    const colors = ['transparent', '#ef4444', '#f97316', '#eab308', '#22c55e', '#16a34a'];
+    strengthFill.style.width = widths[strength];
+    strengthFill.style.background = colors[strength];
+});
+
+// ── Toggle password visibility ──────────────────────────────────────────────
+function togglePassword(fieldId) {
+    const input = document.getElementById(fieldId);
+    input.type = input.type === 'password' ? 'text' : 'password';
+}
+
+// ── Copy username ───────────────────────────────────────────────────────────
+function copyUsername() {
+    const username = document.getElementById('reveal-username').textContent;
+    navigator.clipboard.writeText(username).then(() => {
+        const label = document.getElementById('copy-label');
+        label.textContent = 'Copied!';
+        setTimeout(() => label.textContent = 'Copy', 2000);
+    });
+}
+
+// ── Field validation helpers ────────────────────────────────────────────────
+function setFieldError(fieldId, message) {
+    const field = document.getElementById('field-' + fieldId);
+    const errEl = document.getElementById('err-' + fieldId);
+    if (field) field.classList.toggle('has-error', !!message);
+    if (errEl) errEl.textContent = message || '';
+}
+
+function clearAllErrors() {
+    document.querySelectorAll('.auth-field').forEach(f => f.classList.remove('has-error'));
+    document.querySelectorAll('.auth-field-error').forEach(e => e.textContent = '');
+    document.getElementById('error-banner').style.display = 'none';
+}
+
+function showBanner(message) {
+    const banner = document.getElementById('error-banner');
+    document.getElementById('error-text').textContent = message;
+    banner.style.display = 'flex';
+    banner.scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+
+// ── Reveal card animation ───────────────────────────────────────────────────
+function showRevealCard(username, firstName) {
+    document.getElementById('reveal-username').textContent = username;
+    document.getElementById('reveal-first-name').textContent = firstName || username;
+
+    const signupCard = document.getElementById('signup-card');
+    signupCard.style.opacity = '0';
+    signupCard.style.transform = 'translateY(-20px)';
+    signupCard.style.transition = 'all 0.35s ease';
+
+    setTimeout(() => {
+        signupCard.style.display = 'none';
+        const revealCard = document.getElementById('reveal-card');
+        revealCard.style.display = 'block';
+        revealCard.style.opacity = '0';
+        revealCard.style.transform = 'translateY(20px)';
+        revealCard.style.transition = 'none';
+
+        requestAnimationFrame(() => {
+            requestAnimationFrame(() => {
+                revealCard.style.transition = 'all 0.45s cubic-bezier(0.16, 1, 0.3, 1)';
+                revealCard.style.opacity = '1';
+                revealCard.style.transform = 'translateY(0)';
+            });
+        });
+    }, 350);
+}
+
+// ── Form submit ─────────────────────────────────────────────────────────────
+document.getElementById('signup-form').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    clearAllErrors();
+
+    const fullName = document.getElementById('full_name').value.trim();
+    const email = document.getElementById('email').value.trim();
+    const password = document.getElementById('password').value;
+    const confirmPassword = document.getElementById('confirm_password').value;
+    const terms = document.getElementById('terms').checked;
+
+    // Client-side validation
+    let hasErrors = false;
+
+    if (!fullName) {
+        setFieldError('full_name', 'Please enter your full name.');
+        hasErrors = true;
+    }
+    if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+        setFieldError('email', 'Please enter a valid email address.');
+        hasErrors = true;
+    }
+    if (!password) {
+        setFieldError('password', 'Please create a password.');
+        hasErrors = true;
+    } else if (password.length < 6) {
+        setFieldError('password', 'Password must be at least 6 characters.');
+        hasErrors = true;
+    }
+    if (!confirmPassword) {
+        setFieldError('confirm_password', 'Please confirm your password.');
+        hasErrors = true;
+    } else if (password !== confirmPassword) {
+        setFieldError('confirm_password', 'Passwords do not match.');
+        hasErrors = true;
+    }
+    if (!terms) {
+        setFieldError('terms', 'You must agree to the terms to continue.');
+        hasErrors = true;
+    }
+
+    if (hasErrors) return;
+
+    // Loading state
+    const btn = document.getElementById('submit-btn');
+    const btnLabel = document.getElementById('btn-label');
+    const spinner = document.getElementById('btn-spinner');
+    btn.disabled = true;
+    btnLabel.textContent = 'Creating your account…';
+    spinner.style.display = 'inline-block';
+
+    // Get CSRF token from hidden input
+    const csrfToken = document.querySelector('input[name="csrf_token"]')?.value || '';
+
+    try {
+        const response = await fetch('/api/auth/register', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrfToken
+            },
+            body: JSON.stringify({
+                full_name: fullName,
+                email: email || null,
+                password: password,
+                confirm_password: confirmPassword,
+                terms: true,
+                role: 'buyer'
+            })
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            const errMsg = data.error || 'Registration failed. Please try again.';
+
+            // Map error messages to specific fields
+            if (errMsg.toLowerCase().includes('email')) {
+                setFieldError('email', errMsg);
+            } else if (errMsg.toLowerCase().includes('password')) {
+                setFieldError('password', errMsg);
+            } else if (errMsg.toLowerCase().includes('name')) {
+                setFieldError('full_name', errMsg);
+            } else {
+                showBanner(errMsg);
+            }
+
+            btn.disabled = false;
+            btnLabel.textContent = 'Create My Account';
+            spinner.style.display = 'none';
+            return;
+        }
+
+        // SUCCESS — reveal the username card
+        const parts = fullName.split(' ');
+        const firstName = parts[0];
+        showRevealCard(data.username, firstName);
+
+    } catch (err) {
+        showBanner('A network error occurred. Please check your connection and try again.');
+        btn.disabled = false;
+        btnLabel.textContent = 'Create My Account';
+        spinner.style.display = 'none';
+    }
+});
+</script>
+{% endblock %}
+
+
 {% block styles %}
 <style>
+    /* ── Layout ──────────────────────────────────────────────────────────── */
     .auth-shell {
-        min-height: calc(100vh - 120px);
-        background: radial-gradient(circle at top right, #f7f3ff 0%, #eef6ff 50%, #ffffff 100%);
+        min-height: 100vh;
+        background: radial-gradient(ellipse 80% 60% at 70% 10%, #ede9fe 0%, transparent 60%),
+                    radial-gradient(ellipse 60% 50% at 10% 80%, #dbeafe 0%, transparent 60%),
+                    #f8fafc;
+        display: flex;
+        align-items: center;
+        padding: 3rem 0;
+        position: relative;
+        overflow: hidden;
     }
 
-    .auth-card {
+    .auth-bg-orb {
+        position: absolute;
+        border-radius: 50%;
+        filter: blur(80px);
+        opacity: 0.35;
+        pointer-events: none;
+    }
+    .auth-orb-1 {
+        width: 500px; height: 500px;
+        background: #818cf8;
+        top: -120px; right: -100px;
+    }
+    .auth-orb-2 {
+        width: 400px; height: 400px;
+        background: #38bdf8;
+        bottom: -100px; left: -80px;
+    }
+
+    .auth-container {
+        position: relative;
+        z-index: 1;
+    }
+
+    /* ── Card ────────────────────────────────────────────────────────────── */
+    .glass-card {
+        background: rgba(255,255,255,0.82);
+        backdrop-filter: blur(20px) saturate(180%);
+        -webkit-backdrop-filter: blur(20px) saturate(180%);
+        border: 1px solid rgba(255,255,255,0.7);
+        border-radius: 1.5rem;
+        box-shadow:
+            0 4px 6px -1px rgba(0,0,0,0.05),
+            0 20px 50px -10px rgba(99,102,241,0.12),
+            inset 0 1px 0 rgba(255,255,255,0.9);
+        padding: 2.5rem 2.25rem;
+        animation: cardEntrance 0.55s cubic-bezier(0.16, 1, 0.3, 1) both;
+    }
+
+    @keyframes cardEntrance {
+        from { opacity: 0; transform: translateY(24px) scale(0.98); }
+        to   { opacity: 1; transform: translateY(0) scale(1); }
+    }
+
+    /* ── Header ──────────────────────────────────────────────────────────── */
+    .auth-card-header {
+        text-align: center;
+        margin-bottom: 1.75rem;
+    }
+
+    .auth-brand-icon {
+        width: 56px; height: 56px;
         border-radius: 1rem;
+        background: linear-gradient(135deg, #6366f1, #8b5cf6);
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        color: #fff;
+        margin-bottom: 1rem;
+        box-shadow: 0 8px 20px -4px rgba(99,102,241,0.4);
     }
 
-    .btn-google {
-        border: 1px solid #dadce0;
-        background: #fff;
-        color: #1f1f1f;
+    .auth-title {
+        font-size: 1.6rem;
+        font-weight: 700;
+        color: #0f172a;
+        margin: 0 0 0.35rem;
+        letter-spacing: -0.02em;
+    }
+
+    .auth-subtitle {
+        font-size: 0.92rem;
+        color: #64748b;
+        margin: 0;
+    }
+
+    /* ── Google button ───────────────────────────────────────────────────── */
+    .auth-google-wrap {
+        margin-bottom: 1.25rem;
+    }
+
+    .auth-google-label {
+        display: block;
+        font-size: 0.75rem;
         font-weight: 600;
-        padding: 0.75rem 1rem;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: #94a3b8;
+        margin-bottom: 0.6rem;
+        text-align: center;
     }
 
-    .btn-google:hover {
-        background: #f8f9fa;
+    .btn-google-signup {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.65rem;
+        width: 100%;
+        padding: 0.8rem 1.25rem;
+        border: 1.5px solid #e2e8f0;
+        border-radius: 0.85rem;
+        background: #fff;
+        color: #1e293b;
+        font-size: 0.95rem;
+        font-weight: 600;
+        text-decoration: none;
+        transition: all 0.2s ease;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.06);
     }
+
+    .btn-google-signup:hover {
+        background: #f8fafc;
+        border-color: #cbd5e1;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+        transform: translateY(-1px);
+        color: #0f172a;
+    }
+
+    /* ── Divider ─────────────────────────────────────────────────────────── */
+    .auth-divider {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        margin: 1.25rem 0;
+        color: #94a3b8;
+        font-size: 0.82rem;
+    }
+    .auth-divider::before, .auth-divider::after {
+        content: '';
+        flex: 1;
+        height: 1px;
+        background: #e2e8f0;
+    }
+
+    /* ── Error banner ────────────────────────────────────────────────────── */
+    .auth-error-banner {
+        display: flex;
+        align-items: flex-start;
+        gap: 0.6rem;
+        padding: 0.8rem 1rem;
+        background: #fef2f2;
+        border: 1px solid #fecaca;
+        border-radius: 0.75rem;
+        color: #b91c1c;
+        font-size: 0.88rem;
+        margin-bottom: 1rem;
+    }
+    .auth-error-banner svg { flex-shrink: 0; margin-top: 1px; }
+
+    /* ── Fields ──────────────────────────────────────────────────────────── */
+    .auth-field {
+        margin-bottom: 1rem;
+    }
+
+    .auth-label {
+        display: flex;
+        align-items: center;
+        gap: 0.45rem;
+        font-size: 0.85rem;
+        font-weight: 600;
+        color: #374151;
+        margin-bottom: 0.4rem;
+    }
+
+    .auth-optional-badge {
+        font-size: 0.7rem;
+        font-weight: 500;
+        color: #94a3b8;
+        background: #f1f5f9;
+        border: 1px solid #e2e8f0;
+        border-radius: 999px;
+        padding: 0.05rem 0.45rem;
+        letter-spacing: 0.02em;
+    }
+
+    .auth-input-wrap {
+        position: relative;
+    }
+
+    .auth-input-icon {
+        position: absolute;
+        left: 0.85rem;
+        top: 50%;
+        transform: translateY(-50%);
+        color: #94a3b8;
+        pointer-events: none;
+        transition: color 0.2s;
+    }
+
+    .auth-input {
+        width: 100%;
+        padding: 0.72rem 2.75rem 0.72rem 2.5rem;
+        border: 1.5px solid #e2e8f0;
+        border-radius: 0.75rem;
+        font-size: 0.95rem;
+        color: #0f172a;
+        background: rgba(255,255,255,0.8);
+        transition: all 0.2s ease;
+        outline: none;
+    }
+
+    .auth-input::placeholder { color: #cbd5e1; }
+
+    .auth-input:focus {
+        border-color: #6366f1;
+        background: #fff;
+        box-shadow: 0 0 0 3px rgba(99,102,241,0.12);
+    }
+
+    .auth-input:focus + .auth-input-icon,
+    .auth-input-wrap:focus-within .auth-input-icon {
+        color: #6366f1;
+    }
+
+    .auth-field.has-error .auth-input {
+        border-color: #f87171;
+        background: #fff5f5;
+    }
+
+    .auth-field-error {
+        font-size: 0.8rem;
+        color: #dc2626;
+        margin-top: 0.3rem;
+        min-height: 1em;
+    }
+
+    .auth-hint {
+        font-size: 0.78rem;
+        color: #94a3b8;
+        margin: 0.25rem 0 0;
+    }
+
+    .auth-pw-toggle {
+        position: absolute;
+        right: 0.75rem;
+        top: 50%;
+        transform: translateY(-50%);
+        background: none;
+        border: none;
+        cursor: pointer;
+        color: #94a3b8;
+        padding: 0.25rem;
+        display: flex;
+        align-items: center;
+        transition: color 0.2s;
+    }
+    .auth-pw-toggle:hover { color: #6366f1; }
+
+    /* ── Strength bar ────────────────────────────────────────────────────── */
+    .auth-strength-bar {
+        height: 3px;
+        background: #e2e8f0;
+        border-radius: 999px;
+        margin-top: 0.5rem;
+        overflow: hidden;
+    }
+    .auth-strength-fill {
+        height: 100%;
+        width: 0;
+        border-radius: 999px;
+        transition: width 0.4s ease, background 0.3s ease;
+    }
+
+    /* ── Terms ───────────────────────────────────────────────────────────── */
+    .auth-terms-wrap {
+        margin-bottom: 1.25rem;
+    }
+
+    .auth-checkbox-label {
+        display: flex;
+        align-items: flex-start;
+        gap: 0.6rem;
+        cursor: pointer;
+    }
+
+    .auth-checkbox {
+        display: none;
+    }
+
+    .auth-checkbox-custom {
+        flex-shrink: 0;
+        width: 18px; height: 18px;
+        border: 2px solid #d1d5db;
+        border-radius: 5px;
+        background: #fff;
+        margin-top: 2px;
+        transition: all 0.2s ease;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .auth-checkbox:checked + .auth-checkbox-custom {
+        background: #6366f1;
+        border-color: #6366f1;
+    }
+
+    .auth-checkbox:checked + .auth-checkbox-custom::after {
+        content: '';
+        display: block;
+        width: 5px; height: 9px;
+        border: 2px solid white;
+        border-top: none;
+        border-left: none;
+        transform: rotate(45deg) translateY(-1px);
+    }
+
+    .auth-terms-text {
+        font-size: 0.85rem;
+        color: #475569;
+        line-height: 1.5;
+    }
+    .auth-terms-text a {
+        color: #6366f1;
+        text-decoration: none;
+        font-weight: 500;
+    }
+    .auth-terms-text a:hover { text-decoration: underline; }
+
+    /* ── Submit button ───────────────────────────────────────────────────── */
+    .auth-submit-btn {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.6rem;
+        width: 100%;
+        padding: 0.85rem;
+        border: none;
+        border-radius: 0.85rem;
+        background: linear-gradient(135deg, #6366f1, #8b5cf6);
+        color: #fff;
+        font-size: 0.98rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.25s ease;
+        box-shadow: 0 4px 14px rgba(99,102,241,0.35);
+        text-decoration: none;
+        letter-spacing: 0.01em;
+    }
+
+    .auth-submit-btn:hover:not(:disabled) {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 22px rgba(99,102,241,0.45);
+        color: #fff;
+    }
+
+    .auth-submit-btn:disabled {
+        opacity: 0.75;
+        cursor: not-allowed;
+        transform: none;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .auth-spinner { animation: spin 0.9s linear infinite; }
+
+    /* ── Footer link ─────────────────────────────────────────────────────── */
+    .auth-footer-link {
+        text-align: center;
+        font-size: 0.88rem;
+        color: #64748b;
+        margin: 1.25rem 0 0;
+    }
+    .auth-footer-link a {
+        color: #6366f1;
+        font-weight: 600;
+        text-decoration: none;
+    }
+    .auth-footer-link a:hover { text-decoration: underline; }
+
+    /* ── Reveal card ─────────────────────────────────────────────────────── */
+    .reveal-card {
+        text-align: center;
+    }
+
+    .reveal-success-icon {
+        width: 64px; height: 64px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #22c55e, #16a34a);
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        color: #fff;
+        margin: 0 auto 1.25rem;
+        box-shadow: 0 8px 24px rgba(34,197,94,0.35);
+        animation: popIn 0.5s cubic-bezier(0.16, 1, 0.3, 1) 0.3s both;
+    }
+
+    @keyframes popIn {
+        from { transform: scale(0.4); opacity: 0; }
+        to   { transform: scale(1);   opacity: 1; }
+    }
+
+    .reveal-title {
+        font-size: 1.6rem;
+        font-weight: 700;
+        color: #0f172a;
+        margin: 0 0 0.4rem;
+        letter-spacing: -0.02em;
+    }
+
+    .reveal-subtitle {
+        font-size: 0.95rem;
+        color: #64748b;
+        margin: 0 0 1.75rem;
+    }
+
+    .username-reveal-box {
+        background: linear-gradient(135deg, #f8f5ff, #eff6ff);
+        border: 1.5px solid #c7d2fe;
+        border-radius: 1.1rem;
+        padding: 1.25rem 1.5rem;
+        margin-bottom: 1.25rem;
+    }
+
+    .username-reveal-label {
+        font-size: 0.75rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+        color: #6366f1;
+        margin-bottom: 0.6rem;
+    }
+
+    .username-chip-wrap {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.75rem;
+    }
+
+    .username-chip {
+        font-size: 1.65rem;
+        font-weight: 800;
+        color: #3730a3;
+        letter-spacing: -0.02em;
+        font-family: 'Courier New', monospace;
+    }
+
+    .copy-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.3rem;
+        padding: 0.35rem 0.75rem;
+        background: #6366f1;
+        color: #fff;
+        border: none;
+        border-radius: 0.5rem;
+        font-size: 0.78rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+    .copy-btn:hover {
+        background: #4f46e5;
+        transform: translateY(-1px);
+    }
+
+    .reveal-info-box {
+        display: flex;
+        align-items: flex-start;
+        gap: 0.65rem;
+        background: #fffbeb;
+        border: 1px solid #fde68a;
+        border-radius: 0.85rem;
+        padding: 0.9rem 1.1rem;
+        margin-bottom: 1.5rem;
+        text-align: left;
+    }
+    .reveal-info-box svg {
+        flex-shrink: 0;
+        color: #d97706;
+        margin-top: 1px;
+    }
+    .reveal-info-box p {
+        margin: 0;
+        font-size: 0.85rem;
+        color: #78350f;
+        line-height: 1.55;
+    }
+
+    .reveal-cta {
+        margin-bottom: 1rem;
+    }
+
+    .reveal-signin-hint {
+        font-size: 0.84rem;
+        color: #94a3b8;
+    }
+    .reveal-signin-hint a {
+        color: #6366f1;
+        text-decoration: none;
+        font-weight: 500;
+    }
+    .reveal-signin-hint a:hover { text-decoration: underline; }
 </style>
 {% endblock %}
