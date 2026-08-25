@@ -18,6 +18,9 @@
                             <span class="bi bi-patch-check text-mw small" aria-label="Verified shop"></span>
                             {% endif %}
                         </h1>
+                        {% if shop.google_category %}
+                        <div class="small text-muted mt-1">{{ shop.google_category }}</div>
+                        {% endif %}
                         <div class="d-flex align-items-center gap-2">
                             {% if current_user.is_authenticated %}
                             <button
@@ -38,13 +41,14 @@
                     <div class="mb-3">
                         {% if current_user.is_authenticated and shop_is_owner %}
                         <div class="alert alert-success border-0 py-2 px-3 mb-0">
-                            <i class="bi bi-check-circle me-1"></i>You own this shop.
+                            <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
+                                <span><i class="bi bi-check-circle me-1"></i>You own this shop.</span>
+                                <a href="{{ url_for('seller_template_bp.seller_shop', shop_id=shop.id) }}" class="btn btn-sm btn-success">Manage</a>
+                            </div>
                         </div>
                         {% elif not shop.is_claimed %}
                         <div id="shop-claim-banner" class="alert alert-warning border-0 d-flex flex-wrap justify-content-between align-items-center gap-2 py-2 px-3 mb-0">
-                            <div>
-                                <strong>Unclaimed shop.</strong> Claim ownership to manage this listing.
-                            </div>
+                            <div class="fw-bold">Is this your shop?</div>
                             <a href="{{ url_for('main_bp.claim_shop_page', shop_id=shop.id) }}" class="btn btn-sm btn-dark">
                                 <i class="bi bi-shield-check me-1"></i>Claim shop
                             </a>
@@ -62,16 +66,23 @@
                     <div class="d-flex flex-wrap gap-2 mb-3">
                         {% if shop.town %}<span class="badge rounded-pill text-bg-light border"><i class="bi bi-geo-alt me-1"></i>{{ shop.town }}</span>{% endif %}
                         {% if shop.region %}<span class="badge rounded-pill text-bg-light border">{{ shop.region }}</span>{% endif %}
-                        <a href="https://wa.me/{{ shop.phone | replace('+', '') | replace(' ', '') }}?text={{ (
-                            "Hello, I found *" ~ shop.name ~ "* on Market Window. "
-                            "I wanted to confirm if your shop is located at *" ~ shop.town ~ "*. "
-                            "I'd like to know more about your products. "
-                        ) | urlencode }}"
+                        {% if shop.phone %}
+                            <a href="tel:+{{ shop.phone }}"
+                            class="badge rounded-pill text-bg-success border text-decoration-none">
+                                <i class="bi bi-telephone me-1"></i>{{ shop.phone }}
+                            </a>
+
+                            <a href="https://wa.me/{{ shop.phone | replace('+', '') | replace(' ', '') }}?text={{ (
+                                "Hello, I found *" ~ shop.name ~ "* on Market Window. "
+                                "I wanted to confirm if your shop is around " ~ shop.town or '' ~ ". "
+                            ) | urlencode }}"
                             target="_blank"
                             rel="noopener noreferrer"
-                            class="badge rounded-pill text-bg-light border text-decoration-none">
-                            <i class="bi bi-whatsapp me-1"></i>Chat on WhatsApp
-                        </a>
+                            class="badge rounded-pill text-bg-success border text-decoration-none">
+                                <i class="bi bi-whatsapp me-1"></i>Chat on WhatsApp
+                            </a>
+                        {% endif %}
+
                         {% if shop.email %}<a href="mailto:{{ shop.email }}" class="badge rounded-pill text-bg-light border text-decoration-none"><i class="bi bi-envelope me-1"></i>{{ shop.email }}</a>{% endif %}
                     </div>
 
@@ -123,7 +134,10 @@
                 </span>
                 <span>
                     <span class="shop-directions-button__eyebrow">{{shop.town or "Navigate"}}</span>
-                    <span class="shop-directions-button__label">Follow directions to shop</span>
+                    <span class="shop-directions-button__label">Click to follow the map</span>
+                    {% if shop.address %}
+                        <span class="small fw-light">{{ shop.address|title }}</span>
+                    {% endif %}
                 </span>
                 <i class="bi bi-box-arrow-up-right shop-directions-button__arrow"></i>
             </a>
@@ -328,6 +342,16 @@
 
 {% block scripts %}
 <script>
+    {% if shop.gps and not (shop.town and shop.district and shop.region) %}
+    fetch({{ location_check_url|tojson }}, {
+        method: 'POST',
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest',
+            'X-CSRFToken': document.querySelector('meta[name="csrf-token"]')?.content || '',
+        },
+        credentials: 'same-origin',
+    }).catch(() => {});
+    {% endif %}
     const claimButton = document.getElementById('claim-shop-btn');
     if (claimButton) {
         claimButton.addEventListener('click', async () => {

@@ -11,7 +11,7 @@ class AIServiceError(Exception):
     pass
 
 class AIService:
-    def __init__(self, api_key=None, model_name="llama-3.3-70b-versatile"):
+    def __init__(self, api_key=None, model_name="openai/gpt-oss-20b"):
         self.api_key = api_key or os.getenv("GROQ_API_KEY")
         if not self.api_key:
             raise AIServiceError("GROQ_API_KEY not found in environment")

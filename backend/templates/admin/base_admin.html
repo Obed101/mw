@@ -246,6 +246,10 @@
          class="{{ 'active' if request.endpoint and 'shop' in (request.endpoint or '') else '' }}">
         <i class="bi bi-shop"></i> Shops
       </a>
+      <a href="{{ url_for('mw_admin_bp.shop_imports') }}"
+         class="{{ 'active' if request.endpoint == 'mw_admin_bp.shop_imports' else '' }}">
+        <i class="bi bi-inboxes"></i> Imported Shops
+      </a>
       <a href="{{ url_for('mw_admin_bp.products') }}"
          class="{{ 'active' if request.endpoint and 'product' in (request.endpoint or '') else '' }}">
         <i class="bi bi-box"></i> Products
@@ -357,6 +361,14 @@ document.addEventListener('click', function(e) {
       clone.style.display = 'none';
       form.appendChild(clone);
     });
+    if (btn.name && btn.value) {
+      const actionInput = document.createElement('input');
+      actionInput.type = 'hidden';
+      actionInput.name = btn.name;
+      actionInput.value = btn.value;
+      actionInput.className = 'cloned-input';
+      form.appendChild(actionInput);
+    }
   }
   
   modal.show();

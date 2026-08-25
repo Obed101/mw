@@ -17,13 +17,17 @@ def ensure_super_admin_exists():
     Called on startup: if no super_admin exists at all, make user id=1 one.
     Safe to call repeatedly — idempotent.
     """
-    super_admin_role = Role.query.filter_by(name=ROLE_SUPER_ADMIN).first()
-    if super_admin_role and UserRole.query.filter_by(role_id=super_admin_role.id).count() > 0:
-        return  # Already have at least one super_admin
-
-    user_one = User.query.filter_by(username="Obed101").first()
+    # User id=1 is the designated bootstrap administrator. Keep the username
+    # fallback for databases created before the fixed identity was established.
+    user_one = User.query.get(1) or User.query.filter_by(username="Obed101").first()
     if not user_one:
         return  # No users yet — will be assigned when first user is created
+
+    if user_one.is_super_admin():
+        if not user_one.admin_mode:
+            user_one.admin_mode = True
+            db.session.commit()
+        return
 
     assign_role(user_one, ROLE_SUPER_ADMIN, assigned_by_id=user_one.id)
     # Also enable admin_mode so they can immediately access admin

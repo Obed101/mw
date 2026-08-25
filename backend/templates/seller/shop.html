@@ -558,7 +558,7 @@
         </div>
     </section>
 
-    <div id="shop-feedback" class="mt-4"></div>
+    <div id="shop-feedback" class="mw-toast-container" aria-live="polite" aria-atomic="true"></div>
 
     <section class="setup-card mt-4">
         <template x-if="activeStep === 'basic'">
@@ -594,6 +594,33 @@
                         x-model="form.basic.name"
                         required
                     >
+                </div>
+
+                <div class="mt-4">
+                    <label class="form-label" for="shop-category">Category</label>
+                    <input
+                        id="shop-category"
+                        name="category"
+                        class="form-control"
+                        maxlength="100"
+                        placeholder="e.g. provision store"
+                        x-model="form.basic.category"
+                        required
+                    >
+                </div>
+
+                <div class="form-check mt-3">
+                    <input
+                        class="form-check-input"
+                        type="checkbox"
+                        id="shop-is-own"
+                        name="is_own_shop"
+                        x-model="form.basic.is_own_shop"
+                    >
+                    <label class="form-check-label text-dark" for="shop-is-own">
+                        This is my own shop
+                    </label>
+                    <div class="form-text">Leave unchecked if you are adding a shop you do not own.</div>
                 </div>
 
                 <div class="mt-4">
@@ -1085,6 +1112,8 @@
             form: {
                 basic: {
                     name: config.shop?.name || '',
+                    category: config.shop?.category || '',
+                    is_own_shop: !!config.shop?.is_owned_by_current_user,
                     business_type: config.shop?.business_type || 'sales',
                     gps: config.shop?.gps || '',
                     address: config.shop?.address || '',
@@ -1257,6 +1286,7 @@
                     this.shop = detail.shop;
                     this.currentShopId = detail.shop?.id || detail.shop_id || this.currentShopId;
                     this.form.basic.name = detail.shop.name || '';
+                    this.form.basic.category = detail.shop.category || '';
                     this.form.basic.business_type = detail.shop.business_type || 'sales';
                     this.form.basic.gps = detail.shop.gps || '';
                     this.form.basic.address = detail.shop.address || '';
@@ -1623,6 +1653,7 @@
                         setTimeout(poll, intervalMs);
                     } catch (error) {
                         this.pushFeedback('danger', 'Error checking AI description status.');
+                        console.error(error);
                     }
                 };
 
@@ -1635,12 +1666,22 @@
                     return;
                 }
 
+                const toastTone = tone === 'success' ? 'success' : (tone === 'warning' ? 'warning' : 'error');
+                const icon = toastTone === 'success' ? 'bi-check-circle-fill' : (toastTone === 'warning' ? 'bi-exclamation-triangle-fill' : 'bi-x-octagon-fill');
                 feedbackNode.innerHTML =
-                    '<div class="alert alert-' + (tone === 'success' ? 'success' : 'danger') + ' border-0 shadow-sm mb-0" role="alert">' +
-                    '<div class="d-flex align-items-center gap-2">' +
-                    '<i class="bi ' + (tone === 'success' ? 'bi-check-circle-fill' : 'bi-exclamation-triangle-fill') + '"></i>' +
-                    '<span>' + message + '</span>' +
-                    '</div></div>';
+                    '<div class="mw-toast mw-toast-' + toastTone + '" data-autodismiss="15000" role="status">' +
+                    '<div class="mw-toast-icon"><i class="bi ' + icon + '"></i></div>' +
+                    '<div class="mw-toast-message"></div>' +
+                    '<button type="button" class="mw-toast-close" aria-label="Dismiss notification"><i class="bi bi-x-lg"></i></button>' +
+                    '</div>';
+                const toast = feedbackNode.firstElementChild;
+                toast.querySelector('.mw-toast-message').textContent = message;
+                const dismiss = () => {
+                    toast.classList.add('is-leaving');
+                    window.setTimeout(() => toast.remove(), 350);
+                };
+                toast.querySelector('.mw-toast-close').addEventListener('click', dismiss);
+                window.setTimeout(dismiss, 15000);
             },
         };
     }

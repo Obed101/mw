@@ -870,7 +870,7 @@ def global_search():
     categories_hits = []
 
     try:
-        products_res = search_service.search('products', q, {'limit': 5})
+        products_res = search_service.search('products', q, {'limit': 50})
         products_hits = products_res.get('hits', [])
 
         # The public shop detail route only exposes active shops. Keep the
@@ -880,13 +880,26 @@ def global_search():
             'shops',
             q,
             {
-                'limit': 3,
+                'limit': 30,
                 'filter': 'is_active = true',
             },
         )
         shops_hits = shops_res.get('hits', [])
+        # Older Meilisearch shop documents do not contain town. Hydrate it
+        # from the database so search results show the current shop location
+        # without requiring an index rebuild.
+        shop_ids = [hit.get('id') for hit in shops_hits if hit.get('id') is not None]
+        if shop_ids:
+            shops_by_id = {
+                str(shop.id): shop
+                for shop in Shop.query.filter(Shop.id.in_(shop_ids)).all()
+            }
+            for hit in shops_hits:
+                shop = shops_by_id.get(str(hit.get('id')))
+                if shop:
+                    hit['town'] = shop.town
 
-        categories_res = search_service.search('categories', q, {'limit': 3})
+        categories_res = search_service.search('categories', q, {'limit': 30})
         categories_hits = categories_res.get('hits', [])
 
     except Exception as e:
@@ -897,15 +910,16 @@ def global_search():
                 Product.description.ilike(f'%{q}%')
             ),
             Product.is_active.is_(True)
-        ).limit(8).all()
+        ).all()
         
         shops_db = Shop.query.filter(
             or_(
                 Shop.name.ilike(f'%{q}%'), 
-                Shop.description.ilike(f'%{q}%')
+                Shop.description.ilike(f'%{q}%'),
+                Shop.google_category.ilike(f'%{q}%')
             ),
             Shop.is_active.is_(True)
-        ).limit(4).all()
+        ).all()
         
         categories_db = Category.query.filter(
             or_(
@@ -913,7 +927,7 @@ def global_search():
                 Category.description.ilike(f'%{q}%')
             ),
             Category.is_active.is_(True)
-        ).limit(4).all()
+        ).all()
 
         # Format exactly like MeiliSearch hits for the template
         products_hits = [{'id': p.id, 'name': p.name, 'price': p.price, 'primary_image_url': p.primary_image_url, 'shop_name': p.shop.name if p.shop else ''} for p in products_db]

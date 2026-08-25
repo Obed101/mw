@@ -1,9 +1,23 @@
-<div class="alert alert-{{ 'success' if tone == 'success' else 'danger' }} border-0 shadow-sm mb-0" role="alert">
-    <div class="d-flex align-items-center gap-2">
-        <i class="bi {{ 'bi-check-circle-fill' if tone == 'success' else 'bi-exclamation-triangle-fill' }}"></i>
-        <span>{{ message }}</span>
-    </div>
+<div class="mw-toast mw-toast-{{ 'error' if tone == 'danger' else tone }}" data-autodismiss="15000" role="status">
+    {% set icon = 'bi-check-circle-fill' if tone == 'success' else ('bi-exclamation-triangle-fill' if tone in ['danger', 'warning'] else 'bi-info-circle-fill') %}
+    <div class="mw-toast-icon"><i class="bi {{ icon }}"></i></div>
+    <div class="mw-toast-message">{{ message }}</div>
+    <button type="button" class="mw-toast-close" aria-label="Dismiss notification">
+        <i class="bi bi-x-lg"></i>
+    </button>
 </div>
+<script>
+    (() => {
+        const toast = document.currentScript.previousElementSibling;
+        if (!toast) return;
+        const dismiss = () => {
+            toast.classList.add('is-leaving');
+            window.setTimeout(() => toast.remove(), 350);
+        };
+        toast.querySelector('.mw-toast-close')?.addEventListener('click', dismiss);
+        window.setTimeout(dismiss, Number(toast.dataset.autodismiss || 15000));
+    })();
+</script>
 {% if trigger_payload and trigger_payload.get('shop-step-saved') %}
 <script>
     window.dispatchEvent(new CustomEvent('shop-step-saved', {

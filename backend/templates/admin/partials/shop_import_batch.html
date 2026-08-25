@@ -1,0 +1,94 @@
+{% if not selected_user_id %}
+<div class="admin-card">
+  <div class="admin-card-body text-center" style="color:var(--admin-muted)">
+    Select an uploader to view their imported shop batches.
+  </div>
+</div>
+{% elif not batch %}
+<div class="admin-card">
+  <div class="admin-card-body text-center" style="color:var(--admin-muted)">
+    {{ 'This user has no imported shop batches.' if include_completed else 'This user has no pending import batches.' }}
+  </div>
+</div>
+{% else %}
+<details class="admin-card mb-4" data-import-batch>
+  <summary class="admin-card-header" style="cursor:pointer; list-style:none">
+    <div>
+      <div>Import batch {{ batch_page }}</div>
+      <div class="small fw-normal" style="color:var(--admin-muted)">
+        {{ batch.batch_date.strftime('%b %d, %Y %H:%M') if batch.batch_date else 'Unknown date' }}
+      </div>
+    </div>
+    <span class="status-badge status-pending">{{ items|length }} shown · Expand</span>
+  </summary>
+  <form method="post" action="{{ url_for('mw_admin_bp.shop_import_action') }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div class="table-responsive">
+      <table class="admin-table">
+        <thead>
+          <tr>
+            <th><input type="checkbox" data-select-all></th>
+            <th>Name</th><th>Town</th><th>Phone</th><th>Category</th><th>Location</th><th>Status</th><th>Imported</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for item in items %}
+          <tr data-import-row>
+            <td>
+              {% if item.import_status == 'pending' %}
+              <input type="checkbox" name="import_ids" value="{{ item.id }}">
+              {% endif %}
+            </td>
+            <td><strong>{{ item.name }}</strong><div class="small" style="color:var(--admin-muted)">#{{ item.id }}</div></td>
+            <td>
+              <span data-town-value="{{ item.id }}">{{ item.town or '—' }}</span>
+              <div class="small" style="color:var(--admin-muted)" data-location-details="{{ item.id }}">{{ [item.district, item.region]|select|join(', ') }}</div>
+              {% if item.latitude is not none and item.longitude is not none and not (item.town and item.district and item.region) %}
+              <button type="button" class="btn-admin-sm mt-1" data-check-location data-import-id="{{ item.id }}" data-location-url="{{ url_for('mw_admin_bp.check_import_location', import_id=item.id) }}">Check Location</button>
+              {% endif %}
+            </td>
+            <td>{{ item.phone_number or '—' }}</td>
+            <td>{{ item.category or '—' }}</td>
+            <td>{{ item.address or '—' }}</td>
+            <td><span class="status-badge status-{{ 'active' if item.import_status == 'approved' else ('suspended' if item.import_status == 'rejected' else 'pending') }}">{{ item.import_status|title }}</span></td>
+            <td class="small" style="color:var(--admin-muted)">
+              {{ item.created_at.strftime('%b %d, %Y %H:%M') if item.created_at else '—' }}
+              {% if item.import_status == 'approved' %}
+              <a href="{{ url_for('mw_admin_bp.edit_imported_shop', import_id=item.id) }}" class="d-block mt-1">Edit details</a>
+              {% endif %}
+            </td>
+          </tr>
+          {% else %}
+          <tr><td colspan="8" class="text-center" style="color:var(--admin-muted)">No rows in this batch.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 p-3 border-top" style="border-color:var(--admin-border)!important">
+      <div class="small" style="color:var(--admin-muted)">Select pending rows to approve, reject, or delete.</div>
+      <div class="d-flex gap-2">
+        <button class="btn-admin-sm btn-admin-success" name="action" value="commit" type="submit">Approve selected</button>
+        <button class="btn-admin-sm" name="action" value="reject" type="submit">Reject selected</button>
+        <button class="btn-admin-sm btn-admin-danger" name="action" value="delete" type="submit" data-confirm="Delete the selected imported shops?" data-confirm-title="Delete imports" data-confirm-btn="Delete">Delete selected</button>
+      </div>
+    </div>
+  </form>
+</details>
+
+{% if item_pagination and item_pagination.pages > 1 %}
+<div class="admin-pagination mb-4">
+  {% for page in item_pagination.iter_pages(left_edge=1, right_edge=1, left_current=1, right_current=1) %}
+    {% if page %}
+      {% if page == item_pagination.page %}<span class="current">{{ page }}</span>
+      {% else %}<a href="{{ url_for('mw_admin_bp.shop_imports', user_id=selected_user_id, batch_page=batch_page, item_page=page, include_completed=1 if include_completed else 0) }}">{{ page }}</a>{% endif %}
+    {% else %}<span>…</span>{% endif %}
+  {% endfor %}
+</div>
+{% endif %}
+
+{% if batches.has_next %}
+<div class="text-center mb-4" data-batch-navigation>
+  <button type="button" class="btn-admin-primary" data-next-batch-url="{{ url_for('mw_admin_bp.shop_imports', user_id=selected_user_id, batch_page=batches.next_num, include_completed=1 if include_completed else 0) }}">Load next import batch</button>
+</div>
+{% endif %}
+{% endif %}

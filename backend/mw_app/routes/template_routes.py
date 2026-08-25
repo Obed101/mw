@@ -19,6 +19,7 @@ from ..forms import LoginForm, RegistrationForm
 from ..services.geocoding_service import reverse_geocode
 from ..utils.location import get_user_location, haversine_distance_expr, NEAR_YOU_KM
 from ..utils.ids_parser import IDSParser
+from ..utils.threading_utils import run_in_background
 from ..models import (
     Category,
     Product,
@@ -177,7 +178,7 @@ def _check_and_create_location_notification(user):
         recipient_user_id=user.id,
         notification_type=NOTIFICATION_TYPE_LOCATION_SETUP,
         title='Set your home location',
-        message='Set your home location so we can show you shops and products around you.',
+        message='Set your home location so we can always show you shops and products around you.',
     )
     notification.set_payload({'action_url': url_for('main_bp.home_location_setup'), 'icon': 'location'})
     db.session.add(notification)
@@ -247,6 +248,25 @@ def _reverse_geocode_location(latitude, longitude):
             longitude,
         )
         return None
+
+
+@run_in_background()
+def _geocode_shop_location(shop_id):
+    shop = db.session.get(Shop, shop_id)
+    if not shop or not shop.gps or (shop.town and shop.district and shop.region):
+        return
+
+    normalized_gps = _normalize_gps(shop.gps)
+    if not normalized_gps:
+        return
+    latitude, longitude = (float(value) for value in normalized_gps.split(','))
+    location_data = _reverse_geocode_location(latitude, longitude)
+    if not location_data:
+        return
+    shop.town = location_data.get('town')
+    shop.district = location_data.get('district')
+    shop.region = location_data.get('region')
+    db.session.commit()
 
 
 @seller_bp.route('/shop/reverse-geocode', methods=['GET'])
@@ -384,8 +404,12 @@ def _seller_guard_redirect():
     if not current_user.is_authenticated:
         flash('Please sign in to manage your seller account.', 'warning')
         return redirect(url_for('main_bp.login'))
-    if current_user.role != USER_ROLE_SELLER:
-        flash('Seller access is required for that page.', 'error')
+    setup_shop = Shop.query.filter_by(
+        id=session.get('managed_shop_id'),
+        owner_id=None,
+    ).first() if session.get('managed_shop_id') else None
+    if not _resolve_user_shop(current_user) and not setup_shop and (not current_user.is_admin):
+        flash('It appears you do not own a shop.', 'warning')
         return redirect(url_for('main_bp.index'))
     return None
 
@@ -397,6 +421,8 @@ def _build_shop_payload(shop):
     return {
         'id': shop.id,
         'name': shop.name,
+        'category': shop.google_category,
+        'is_owned_by_current_user': bool(current_user.is_authenticated and shop.owner_id == current_user.id),
         'description': shop.description,
         'business_type': shop.business_type,
         'phone': shop.phone,
@@ -429,7 +455,7 @@ def _build_shop_setup_state(shop):
     step_order = ['basic', 'image', 'contact', 'description']
 
     state = {
-        'basic_complete': bool(shop and shop.name and _normalize_gps(shop.gps) and (shop.address or '').strip()),
+        'basic_complete': bool(shop and shop.name and shop.google_category and _normalize_gps(shop.gps) and (shop.address or '').strip()),
         'image_complete': _shop_has_custom_image(shop),
         'contact_complete': bool(shop and (shop.phone or shop.email)),
         'description_complete': bool(shop and (shop.description or '').strip()),
@@ -517,10 +543,22 @@ def _resolve_setup_shop(user):
         shop = _resolve_owned_shop(user, active_shop_id, allow_default=False)
         if shop:
             return shop
+        shop = Shop.query.filter_by(id=active_shop_id, owner_id=None).first()
+        if shop and session.get('managed_shop_id') == shop.id:
+            return shop
 
     requested_shop_id = _requested_shop_id()
     if requested_shop_id:
-        return _resolve_owned_shop(user, requested_shop_id, allow_default=False)
+        shop = _resolve_owned_shop(user, requested_shop_id, allow_default=False)
+        if shop:
+            return shop
+        shop = Shop.query.filter_by(id=requested_shop_id, owner_id=None).first()
+        if shop and session.get('managed_shop_id') == shop.id:
+            return shop
+
+    managed_shop_id = session.get('managed_shop_id')
+    if managed_shop_id:
+        return Shop.query.filter_by(id=managed_shop_id, owner_id=None).first()
 
     return None
 
@@ -669,9 +707,24 @@ def register():
     form = RegistrationForm()
     return render_template('auth/register.html', form=form)
 
+def _clean_invalid_shop_addresses():
+    """Remove scraper placeholders that are not real shop addresses."""
+    invalid_values = {'·', 'open'}
+    shops_to_clean = [
+        shop for shop in Shop.query.filter(Shop.address.isnot(None)).all()
+        if (shop.address or '').strip().casefold() in invalid_values
+    ]
+    if not shops_to_clean:
+        return
+    for shop in shops_to_clean:
+        shop.address = None
+    db.session.commit()
+
+
 @main_bp.route('/shops')
 def shops():
     """Browse shops page"""
+    _clean_invalid_shop_addresses()
     categories = Category.query.filter_by(is_active=True).order_by(Category.name.asc()).all()
     return render_template('buyer/shops.html', categories=categories)
 
@@ -756,7 +809,19 @@ def shop_detail(shop_id):
         shop_is_favorited=shop_is_favorited,
         shop_is_owner=shop_is_owner,
         more_shops=more_shops,
+        location_check_url=url_for('main_bp.check_shop_location', shop_id=shop.id),
     )
+
+
+@main_bp.route('/shops/<int:shop_id>/check-location', methods=['GET', 'POST'])
+def check_shop_location(shop_id):
+    shop = Shop.query.filter(Shop.id == shop_id, Shop.is_active.is_(True)).first_or_404()
+    location = {'town': shop.town, 'district': shop.district, 'region': shop.region}
+    ready = all(location.values())
+    if request.method == 'POST' and not ready and shop.gps:
+        _geocode_shop_location(shop.id)
+        return jsonify(success=True, started=True, location=location), 202
+    return jsonify(success=True, ready=ready, location=location)
 
 
 @main_bp.route('/shops/<int:shop_id>/claim')
@@ -892,6 +957,7 @@ def seller_shop_preview():
         directions_url=directions_url,
         shop_categories=child_categories,
         shop_is_favorited=False,
+        location_check_url=url_for('main_bp.check_shop_location', shop_id=shop.id),
     )
 
 @main_bp.route('/products')
@@ -1310,6 +1376,7 @@ def _parse_ids_upload(file_storage):
         dialect = csv.get_dialect('excel')
 
     parser = IDSParser()
+    import_batch = uuid4().hex
     parsed_rows = []
     non_empty_rows = 0
 
@@ -1320,8 +1387,9 @@ def _parse_ids_upload(file_storage):
 
     resolved_headers = parser.resolve_headers(headers)
     header_indexes = {
-        field: headers.index(source)
-        for field, source in resolved_headers.items()
+        field: [index for index, header in enumerate(headers)
+                if str(header).strip().casefold() == field.casefold()]
+        for field in resolved_headers
     }
 
     for row_number, row in enumerate(reader, start=2):
@@ -1336,7 +1404,11 @@ def _parse_ids_upload(file_storage):
             'data': parsed,
         })
 
-    staging = parser.persist_imports([row['data'] for row in parsed_rows])
+    staging = parser.persist_imports(
+        [row['data'] for row in parsed_rows],
+        uploader_user_id=current_user.id,
+        import_batch=import_batch,
+    )
 
     upload_dir = Path(current_app.static_folder) / 'uploads' / 'imports'
     upload_dir.mkdir(parents=True, exist_ok=True)
@@ -1354,6 +1426,7 @@ def _parse_ids_upload(file_storage):
         'parsed_rows': parsed_rows,
         'warning_count': sum(len(row['data'].get('warnings') or []) for row in parsed_rows),
         'staging': staging,
+        'import_batch': import_batch,
     }
 
 
@@ -1684,14 +1757,17 @@ def seller_shop():
 def save_shop_basic_step():
     """Save the basic shop info step."""
     try:
-        shop = _resolve_owned_shop(current_user, _requested_shop_id())
+        shop = _resolve_setup_shop(current_user)
         name = str(request.form.get('name') or '').strip()
+        category = str(request.form.get('category') or '').strip()
         gps_value = str(request.form.get('gps') or '').strip()
         address = str(request.form.get('address') or '').strip()
         normalized_gps = _normalize_gps(gps_value)
 
         if not name:
             return _build_shop_feedback_response('Add your shop name to continue.', tone='danger')
+        if not category:
+            return _build_shop_feedback_response('Add your shop category to continue.', tone='warning')
         if not normalized_gps:
             return _build_shop_feedback_response('Choose your shop location on the map to continue.', tone='danger')
         if not address:
@@ -1708,6 +1784,7 @@ def save_shop_basic_step():
         submitted_region = str(request.form.get('region') or '').strip()
         submitted_district = str(request.form.get('district') or '').strip()
         submitted_town = str(request.form.get('town') or '').strip()
+        is_own_shop = request.form.get('is_own_shop') == 'on'
 
         should_geocode = bool(normalized_gps) and (
             not shop
@@ -1725,6 +1802,7 @@ def save_shop_basic_step():
             town = submitted_town or (location_data['town'] if location_data else None)
             shop = Shop(
                 name=name,
+                google_category=category,
                 gps=normalized_gps,
                 address=address,
                 business_type=business_type,
@@ -1732,15 +1810,19 @@ def save_shop_basic_step():
                 district=district,
                 town=town,
                 is_active=True,
-                owner_id=current_user.id,
+                owner_id=current_user.id if is_own_shop else None,
+                is_claimed=is_own_shop,
             )
             shop.replace_image_urls([DEFAULT_SHOP_PLACEHOLDER_IMAGE])
             db.session.add(shop)
         else:
             shop.name = name
+            shop.google_category = category
             shop.gps = normalized_gps
             shop.address = address
             shop.business_type = business_type
+            shop.owner_id = current_user.id if is_own_shop else None
+            shop.is_claimed = is_own_shop
             if should_geocode:
                 shop.region = submitted_region or (location_data['region'] if location_data else None)
                 shop.district = submitted_district or (location_data['district'] if location_data else None)
@@ -1752,6 +1834,7 @@ def save_shop_basic_step():
 
         db.session.commit()
         session['managed_shop_id'] = shop.id if shop else None
+        session['active_shop_id'] = shop.id if shop else None
         return _build_shop_setup_success('basic', 'Basic info saved. Nice start.', shop)
 
     except ValueError as exc:
@@ -1768,7 +1851,7 @@ def save_shop_basic_step():
 def save_shop_image_step():
     """Save the front image step."""
     try:
-        shop = _resolve_owned_shop(current_user, _requested_shop_id())
+        shop = _resolve_setup_shop(current_user)
         if not shop:
             return _build_shop_feedback_response('Save your basic shop details first.', tone='danger')
 
@@ -1803,7 +1886,7 @@ def save_shop_image_step():
 def save_shop_contact_step():
     """Save the business contact step."""
     try:
-        shop = _resolve_owned_shop(current_user, _requested_shop_id())
+        shop = _resolve_setup_shop(current_user)
         if not shop:
             return _build_shop_feedback_response('Save your basic shop details first.', tone='danger')
 
@@ -1829,7 +1912,7 @@ def save_shop_contact_step():
 def save_shop_description_step():
     """Save the shop description step."""
     try:
-        shop = _resolve_owned_shop(current_user, _requested_shop_id())
+        shop = _resolve_setup_shop(current_user)
         if not shop:
             return _build_shop_feedback_response('Save your basic shop details first.', tone='danger')
 
@@ -1908,6 +1991,7 @@ def buyer_dashboard():
 @buyer_bp.route('/shops')
 def buyer_shops():
     """Browse shops page"""
+    _clean_invalid_shop_addresses()
     categories = Category.query.filter_by(is_active=True).order_by(Category.name.asc()).all()
     return render_template('buyer/shops.html', categories=categories)
 

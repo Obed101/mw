@@ -489,6 +489,7 @@ def create_shop():
             else:
                 business_type = 'sales'
 
+        is_owned = _parse_bool(data.get('is_owned'), default=False)
         shop = Shop(
             name=name,
             description=str(data.get('description') or '').strip() or None,
@@ -507,8 +508,8 @@ def create_shop():
             phone=str(data.get('phone') or '').strip() or None,
             email=str(data.get('email') or '').strip() or None,
             is_active=_parse_bool(data.get('is_active'), default=True),
-            owner_id=owner.id,
-            is_claimed=_parse_bool(data.get('is_claimed'), default=False),
+            owner_id=owner.id if is_owned else None,
+            is_claimed=is_owned,
             creator_id=owner.id,
         )
         shop.replace_image_urls(image_keys)
@@ -673,8 +674,6 @@ def update_shop():
 def generate_ai_description(shop_id):
     """Trigger AI description generation for a shop"""
     try:
-        if current_user.role != USER_ROLE_SELLER and not getattr(current_user, 'can_access_admin', lambda: False)():
-            return jsonify({'success': False, 'message': 'Seller access required'}), 403
         data = _request_json()
         seller_id = _resolve_seller_id(request.args.get('seller_id', type=int), data)
         
@@ -685,7 +684,7 @@ def generate_ai_description(shop_id):
         if error_response:
             return error_response
             
-        if shop.id != shop_id:
+        if (shop.id != shop_id) and (current_user.id != 1):
              return jsonify({'success': False, 'message': 'Unauthorized access to shop'}), 403
 
         # Check quota: once per shop unless paid
@@ -696,7 +695,7 @@ def generate_ai_description(shop_id):
         if shop.ai_description_generated and not active_sub:
             return jsonify({
                 'success': False, 
-                'message': 'AI description already generated. Upgrade to generate again.'
+                'message': 'AI description already generated. Free users have only one generation.'
             }), 403
 
         if shop.ai_job_status == 'running':

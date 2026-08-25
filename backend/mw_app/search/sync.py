@@ -39,6 +39,7 @@ def _shop_to_doc(shop):
         "description": shop.description,
         "google_category": shop.google_category,
         "location": shop.region,  # assuming region field represents location
+        "town": shop.town,
         "business_type": _get_value(shop, 'business_type'),
         "is_verified": _get_value(shop, 'is_verified'),
         "is_active": shop.is_active,

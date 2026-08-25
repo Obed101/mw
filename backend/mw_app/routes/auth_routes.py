@@ -353,7 +353,7 @@ def _check_and_create_location_notification(user):
         recipient_user_id=user.id,
         notification_type=NOTIFICATION_TYPE_LOCATION_SETUP,
         title='Set your home location',
-        message='Set your home location so we can show you shops and products around you.',
+        message='Set your home location so we can always show you shops and products around you.',
     )
     notification.set_payload({'action_url': url_for('main_bp.home_location_setup')})
     db.session.add(notification)

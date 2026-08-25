@@ -55,5 +55,5 @@ class Config:
 
     # Arkesel SMS Configuration
     ARKESEL_API_KEY = os.getenv("ARKESEL_API_KEY")
-    ARKESEL_SENDER_ID = os.getenv("ARKESEL_SENDER_ID", "Market Wind")
+    ARKESEL_SENDER_ID = os.getenv("ARKESEL_SENDER_ID", "Markt Wndow")
 

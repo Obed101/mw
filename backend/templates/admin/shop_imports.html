@@ -1,0 +1,111 @@
+{% extends "admin/base_admin.html" %}
+{% block admin_title %}Imported Shops{% endblock %}
+
+{% block admin_content %}
+<div class="d-flex flex-wrap justify-content-between align-items-end gap-3 mb-4">
+  <div>
+    <h1 class="h4 mb-1">Imported shops</h1>
+    <p class="mb-0" style="color:var(--admin-muted)">Review uploads one user and one import batch at a time.</p>
+  </div>
+  <form method="get" class="d-flex gap-2 align-items-end">
+    <div>
+      <label class="small d-block mb-1" style="color:var(--admin-muted)" for="import-user">Uploader</label>
+      <select id="import-user" name="user_id" class="admin-form-control" onchange="this.form.submit()">
+        <option value="">Select a user</option>
+        {% for user in import_users %}
+        <option value="{{ user.id }}" {{ 'selected' if selected_user_id == user.id else '' }}>
+          {{ user.username }}{% if user.email %} — {{ user.email }}{% endif %}
+        </option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="form-check mb-2">
+      <input class="form-check-input" type="checkbox" id="include-completed" name="include_completed" value="1" onchange="this.form.submit()" {{ 'checked' if include_completed else '' }}>
+      <label class="form-check-label small" for="include-completed" style="color:var(--admin-muted)">Include completed batches</label>
+    </div>
+  </form>
+</div>
+
+<div id="shop-import-batches">
+  {% include "admin/partials/shop_import_batch.html" %}
+</div>
+{% endblock %}
+
+{% block admin_scripts %}
+<script>
+(() => {
+  const container = document.getElementById('shop-import-batches');
+  container?.addEventListener('change', event => {
+    if (!event.target.matches('[data-select-all]')) return;
+    event.target.closest('table').querySelectorAll('input[name="import_ids"]').forEach(input => input.checked = event.target.checked);
+  });
+  container?.addEventListener('click', event => {
+    if (event.target.closest('button, a, input, select, textarea, label, summary')) return;
+    const row = event.target.closest('[data-import-row]');
+    const checkbox = row?.querySelector('input[name="import_ids"]');
+    if (checkbox) checkbox.checked = !checkbox.checked;
+  });
+  container?.addEventListener('click', async event => {
+    const button = event.target.closest('[data-check-location]');
+    if (!button) return;
+    button.disabled = true;
+    button.textContent = 'Checking…';
+    const headers = {'X-Requested-With': 'XMLHttpRequest'};
+    const csrf = document.querySelector('meta[name="csrf-token"]');
+    if (csrf) headers['X-CSRFToken'] = csrf.content;
+    try {
+      const response = await fetch(button.dataset.locationUrl, {method: 'POST', headers});
+      const data = await response.json();
+      if (!response.ok || !data.success) throw new Error(data.message || 'Location check failed.');
+      const town = document.querySelector(`[data-town-value="${button.dataset.importId}"]`);
+      const details = document.querySelector(`[data-location-details="${button.dataset.importId}"]`);
+      const updateLocation = location => {
+        if (town) town.textContent = location?.town || '—';
+        if (details) details.textContent = [location?.district, location?.region].filter(Boolean).join(', ');
+      };
+      updateLocation(data.location);
+      button.textContent = 'Location check started';
+      window.setTimeout(async () => {
+        const result = await fetch(button.dataset.locationUrl, {headers: {'X-Requested-With': 'XMLHttpRequest'}}).then(r => r.json());
+        if (result.ready) {
+          updateLocation(result.location);
+          button.remove();
+        } else { button.disabled = false; button.textContent = 'Check Location'; }
+      }, 1500);
+    } catch (error) {
+      button.disabled = false;
+      button.textContent = error.message;
+    }
+  });
+  const nextButton = () => container?.querySelector('[data-next-batch-url]');
+  let loading = false;
+
+  async function loadNextBatch() {
+    const button = nextButton();
+    if (!button || loading) return;
+    loading = true;
+    button.disabled = true;
+    button.textContent = 'Loading…';
+    try {
+      const response = await fetch(button.dataset.nextBatchUrl + '&fragment=1', {headers: {'X-Requested-With': 'XMLHttpRequest'}});
+      if (!response.ok) throw new Error('Unable to load the next import batch.');
+      const html = await response.text();
+      button.closest('[data-batch-navigation]')?.remove();
+      container.insertAdjacentHTML('beforeend', html);
+    } catch (error) {
+      button.disabled = false;
+      button.textContent = error.message;
+    } finally {
+      loading = false;
+    }
+  }
+
+  const observer = new IntersectionObserver(entries => {
+    if (entries.some(entry => entry.isIntersecting)) loadNextBatch();
+  }, {rootMargin: '240px'});
+  const observe = () => { const button = nextButton(); if (button) observer.observe(button); };
+  observe();
+  new MutationObserver(observe).observe(container, {childList: true, subtree: true});
+})();
+</script>
+{% endblock %}

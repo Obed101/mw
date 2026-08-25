@@ -128,6 +128,11 @@ class User(db.Model, UserMixin):
     def has_role(self, role_name):
         """Return True if user has the named role in UserRole table."""
         return any(ur.role.name == role_name for ur in self.user_roles if ur.role)
+    
+    def set_role(self, role_name):
+        """Set the user's role."""
+        self.role = role_name
+        self.updated_at = datetime.now(timezone.utc)
 
     def is_super_admin(self):
         """True if user has super_admin role."""

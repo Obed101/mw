@@ -164,6 +164,13 @@ class ShopImport(db.Model):
     plus_code = db.Column(db.String(30))
     image_url = db.Column(db.String(500))
     delivery = db.Column(db.Boolean, default=False, nullable=False)
+    latitude = db.Column(db.Float, nullable=True)
+    longitude = db.Column(db.Float, nullable=True)
+    town = db.Column(db.String(100), nullable=True)
+    district = db.Column(db.String(100), nullable=True)
+    region = db.Column(db.String(100), nullable=True)
+    uploader_user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=True, index=True)
+    import_batch = db.Column(db.String(100), nullable=True, index=True)
     created_at = db.Column(
         db.DateTime(timezone=True),
         default=lambda: datetime.now(timezone.utc),
@@ -171,6 +178,8 @@ class ShopImport(db.Model):
     )
     import_status = db.Column(db.String(20), default="pending", nullable=False)
     rejection_reason = db.Column(db.Text, nullable=True)
+
+    uploader = db.relationship("User", foreign_keys=[uploader_user_id], backref="shop_imports")
 
     def __repr__(self):
         return f"<ShopImport {self.id} {self.name!r} status={self.import_status!r}>"

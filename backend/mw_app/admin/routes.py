@@ -4,12 +4,13 @@ Every route is protected by strong backend permission checks.
 """
 from flask import Blueprint, render_template, redirect, url_for, flash, request, jsonify
 from flask_login import current_user
-from sqlalchemy import or_
+from sqlalchemy import or_, func
 from sqlalchemy.exc import IntegrityError
+import re
 
 from ..extensions import db
 from ..models import (
-    User, Shop, Product,
+    User, Shop, ShopImport, Product, Notification,
     Role, UserRole,
     VERIFICATION_STATUS_VERIFIED, VERIFICATION_STATUS_SUSPENDED,
     VERIFICATION_STATUS_PENDING,
@@ -21,10 +22,35 @@ from .services import (
     get_dashboard_stats, paginate_query, ensure_super_admin_exists,
 )
 from .forms import UserEditForm, ShopAdminEditForm, ProductAdminEditForm
+from ..utils.threading_utils import run_in_background
 
 mw_admin_bp = Blueprint('mw_admin_bp', __name__, url_prefix='/admin')
 
 PER_PAGE = 20
+SHOP_IMPORT_BATCHES_PER_PAGE = 1
+SHOP_IMPORT_ITEMS_PER_PAGE = 50
+DEFAULT_SHOP_PLACEHOLDER_IMAGE = '/static/images/mw_logo_trans.png'
+
+
+@run_in_background()
+def _geocode_shop_import_location(import_id):
+    """Enrich one staged import in the background after an explicit request."""
+    from ..utils.ids_parser import IDSParser
+
+    imported = db.session.get(ShopImport, import_id)
+    if not imported or imported.latitude is None or imported.longitude is None:
+        return
+
+    parser = IDSParser()
+    try:
+        location = parser._reverse_geocode(imported.latitude, imported.longitude)
+        imported.town = location.get('town')
+        imported.district = location.get('district')
+        imported.region = location.get('region')
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+
 
 
 # ---------------------------------------------------------------------------
@@ -335,6 +361,281 @@ def assign_user_role(user_id):
 # Shop Management
 # ---------------------------------------------------------------------------
 
+def _import_phone_key(value):
+    digits = re.sub(r"\D", "", str(value or ""))
+    if digits.startswith("233") and len(digits) == 12:
+        return digits
+    if digits.startswith("0") and len(digits) == 10:
+        return "233" + digits[1:]
+    if len(digits) == 9:
+        return "233" + digits
+    return None
+
+
+def _import_identity_key(value):
+    cleaned = re.sub(r"[^\w]+", " ", str(value or "").casefold(), flags=re.UNICODE)
+    return re.sub(r"\s+", " ", cleaned).strip() or None
+
+
+def _import_duplicate_keys(name, phone, address, category, plus_code, latitude=None, longitude=None):
+    name_key = _import_identity_key(name)
+    phone_key = _import_phone_key(phone)
+    phone_name_key = (phone_key, name_key) if phone_key and name_key else None
+    attributes = {
+        _import_identity_key(value)
+        for value in (address, category, plus_code)
+    }
+    if latitude is not None and longitude is not None:
+        attributes.add(f'{float(latitude):.5f},{float(longitude):.5f}')
+    return phone_name_key, {
+        (name_key, attribute)
+        for attribute in attributes
+        if name_key and attribute
+    }
+
+
+def _shop_gps_parts(shop):
+    if not shop.gps or ',' not in shop.gps:
+        return None, None
+    try:
+        latitude, longitude = (float(part.strip()) for part in shop.gps.split(',', 1))
+        return latitude, longitude
+    except (TypeError, ValueError):
+        return None, None
+
+
+def _shop_import_batch_filter(batch_key):
+    if batch_key is None:
+        return ShopImport.import_batch.is_(None)
+    return ShopImport.import_batch == batch_key
+
+
+@mw_admin_bp.route('/shop-imports')
+@admin_required
+def shop_imports():
+    selected_user_id = request.args.get('user_id', type=int)
+    include_completed = request.args.get('include_completed', type=int, default=0) == 1
+    batch_page = max(request.args.get('batch_page', 1, type=int), 1)
+    item_page = max(request.args.get('item_page', 1, type=int), 1)
+
+    import_users = (
+        User.query
+        .join(ShopImport, ShopImport.uploader_user_id == User.id)
+        .distinct()
+        .order_by(User.username.asc())
+        .all()
+    )
+    batches = []
+    items = []
+    batch = None
+    item_pagination = None
+
+    if selected_user_id:
+        batch_query = (
+            db.session.query(
+                ShopImport.import_batch,
+                func.max(ShopImport.created_at).label('batch_date'),
+            )
+            .filter(ShopImport.uploader_user_id == selected_user_id)
+        )
+        if not include_completed:
+            batch_query = batch_query.filter(ShopImport.import_status == 'pending')
+        batch_query = (
+            batch_query
+            .group_by(ShopImport.import_batch)
+            .order_by(func.max(ShopImport.created_at).desc())
+        )
+        batches = batch_query.paginate(
+            page=batch_page,
+            per_page=SHOP_IMPORT_BATCHES_PER_PAGE,
+            error_out=False,
+        )
+        if batches.items:
+            batch = batches.items[0]
+            item_query = ShopImport.query.filter(
+                ShopImport.uploader_user_id == selected_user_id,
+                _shop_import_batch_filter(batch.import_batch),
+            ).order_by(ShopImport.created_at.desc(), ShopImport.id.desc())
+            item_pagination = item_query.paginate(
+                page=item_page,
+                per_page=SHOP_IMPORT_ITEMS_PER_PAGE,
+                error_out=False,
+            )
+            items = item_pagination.items
+
+    template = 'admin/partials/shop_import_batch.html' if request.args.get('fragment') else 'admin/shop_imports.html'
+    return render_template(
+        template,
+        import_users=import_users,
+        selected_user_id=selected_user_id,
+        batches=batches,
+        batch=batch,
+        items=items,
+        item_pagination=item_pagination,
+        batch_page=batch_page,
+        include_completed=include_completed,
+    )
+
+
+@mw_admin_bp.route('/shop-imports/<int:import_id>/check-location', methods=['GET', 'POST'])
+@admin_required
+def check_import_location(import_id):
+    imported = ShopImport.query.get_or_404(import_id)
+    location = {
+        'town': imported.town,
+        'district': imported.district,
+        'region': imported.region,
+    }
+    ready = any(location.values())
+
+    if request.method == 'POST' and not ready:
+        if imported.latitude is None or imported.longitude is None:
+            return jsonify(success=False, message='This import has no valid GPS coordinates.'), 400
+        _geocode_shop_import_location(imported.id)
+        return jsonify(success=True, started=True, location=location), 202
+
+    return jsonify(success=True, ready=ready, location=location)
+
+
+@mw_admin_bp.route('/shop-imports/action', methods=['POST'])
+@admin_required
+def shop_import_action():
+    action = request.form.get('action', '').strip().lower()
+    import_ids = [value for value in request.form.getlist('import_ids') if value.isdigit()]
+    if action not in {'commit', 'reject', 'delete'} or not import_ids:
+        flash('Select at least one imported shop and choose an action.', 'warning')
+        return redirect(request.referrer or url_for('mw_admin_bp.shop_imports'))
+
+    imports = ShopImport.query.filter(
+        ShopImport.id.in_([int(value) for value in import_ids])
+    ).all()
+    existing_phone_name_keys = set()
+    existing_no_phone_keys = set()
+    for shop in Shop.query.all():
+        latitude, longitude = _shop_gps_parts(shop)
+        phone_name_key, no_phone_keys = _import_duplicate_keys(
+            shop.name,
+            shop.phone,
+            shop.address,
+            shop.google_category,
+            shop.plus_code,
+            latitude,
+            longitude,
+        )
+        if phone_name_key:
+            existing_phone_name_keys.add(phone_name_key)
+        if not _import_phone_key(shop.phone):
+            existing_no_phone_keys.update(no_phone_keys)
+    processed = 0
+    duplicate_count = 0
+    uploader_messages = {}
+
+    for imported in imports:
+        if action == 'delete':
+            uploader_messages.setdefault(imported.uploader_user_id, []).append(
+                f'Import "{imported.name}" was deleted by an administrator.'
+            )
+            db.session.delete(imported)
+            processed += 1
+            continue
+
+        if imported.import_status != 'pending':
+            continue
+
+        if action == 'reject':
+            imported.import_status = 'rejected'
+            imported.rejection_reason = 'Rejected by an administrator.'
+            uploader_messages.setdefault(imported.uploader_user_id, []).append(
+                f'Import "{imported.name}" was rejected by an administrator.'
+            )
+            processed += 1
+            continue
+
+        phone_name_key, no_phone_keys = _import_duplicate_keys(
+            imported.name,
+            imported.phone_number,
+            imported.address,
+            imported.category,
+            imported.plus_code,
+            imported.latitude,
+            imported.longitude,
+        )
+        is_duplicate = (
+            phone_name_key in existing_phone_name_keys
+            if phone_name_key
+            else bool(existing_no_phone_keys.intersection(no_phone_keys))
+        )
+        if is_duplicate:
+            imported.import_status = 'rejected'
+            imported.rejection_reason = 'A matching shop identity already exists in the shop database.'
+            uploader_messages.setdefault(imported.uploader_user_id, []).append(
+                f'Import "{imported.name}" was rejected because it duplicates an existing shop.'
+            )
+            duplicate_count += 1
+            continue
+
+        shop = Shop(
+            name=imported.name,
+            google_category=imported.category,
+            address=imported.address,
+            region=imported.region,
+            district=imported.district,
+            town=imported.town,
+            gps=(f'{imported.latitude},{imported.longitude}'
+                 if imported.latitude is not None and imported.longitude is not None else None),
+            phone=imported.phone_number,
+            # Imported Google listings remain unowned until somebody completes
+            # the normal claim/verification flow.
+            owner_id=None,
+            creator_id=current_user.id,
+            source='google',
+            source_reference=f'shop_import:{imported.id}',
+            import_batch=imported.import_batch,
+            google_image_url=imported.image_url,
+        )
+        shop.replace_image_urls([DEFAULT_SHOP_PLACEHOLDER_IMAGE])
+        db.session.add(shop)
+        imported.import_status = 'approved'
+        imported.rejection_reason = None
+        if phone_name_key:
+            existing_phone_name_keys.add(phone_name_key)
+        else:
+            existing_no_phone_keys.update(no_phone_keys)
+        uploader_messages.setdefault(imported.uploader_user_id, []).append(
+            f'Import "{imported.name}" was approved and added to the shop database.'
+        )
+        processed += 1
+
+    db.session.flush()
+    for uploader_id, messages in uploader_messages.items():
+        if not uploader_id:
+            continue
+        Notification.create_for_users(
+            [uploader_id],
+            notification_type='shop_import_reviewed',
+            title='Shop import reviewed',
+            message=' '.join(messages[:3]) + (f' (+{len(messages) - 3} more)' if len(messages) > 3 else ''),
+            actor_user_id=current_user.id,
+            payload={'action': action, 'count': len(messages)},
+        )
+    db.session.commit()
+
+    if duplicate_count:
+        flash(f'{duplicate_count} duplicate import(s) were rejected automatically.', 'warning')
+    flash(f'{processed} imported shop(s) processed.', 'success')
+    return redirect(request.referrer or url_for('mw_admin_bp.shop_imports'))
+
+
+@mw_admin_bp.route('/shop-imports/<int:import_id>/edit')
+@admin_required
+def edit_imported_shop(import_id):
+    imported = ShopImport.query.get_or_404(import_id)
+    shop = Shop.query.filter_by(source_reference=f'shop_import:{imported.id}').first()
+    if not shop:
+        flash('Approve this import before opening the full shop editor.', 'info')
+        return redirect(request.referrer or url_for('mw_admin_bp.shop_imports'))
+    return redirect(url_for('mw_admin_bp.edit_shop', shop_id=shop.id))
+
 @mw_admin_bp.route('/shops')
 @admin_required
 def shops():
@@ -381,10 +682,24 @@ def edit_shop(shop_id):
 
     if form.validate_on_submit():
         shop.name = form.name.data.strip()
+        shop.google_category = form.google_category.data.strip() if form.google_category.data else None
         shop.description = form.description.data
+        shop.business_type = form.business_type.data
         shop.phone = form.phone.data.strip() if form.phone.data else None
         shop.email = form.email.data.strip() if form.email.data else None
         shop.address = form.address.data.strip() if form.address.data else None
+        shop.region = form.region.data.strip() if form.region.data else None
+        shop.district = form.district.data.strip() if form.district.data else None
+        shop.town = form.town.data.strip() if form.town.data else None
+        shop.gps = form.gps.data.strip() if form.gps.data else None
+        shop.plus_code = form.plus_code.data.strip() if form.plus_code.data else None
+        shop.landmark = form.landmark.data.strip() if form.landmark.data else None
+        shop.source = form.source.data.strip() if form.source.data else 'user'
+        shop.source_reference = form.source_reference.data.strip() if form.source_reference.data else None
+        shop.google_image_url = form.google_image_url.data.strip() if form.google_image_url.data else None
+        shop.data_quality_score = form.data_quality_score.data
+        shop.verification_notes = form.verification_notes.data
+        shop.promoted = bool(form.promoted.data)
         shop.is_active = form.is_active.data
         shop.verification_status = form.verification_status.data
 
@@ -751,5 +1066,5 @@ def ai_chat():
     except AIServiceError as e:
         return jsonify(success=False, error=str(e)), 502
     except Exception as e:
-        return jsonify(success=False, error='An unexpected error occurred.'), 500
+        return jsonify(success=False, error='An unexpected error occurred: ' + str(e)), 500
 

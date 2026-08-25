@@ -22,6 +22,20 @@
             {{ form.name(class='admin-form-control') }}
             {% for err in form.name.errors %}<div style="color:#f87171;font-size:.75rem;margin-top:.25rem">{{ err }}</div>{% endfor %}
           </div>
+          <div class="row g-3">
+            <div class="col-md-6">
+              <div class="admin-form-group">
+                <label>Category</label>
+                {{ form.google_category(class='admin-form-control') }}
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="admin-form-group">
+                <label>Business Type</label>
+                {{ form.business_type(class='admin-form-control') }}
+              </div>
+            </div>
+          </div>
           <div class="admin-form-group">
             <label>Description</label>
             {{ form.description(class='admin-form-control', rows=3) }}
@@ -44,9 +58,42 @@
             <label>Address</label>
             {{ form.address(class='admin-form-control') }}
           </div>
+          <div class="row g-3">
+            <div class="col-md-4"><div class="admin-form-group"><label>Region</label>{{ form.region(class='admin-form-control') }}</div></div>
+            <div class="col-md-4"><div class="admin-form-group"><label>District</label>{{ form.district(class='admin-form-control') }}</div></div>
+            <div class="col-md-4"><div class="admin-form-group"><label>Town</label>{{ form.town(class='admin-form-control') }}</div></div>
+          </div>
+          <div class="row g-3">
+            <div class="col-md-6"><div class="admin-form-group"><label>GPS</label>{{ form.gps(class='admin-form-control') }}</div></div>
+            <div class="col-md-6"><div class="admin-form-group"><label>Plus Code</label>{{ form.plus_code(class='admin-form-control') }}</div></div>
+          </div>
+          <div class="admin-form-group">
+            <label>Landmark</label>
+            {{ form.landmark(class='admin-form-control') }}
+          </div>
+          <div class="admin-form-group">
+            <label>Verification Notes</label>
+            {{ form.verification_notes(class='admin-form-control', rows=3) }}
+          </div>
           <div class="admin-form-group">
             <label>Verification Status</label>
             {{ form.verification_status(class='admin-form-control') }}
+          </div>
+          <div class="row g-3">
+            <div class="col-md-6"><div class="admin-form-group"><label>Source</label>{{ form.source(class='admin-form-control') }}</div></div>
+            <div class="col-md-6"><div class="admin-form-group"><label>Data Quality Score</label>{{ form.data_quality_score(class='admin-form-control') }}</div></div>
+          </div>
+          <div class="admin-form-group">
+            <label>Source Reference</label>
+            {{ form.source_reference(class='admin-form-control') }}
+          </div>
+          <div class="admin-form-group">
+            <label>Google Image URL</label>
+            {{ form.google_image_url(class='admin-form-control') }}
+          </div>
+          <div class="admin-form-check mb-3">
+            {{ form.promoted() }}
+            <label style="color:var(--admin-text);font-size:.9rem">Promoted</label>
           </div>
           <div class="admin-form-check mb-3">
             {{ form.is_active() }}
