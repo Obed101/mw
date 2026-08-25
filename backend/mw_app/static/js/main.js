@@ -277,6 +277,7 @@ document.addEventListener("DOMContentLoaded", () => {
             user: "person",
             support: "headset",
             system: "bell",
+            location: "geo-alt",
         };
         return icons[icon] || "bell";
     }

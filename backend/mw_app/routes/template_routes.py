@@ -38,6 +38,10 @@ from ..extensions import oauth, db
 import secrets
 from functools import wraps
 
+# Notification types - defined here to avoid circular imports
+NOTIFICATION_TYPE_LOCATION_SETUP = 'home_location_setup'
+NOTIFICATION_TYPE_PHONE_SETUP = 'phone_number_setup'
+
 main_bp = Blueprint('main_bp', __name__)
 auth_bp = Blueprint('auth_template_bp', __name__, url_prefix='/auth')
 seller_bp = Blueprint('seller_template_bp', __name__, url_prefix='/seller')
@@ -123,8 +127,12 @@ def _notification_icon(notification):
         return 'shop'
     if 'product' in notification_type or 'stock' in notification_type:
         return 'product'
+    if 'phone' in notification_type or NOTIFICATION_TYPE_PHONE_SETUP in notification_type:
+        return 'phone'
     if 'user' in notification_type:
         return 'user'
+    if 'location' in notification_type or NOTIFICATION_TYPE_LOCATION_SETUP in notification_type:
+        return 'location'
     return 'system'
 
 
@@ -134,6 +142,8 @@ def _bootstrap_icon_name(icon):
         'product': 'box-seam',
         'system': 'bell',
         'user': 'person',
+        'phone': 'telephone-fill',
+        'location': 'geo-alt',
     }.get(icon, icon)
 
 
@@ -141,11 +151,59 @@ def _notification_action_url(notification):
     payload = notification.get_payload() or {}
     if payload.get('action_url'):
         return payload['action_url']
+    if notification.notification_type == NOTIFICATION_TYPE_LOCATION_SETUP:
+        return url_for('main_bp.home_location_setup')
+    if notification.notification_type == NOTIFICATION_TYPE_PHONE_SETUP:
+        return url_for('main_bp.profile')
     if payload.get('conversation_id') and 'support' in (notification.notification_type or ''):
         if current_user.is_authenticated and current_user.role == USER_ROLE_ADMIN:
             return url_for('support_bp.admin_support_chat', id=payload['conversation_id'])
         return url_for('support_bp.my_support_chat', id=payload['conversation_id'])
     return None
+
+
+def _check_and_create_location_notification(user):
+    """Check if user needs location setup notification and create if needed"""
+    if user.region and user.district and user.town:
+        return
+    existing = Notification.query.filter_by(
+        recipient_user_id=user.id,
+        notification_type=NOTIFICATION_TYPE_LOCATION_SETUP,
+        is_read=False
+    ).first()
+    if existing:
+        return
+    notification = Notification(
+        recipient_user_id=user.id,
+        notification_type=NOTIFICATION_TYPE_LOCATION_SETUP,
+        title='Set your home location',
+        message='Set your home location so we can show you shops and products around you.',
+    )
+    notification.set_payload({'action_url': url_for('main_bp.home_location_setup'), 'icon': 'location'})
+    db.session.add(notification)
+    db.session.commit()
+
+
+def _check_and_create_phone_notification(user):
+    """Check if user needs phone number setup notification and create if needed"""
+    if user.phone:
+        return
+    existing = Notification.query.filter_by(
+        recipient_user_id=user.id,
+        notification_type=NOTIFICATION_TYPE_PHONE_SETUP,
+        is_read=False
+    ).first()
+    if existing:
+        return
+    notification = Notification(
+        recipient_user_id=user.id,
+        notification_type=NOTIFICATION_TYPE_PHONE_SETUP,
+        title='Add your phone number',
+        message='Please add your phone number so buyers and sellers can contact you easily when necessary.',
+    )
+    notification.set_payload({'action_url': url_for('main_bp.profile'), 'icon': 'phone'})
+    db.session.add(notification)
+    db.session.commit()
 
 
 def _notification_to_dict(notification):
@@ -883,6 +941,16 @@ def mark_notification_read(notification_id):
         recipient_user_id=current_user.id,
     ).first_or_404()
 
+    # Prevent marking location setup notification as read before setup is complete
+    if notification.notification_type == NOTIFICATION_TYPE_LOCATION_SETUP:
+        # Check if user has completed location setup
+        if not (current_user.region and current_user.district and current_user.town):
+            return jsonify({
+                'success': False,
+                'message': 'Please complete your location setup first',
+                'notification': _notification_to_dict(notification),
+            }), 400
+
     if not notification.is_read:
         notification.mark_read()
         db.session.commit()
@@ -1041,6 +1109,17 @@ def profile():
             
             # Commit changes to database
             db.session.commit()
+
+            # Mark phone setup notification as read if phone is set
+            if current_user.phone:
+                phone_notification = Notification.query.filter_by(
+                    recipient_user_id=current_user.id,
+                    notification_type=NOTIFICATION_TYPE_PHONE_SETUP,
+                    is_read=False
+                ).first()
+                if phone_notification:
+                    phone_notification.mark_read()
+                    db.session.commit()
             
             flash('Profile updated successfully!', 'success')
             return redirect(url_for('main_bp.profile'))
@@ -1053,6 +1132,7 @@ def profile():
             db.session.rollback()
             flash('Error updating profile. Please try again.', 'error')
             print(f"Profile update error: {e}")
+            return redirect(url_for('main_bp.profile'))
     
     # Calculate membership duration
     if current_user.created_at:
@@ -1149,6 +1229,61 @@ def profile():
                          recent_activity=recent_activity,
                          owned_shops=owned_shops)
 
+
+@main_bp.route('/home-location-setup')
+@login_required
+def home_location_setup():
+    """Home location setup page"""
+    return render_template('public/home_location_setup.html')
+
+
+@main_bp.route('/save-home-location', methods=['POST'])
+@login_required
+def save_home_location():
+    """Save user's home location"""
+    try:
+        data = request.get_json()
+        
+        if not data:
+            return jsonify({'success': False, 'message': 'No data provided'}), 400
+        
+        region = data.get('region', '').strip()
+        district = data.get('district', '').strip()
+        town = data.get('town', '').strip()
+        gps = data.get('gps', '').strip()
+        
+        if not all([region, district, town]):
+            return jsonify({'success': False, 'message': 'All location fields are required'}), 400
+        
+        # Update user location
+        current_user.region = region
+        current_user.district = district
+        current_user.town = town
+        current_user.updated_at = datetime.now(timezone.utc)
+        
+        # Note: We don't store GPS for user in the current model, but we could add it if needed
+        # For now, we're just updating the location fields
+        
+        db.session.commit()
+        
+        # Mark location setup notification as read
+        location_notification = Notification.query.filter_by(
+            recipient_user_id=current_user.id,
+            notification_type=NOTIFICATION_TYPE_LOCATION_SETUP,
+            is_read=False
+        ).first()
+        
+        if location_notification:
+            location_notification.mark_read()
+            db.session.commit()
+        
+        return jsonify({'success': True, 'message': 'Location saved successfully'}), 200
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': f'Error saving location: {str(e)}'}), 500
+
+
 # Dropbox routes (main)
 def _parse_ids_upload(file_storage):
     """Parse one uploaded CSV file and return a preview report."""
@@ -1183,17 +1318,25 @@ def _parse_ids_upload(file_storage):
     if headers is None:
         raise ValueError(f"'{filename}' does not contain any rows.")
 
+    resolved_headers = parser.resolve_headers(headers)
+    header_indexes = {
+        field: headers.index(source)
+        for field, source in resolved_headers.items()
+    }
+
     for row_number, row in enumerate(reader, start=2):
         if not any(str(cell or '').strip() for cell in row):
             continue
 
         non_empty_rows += 1
-        parsed = parser.parse_row(row)
+        parsed = parser.parse_row(row, header_indexes)
         parsed_rows.append({
             'row_number': row_number,
             'raw_cells': len(row),
             'data': parsed,
         })
+
+    staging = parser.persist_imports([row['data'] for row in parsed_rows])
 
     upload_dir = Path(current_app.static_folder) / 'uploads' / 'imports'
     upload_dir.mkdir(parents=True, exist_ok=True)
@@ -1207,9 +1350,10 @@ def _parse_ids_upload(file_storage):
         'stored_url': url_for('static', filename=f'uploads/imports/{stored_name}'),
         'headers': headers,
         'total_rows': non_empty_rows,
-        'preview_rows': parsed_rows[:10],
+        'preview_rows': parsed_rows[:20],
         'parsed_rows': parsed_rows,
         'warning_count': sum(len(row['data'].get('warnings') or []) for row in parsed_rows),
+        'staging': staging,
     }
 
 
@@ -1276,6 +1420,8 @@ def oauth_login():
 @main_bp.route('/oauth/authorize')
 def oauth_authorize():
     """Logs in a user using Google OAuth. Redirect to the previous page or dashboard if not found"""
+    from ..utils.username_utils import generate_username
+
     try:
         # 1. Exchange code for token
         token = oauth.google.authorize_access_token()
@@ -1315,18 +1461,19 @@ def oauth_authorize():
             track_event('login', user)
             flash(f"Welcome back, {user.first_name or user.username}!", "success")
         else:
-            username = email.split('@')[0]
-            counter = 1
-            base = username
-            while User.query.filter_by(username=username).first():
-                username = f"{base}{counter}"
-                counter += 1
+            # Build a full_name string for the username generator
+            full_name = f"{first_name} {last_name}".strip() or email.split('@')[0]
+            username, parsed_first, parsed_last = generate_username(full_name)
+
+            # Use Google's names if available, else fall back to parsed
+            resolved_first = first_name or parsed_first
+            resolved_last = last_name or parsed_last
 
             user = User(
                 username=username,
                 email=email,
-                first_name=first_name,
-                last_name=last_name,
+                first_name=resolved_first,
+                last_name=resolved_last,
                 role=USER_ROLE_BUYER,
                 status='active'
             )
@@ -1338,7 +1485,17 @@ def oauth_authorize():
             login_user(user)
             from ..services.analytics_service import track_event
             track_event('signup', user)
-            flash(f"Welcome to Market Window, {user.first_name or user.username}!", "success")
+
+            flash(
+                f"Welcome to Market Window, {resolved_first or username}! "
+                f"Your username is <strong>{username}</strong>. "
+                f"Use it with your password if you ever sign in without Google.",
+                "success"
+            )
+
+        # Prompt user if phone number or home location is missing
+        _check_and_create_phone_notification(user)
+        _check_and_create_location_notification(user)
 
         # 4. Redirect to the previous page or dashboard if not found
         next_page = session.pop('prev', None)

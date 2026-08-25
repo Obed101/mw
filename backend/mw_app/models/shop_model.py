@@ -149,6 +149,33 @@ class Shop(db.Model):
         return self.phone_verified and self.email_verified and self.verification_status == VERIFICATION_STATUS_PENDING
 
 
+class ShopImport(db.Model):
+    """Staging record for one parsed IDS shop row."""
+
+    __tablename__ = "shop_import"
+
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(150), nullable=False)
+    category = db.Column(db.String(100))
+    rating = db.Column(db.Float, nullable=True)
+    address = db.Column(db.String(255))
+    phone_number = db.Column(db.String(20))
+    closing_time = db.Column(db.String(100))
+    plus_code = db.Column(db.String(30))
+    image_url = db.Column(db.String(500))
+    delivery = db.Column(db.Boolean, default=False, nullable=False)
+    created_at = db.Column(
+        db.DateTime(timezone=True),
+        default=lambda: datetime.now(timezone.utc),
+        nullable=False,
+    )
+    import_status = db.Column(db.String(20), default="pending", nullable=False)
+    rejection_reason = db.Column(db.Text, nullable=True)
+
+    def __repr__(self):
+        return f"<ShopImport {self.id} {self.name!r} status={self.import_status!r}>"
+
+
 class ShopImage(db.Model):
     __tablename__ = "shop_image"
 
@@ -337,4 +364,3 @@ class VerificationOTP(db.Model):
             if exp > now and candidate.attempts_count < 5:
                 return candidate
         return None
-

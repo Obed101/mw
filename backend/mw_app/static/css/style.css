@@ -1309,6 +1309,11 @@ body.mw-page-transitioning .bottom-nav {
     color: white;
 }
 
+.notification-icon.location {
+    background: linear-gradient(135deg, #10b981, #059669);
+    color: white;
+}
+
 .notification-icon.unread {
     position: relative;
 }

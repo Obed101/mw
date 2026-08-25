@@ -873,7 +873,17 @@ def global_search():
         products_res = search_service.search('products', q, {'limit': 5})
         products_hits = products_res.get('hits', [])
 
-        shops_res = search_service.search('shops', q, {'limit': 3})
+        # The public shop detail route only exposes active shops. Keep the
+        # global search results consistent with that route so inactive
+        # indexed records cannot produce links that end in a 404.
+        shops_res = search_service.search(
+            'shops',
+            q,
+            {
+                'limit': 3,
+                'filter': 'is_active = true',
+            },
+        )
         shops_hits = shops_res.get('hits', [])
 
         categories_res = search_service.search('categories', q, {'limit': 3})

@@ -648,6 +648,21 @@
                     </div>
                 </div>
 
+                <!-- Location permission prompt / warning banner -->
+                <div class="alert alert-warning border-0 shadow-sm mt-3 mb-0 d-flex align-items-start gap-3" x-show="locationPermissionDenied" x-cloak>
+                    <i class="bi bi-geo-alt-fill text-warning fs-4 flex-shrink-0 mt-1"></i>
+                    <div class="flex-grow-1">
+                        <div class="fw-bold mb-1">Please allow location access</div>
+                        <div class="small text-muted" x-text="locationPermissionMessage"></div>
+                        <div class="mt-2 d-flex flex-wrap gap-2 align-items-center">
+                            <button type="button" class="btn btn-sm btn-warning fw-semibold rounded-pill px-3" @click="useCurrentLocation()">
+                                <i class="bi bi-crosshair me-1"></i> Allow Location Access
+                            </button>
+                            <span class="small text-muted">Or tap anywhere on the map to pin manually</span>
+                        </div>
+                    </div>
+                </div>
+
                 <div class="map-picker mt-3" x-ref="locationMap"></div>
                 <p class="text-muted small mt-3 mb-0">Tap anywhere on the map to place your shop pin.</p>
 
@@ -890,7 +905,7 @@
                             x-cloak
                         >
                             <i class="bi" :class="generatingAIDescription ? 'bi-hourglass-split' : 'bi-magic'"></i>
-                            <span x-text="generatingAIDescription ? 'Generating...' : 'Write shop description with AI'"></span>
+                            <span x-text="generatingAIDescription ? 'Generating...' : 'Improve with AI'"></span>
                         </button>
                     </div>
                 </div>
@@ -1061,6 +1076,8 @@
             locationLookupError: '',
             locationLookupRequestId: 0,
             detectedLocationText: '',
+            locationPermissionDenied: false,
+            locationPermissionMessage: '',
             selectedImageName: '',
             imagePreviewUrl: '',
             map: null,
@@ -1112,8 +1129,13 @@
                         this.placeMarkerFromValue(this.form.basic.gps);
                     } else {
                         this.refreshMap();
+                        this.autoLocateUser();
                     }
                 });
+            },
+
+            autoLocateUser() {
+                this.useCurrentLocation(true);
             },
 
             detectBusinessType() {
@@ -1172,7 +1194,12 @@
                 console.log('Switching to step:', step);
                 this.activeStep = step;
                 if (step === 'basic') {
-                    this.$nextTick(() => this.refreshMap());
+                    this.$nextTick(() => {
+                        this.refreshMap();
+                        if (!this.form.basic.gps && !this.marker) {
+                            this.autoLocateUser();
+                        }
+                    });
                 }
             },
 
@@ -1367,7 +1394,7 @@
                 if (!parsed || !this.map) {
                     return;
                 }
-                this.placeMarker(parsed[0], parsed[1], false);
+                this.placeMarker(parsed[0], parsed[1], true);
             },
 
             placeMarker(lat, lng, centerMap) {
@@ -1397,7 +1424,7 @@
             setGps(lat, lng, centerMap) {
                 this.form.basic.gps = Number(lat).toFixed(6) + ',' + Number(lng).toFixed(6);
                 if (this.map && centerMap) {
-                    this.map.setView([Number(lat), Number(lng)], 15);
+                    this.map.setView([Number(lat), Number(lng)], 16);
                 }
             },
 
@@ -1416,9 +1443,10 @@
                 }
             },
 
-            useCurrentLocation() {
+            useCurrentLocation(isAuto = false) {
                 if (!navigator.geolocation) {
-                    this.pushFeedback('danger', 'Location access is not available in this browser.');
+                    this.locationPermissionDenied = true;
+                    this.locationPermissionMessage = 'Location access is not available in this browser. Please tap on the map to place your pin manually.';
                     return;
                 }
 
@@ -1426,11 +1454,19 @@
                 navigator.geolocation.getCurrentPosition(
                     (position) => {
                         this.locating = false;
-                        this.placeMarker(position.coords.latitude, position.coords.longitude, true);
+                        this.locationPermissionDenied = false;
+                        this.locationPermissionMessage = '';
+                        const lat = position.coords.latitude;
+                        const lng = position.coords.longitude;
+                        this.placeMarker(lat, lng, true);
+                        if (this.map) {
+                            this.map.setView([lat, lng], 16);
+                        }
                     },
                     (error) => {
                         this.locating = false;
-                        this.pushFeedback('danger', error?.message || 'We could not get your current location.');
+                        this.locationPermissionDenied = true;
+                        this.locationPermissionMessage = this.getGeolocationErrorMessage(error);
                     },
                     {
                         enableHighAccuracy: true,
@@ -1438,6 +1474,19 @@
                         maximumAge: 30000,
                     }
                 );
+            },
+
+            getGeolocationErrorMessage(error) {
+                switch(error?.code) {
+                    case 1: // PERMISSION_DENIED
+                        return 'Location access was not granted. Please allow location access in your browser / device settings so we can automatically zoom to your shop location for easy pinning, or tap the map to place your pin manually.';
+                    case 2: // POSITION_UNAVAILABLE
+                        return 'Location information is currently unavailable. Please verify GPS / network settings or tap the map to place your pin.';
+                    case 3: // TIMEOUT
+                        return 'Location request timed out. Please tap "Use Current Location" to try again, or tap the map to place your pin manually.';
+                    default:
+                        return 'Could not get your current location. Please allow location access or select your location manually on the map.';
+                }
             },
 
             openImagePicker(useCamera) {
@@ -1515,7 +1564,7 @@
 
                 this.generatingAIDescription = true;
                 try {
-                    const url = `/seller/shops/${this.currentShopId}/generate-ai-description?seller_id=${this.sellerId}`;
+                    const url = `/api/seller/shops/${this.currentShopId}/generate-ai-description?seller_id=${this.sellerId}`;
                     const response = await fetch(url, {
                         method: 'POST',
                         headers: {
@@ -1529,7 +1578,7 @@
                         throw new Error(data.message || 'Unable to generate AI description.');
                     }
 
-                    this.pushFeedback('success', data.message || 'AI description generation started. Please wait a moment...');
+                    this.pushFeedback('success', data.message || 'AI has started working. Please wait a moment...');
                     
                     // Poll for the generated description
                     this.pollForAIDescription();

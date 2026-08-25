@@ -62,7 +62,16 @@
                     <div class="d-flex flex-wrap gap-2 mb-3">
                         {% if shop.town %}<span class="badge rounded-pill text-bg-light border"><i class="bi bi-geo-alt me-1"></i>{{ shop.town }}</span>{% endif %}
                         {% if shop.region %}<span class="badge rounded-pill text-bg-light border">{{ shop.region }}</span>{% endif %}
-                        {% if shop.phone %}<a href="tel:{{ shop.phone }}" class="badge rounded-pill text-bg-light border text-decoration-none"><i class="bi bi-telephone me-1"></i>{{ shop.phone }}</a>{% endif %}
+                        <a href="https://wa.me/{{ shop.phone | replace('+', '') | replace(' ', '') }}?text={{ (
+                            "Hello, I found *" ~ shop.name ~ "* on Market Window. "
+                            "I wanted to confirm if your shop is located at *" ~ shop.town ~ "*. "
+                            "I'd like to know more about your products. "
+                        ) | urlencode }}"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            class="badge rounded-pill text-bg-light border text-decoration-none">
+                            <i class="bi bi-whatsapp me-1"></i>Chat on WhatsApp
+                        </a>
                         {% if shop.email %}<a href="mailto:{{ shop.email }}" class="badge rounded-pill text-bg-light border text-decoration-none"><i class="bi bi-envelope me-1"></i>{{ shop.email }}</a>{% endif %}
                     </div>
 

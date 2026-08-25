@@ -73,6 +73,14 @@
         font-size: 0.78rem;
         margin: 0 0.25rem 0.25rem 0;
     }
+    .preview-url {
+        display: inline-block;
+        max-width: 220px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        vertical-align: bottom;
+    }
 </style>
 {% endblock %}
 
@@ -152,6 +160,8 @@
                     </div>
                     <div class="d-flex flex-wrap gap-2">
                         <span class="badge text-bg-primary">Rows: {{ report.total_rows }}</span>
+                        <span class="badge text-bg-success">Staged: {{ report.staging.staged_count }}</span>
+                        <span class="badge text-bg-secondary">Duplicates: {{ report.staging.duplicate_count }}</span>
                         <span class="badge text-bg-warning">Warnings: {{ report.warning_count }}</span>
                         <a href="{{ report.stored_url }}" class="btn btn-outline-secondary btn-sm" target="_blank" rel="noreferrer">
                             <i class="bi bi-download me-1"></i>Original CSV
@@ -174,11 +184,14 @@
                             <tr>
                                 <th style="width: 70px;">Row</th>
                                 <th>Name</th>
+                                <th>Category</th>
+                                <th>Rating</th>
                                 <th>Phone</th>
                                 <th>Address</th>
-                                <th>Google Category</th>
                                 <th>Plus Code</th>
-                                <th>Rating</th>
+                                <th>Image URL</th>
+                                <th>Delivery</th>
+                                <th>Time</th>
                                 <th>Warnings</th>
                             </tr>
                         </thead>
@@ -188,11 +201,18 @@
                             <tr>
                                 <td class="text-muted">{{ row.row_number }}</td>
                                 <td>{{ data.name or 'Not found' }}</td>
-                                <td>{{ data.phone or 'Not found' }}</td>
-                                <td>{{ data.address or data.landmark or 'Not found' }}</td>
-                                <td>{{ data.category or 'Not found' }}</td>
-                                <td>{{ data.plus_code or 'Not found' }}</td>
+                                <td>{{ data.google_category or 'Not found' }}</td>
                                 <td>{{ data.rating if data.rating is not none else 'Not found' }}</td>
+                                <td>{{ data.phone or 'Not found' }}</td>
+                                <td>{{ data.address or 'Not found' }}</td>
+                                <td>{{ data.plus_code or 'Not found' }}</td>
+                                <td>
+                                    {% if data.image_url %}
+                                    <a href="{{ data.image_url }}" target="_blank" rel="noreferrer" class="preview-url">{{ data.image_url }}</a>
+                                    {% else %}Not found{% endif %}
+                                </td>
+                                <td>{{ 'Yes' if data.delivery else 'No' }}</td>
+                                <td>{{ data.time or 'Not found' }}</td>
                                 <td>
                                     {% if data.warnings %}
                                         <div class="d-flex flex-wrap gap-1">

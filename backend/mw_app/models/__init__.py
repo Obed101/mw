@@ -10,7 +10,7 @@ from .user_model import (
 )
 from .role_model import Role, UserRole, ROLE_SUPER_ADMIN, ROLE_ADMIN, ROLE_USER, VALID_ROLES, ADMIN_ROLES
 
-from .shop_model import Shop, ShopImage, UserFollowShop, VerificationOTP, \
+from .shop_model import Shop, ShopImport, ShopImage, UserFollowShop, VerificationOTP, \
     MAX_SHOP_IMAGES, \
     VERIFICATION_STATUS_PENDING, VERIFICATION_STATUS_UNDER_REVIEW, VERIFICATION_STATUS_VERIFIED, \
     VERIFICATION_STATUS_REJECTED, VERIFICATION_STATUS_SUSPENDED, VALID_VERIFICATION_STATUSES
@@ -33,7 +33,7 @@ __all__ = [
     # Models
     'User', 'UserBrowsingHistory', 'AuthToken',
     'Role', 'UserRole',
-    'Shop', 'ShopImage', 'UserFollowShop', 'VerificationOTP',
+    'Shop', 'ShopImport', 'ShopImage', 'UserFollowShop', 'VerificationOTP',
     'Product', 'ProductImage', 'StockUpdate',
     'Category',
     'ServiceKeyword',
