@@ -23,6 +23,7 @@ from .services import (
 )
 from .forms import UserEditForm, ShopAdminEditForm, ProductAdminEditForm
 from ..utils.threading_utils import run_in_background
+from ..utils.phone_utils import normalize_ghana_phone
 
 mw_admin_bp = Blueprint('mw_admin_bp', __name__, url_prefix='/admin')
 
@@ -685,7 +686,7 @@ def edit_shop(shop_id):
         shop.google_category = form.google_category.data.strip() if form.google_category.data else None
         shop.description = form.description.data
         shop.business_type = form.business_type.data
-        shop.phone = form.phone.data.strip() if form.phone.data else None
+        shop.phone = normalize_ghana_phone(form.phone.data)
         shop.email = form.email.data.strip() if form.email.data else None
         shop.address = form.address.data.strip() if form.address.data else None
         shop.region = form.region.data.strip() if form.region.data else None

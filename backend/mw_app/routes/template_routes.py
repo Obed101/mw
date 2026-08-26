@@ -2134,6 +2134,7 @@ def wishlist():
                     'primary_image_url': product.primary_image_url,
                     'shop_id': product.shop_id,
                     'shop_name': shop.name if shop else 'Unknown Shop',
+                    'shop_phone': shop.phone if shop else None,
                     'favorited_at': favorite.favorited_at.isoformat() if favorite.favorited_at else None
                 }
                 products.append(product_dict)

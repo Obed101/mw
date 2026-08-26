@@ -82,6 +82,32 @@
         --bs-btn-font-size: 0.68rem;
     }
 
+    .wishlist-shell .wishlist-card-link {
+        display: block;
+        color: inherit;
+        text-decoration: none;
+    }
+
+    .wishlist-shell .wishlist-actions {
+        width: 100%;
+    }
+
+    .wishlist-shell .wishlist-actions .btn-group {
+        display: flex;
+        width: 100%;
+        overflow: hidden;
+        border-radius: 999px;
+    }
+
+    .wishlist-shell .wishlist-actions .btn-group .btn {
+        flex: 1 1 0;
+        min-height: 2rem;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.25rem;
+    }
+
     .wishlist-shell .wishlist-price,
     .wishlist-shell .wishlist-item .h5.text-primary {
         font-size: 0.9rem;
@@ -119,13 +145,13 @@
     <!-- Tabs -->
     <ul class="nav nav-tabs mb-4" id="wishlistTabs" role="tablist">
         <li class="nav-item" role="presentation">
-            <button class="nav-link active" id="shops-tab" data-bs-toggle="tab" data-bs-target="#shops" type="button" role="tab">
-                <i class="bi bi-shop me-2"></i>Shops <span class="badge bg-primary-subtle text-primary-emphasis ms-1">{{ shops|length if shops else 0 }}</span>
+            <button class="nav-link active" id="products-tab" data-bs-toggle="tab" data-bs-target="#products" type="button" role="tab">
+                <i class="bi bi-box-seam me-2"></i>Products <span class="badge bg-primary-subtle text-primary-emphasis ms-1">{{ products|length if products else 0 }}</span>
             </button>
         </li>
         <li class="nav-item" role="presentation">
-            <button class="nav-link" id="products-tab" data-bs-toggle="tab" data-bs-target="#products" type="button" role="tab">
-                <i class="bi bi-box-seam me-2"></i>Products <span class="badge bg-primary-subtle text-primary-emphasis ms-1">{{ products|length if products else 0 }}</span>
+            <button class="nav-link" id="shops-tab" data-bs-toggle="tab" data-bs-target="#shops" type="button" role="tab">
+                <i class="bi bi-shop me-2"></i>Shops <span class="badge bg-primary-subtle text-primary-emphasis ms-1">{{ shops|length if shops else 0 }}</span>
             </button>
         </li>
     </ul>
@@ -133,12 +159,13 @@
     <!-- Tab Content -->
     <div class="tab-content" id="wishlistTabContent">
         <!-- Shops Tab -->
-        <div class="tab-pane fade show active" id="shops" role="tabpanel">
+        <div class="tab-pane fade" id="shops" role="tabpanel">
             {% if shops %}
             <div class="row wishlist-grid" id="followed-shops">
                 {% for shop in shops %}
                 <div class="col-6 col-md-4 col-lg-3 col-xl-2 followed-shop-item" data-shop-id="{{ shop.id }}">
                     <div class="card border-0 shadow-sm wishlist-card">
+                        <a href="{{ url_for('main_bp.shop_detail', shop_id=shop.id) }}" class="wishlist-card-link">
                         <div class="position-relative">
                             <img src="{{ shop.primary_image_url or url_for('static', filename='images/mw_logo_trans.png') }}" 
                                  alt="{{ shop.name }}" 
@@ -168,25 +195,27 @@
                             </div>
                             {% endif %}
                             
-                            <div class="d-flex justify-content-between align-items-center mt-auto wishlist-actions">
-                                <div class="btn-group btn-group-sm">
-                                {% if shop.phone %}
-                                <a href="tel:{{ shop.phone }}" class="btn btn-outline-secondary" title="Call Shop">
-                                    <i class="bi bi-telephone"></i>
-                                </a>
-                                {% endif %}
-                                <a href="{{ url_for('main_bp.shop_detail', shop_id=shop.id) }}" class="btn btn-outline-primary" title="Visit Shop">
-                                    <i class="bi bi-eye"></i>
-                                </a>
+                        </div>
+                        </a>
+                        <div class="px-2 pb-2 wishlist-actions">
+                            <div class="btn-group btn-group-sm">
                                 <button class="btn btn-outline-danger"
                                         hx-post="{{ url_for('buyer_bp.follow_shop', shop_id=shop.id, wishlist=1) }}"
                                         hx-target="closest .followed-shop-item"
                                         hx-swap="outerHTML"
                                         hx-confirm="Unfollow this shop?"
-                                        title="Unfollow shop">
-                                    <i class="bi bi-trash"></i>
+                                        title="Remove shop">
+                                    <i class="bi bi-x-lg"></i><span>Remove</span>
                                 </button>
-                                </div>
+                                {% if shop.phone %}
+                                <a href="tel:{{ shop.phone }}" class="btn btn-outline-secondary" title="Call Shop">
+                                    <i class="bi bi-telephone"></i><span>Call</span>
+                                </a>
+                                {% else %}
+                                <button type="button" class="btn btn-outline-secondary" disabled title="Phone unavailable">
+                                    <i class="bi bi-telephone"></i><span>Call</span>
+                                </button>
+                                {% endif %}
                             </div>
                         </div>
                     </div>
@@ -206,12 +235,13 @@
         </div>
 
         <!-- Products Tab -->
-        <div class="tab-pane fade" id="products" role="tabpanel">
+        <div class="tab-pane fade show active" id="products" role="tabpanel">
             {% if products %}
             <div class="row wishlist-grid" id="wishlist-products">
                 {% for product in products %}
                 <div class="col-6 col-md-4 col-lg-3 col-xl-2 wishlist-item" data-product-id="{{ product.id }}">
                     <div class="card border-0 shadow-sm wishlist-card">
+                        <a href="{{ url_for('buyer_bp.product_detail', product_id=product.id) }}" class="wishlist-card-link">
                         <div class="position-relative">
                             <img src="{{ product.primary_image_url or url_for('static', filename='images/mw_logo_trans.png') }}" 
                                  alt="{{ product.name }}" 
@@ -229,24 +259,29 @@
                                 {% endif %}
                             </div>
                             
-                            <div class="d-flex justify-content-between align-items-center mt-auto wishlist-actions">
+                            <div class="d-flex justify-content-between align-items-center mt-auto">
                                 <span class="h5 text-primary mb-0">GH₵{{ "%.2f"|format(product.price) }}</span>
-                                <div class="btn-group btn-group-sm">
-                                    <a href="{{ url_for('main_bp.shop_detail', shop_id=product.shop_id) }}" class="btn btn-outline-secondary" title="View Shop">
-                                        <i class="bi bi-shop"></i>
-                                    </a>
-                                    <a href="{{ url_for('buyer_bp.product_detail', product_id=product.id) }}" class="btn btn-outline-primary" title="View Product">
-                                        <i class="bi bi-eye"></i>
-                                    </a>
-                                    <button class="btn btn-outline-danger"
-                                            hx-post="{{ url_for('buyer_bp.favorite_product', product_id=product.id, wishlist=1) }}"
-                                            hx-target="closest .wishlist-item"
-                                            hx-swap="outerHTML"
-                                            hx-confirm="Remove from wishlist?"
-                                            title="Remove from wishlist">
-                                        <i class="bi bi-trash"></i>
-                                    </button>
-                                </div>
+                        </div>
+                        </a>
+                        <div class="px-2 pb-2 wishlist-actions">
+                            <div class="btn-group btn-group-sm">
+                                <button class="btn btn-outline-danger"
+                                        hx-post="{{ url_for('buyer_bp.favorite_product', product_id=product.id, wishlist=1) }}"
+                                        hx-target="closest .wishlist-item"
+                                        hx-swap="outerHTML"
+                                        hx-confirm="Remove from wishlist?"
+                                        title="Remove product">
+                                    <i class="bi bi-x-lg"></i><span>Remove</span>
+                                </button>
+                                {% if product.shop_phone %}
+                                <a href="tel:{{ product.shop_phone }}" class="btn btn-outline-secondary" title="Call Shop">
+                                    <i class="bi bi-telephone"></i><span>Call</span>
+                                </a>
+                                {% else %}
+                                <button type="button" class="btn btn-outline-secondary" disabled title="Phone unavailable">
+                                    <i class="bi bi-telephone"></i><span>Call</span>
+                                </button>
+                                {% endif %}
                             </div>
                         </div>
                     </div>
