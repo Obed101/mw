@@ -10,6 +10,7 @@ from ..utils.threading_utils import run_in_background
 from ..utils.tracking import track_event_async
 from ..services.ai_tasks import background_generate_shop_description
 from ..services.geocoding_service import reverse_geocode
+from ..utils.cloudinary_images import process_and_upload_image
 from datetime import datetime, timezone
 
 seller_bp = Blueprint('seller_bp', __name__, url_prefix='/seller')
@@ -208,6 +209,7 @@ def _serialize_product(product):
         'is_low_stock': product.is_low_stock(),
         'is_out_of_stock': product.is_out_of_stock(),
         'image_urls': product.image_urls,
+        'image_public_ids': [record.cloudinary_public_id for record in product.image_records],
         'primary_image_url': product.primary_image_url,
         'updated_at': product.updated_at.isoformat() if product.updated_at else None,
     }
@@ -363,7 +365,7 @@ def _apply_product_updates(product, data):
         if raw_images is None:
             raw_images = data.get('image_keys')
         image_keys = _parse_key_list(raw_images)
-        product.replace_image_urls(image_keys)
+        product.replace_image_urls(image_keys, data.get('image_public_ids'))
 
     return None
 
@@ -1002,20 +1004,23 @@ def upload_product_image():
         upload_dir = Path(current_app.static_folder) / 'uploads' / 'products'
         upload_dir.mkdir(parents=True, exist_ok=True)
 
-        stored_name = f"product-{uuid4().hex}{suffix}"
-        file.save(upload_dir / stored_name)
-
-        image_url = url_for('static', filename=f'uploads/products/{stored_name}')
+        upload = process_and_upload_image(
+            file,
+            'market_window/products/images',
+            max_dimensions=(1200, 1200),
+            entity_type='product',
+        )
         return jsonify({
             'success': True,
-            'image_url': image_url
+            'image_url': upload['secure_url'],
+            'image_public_id': upload['public_id']
         }), 200
 
     except Exception as e:
+        current_app.logger.exception('Product image upload failed')
         return jsonify({
             'success': False,
-            'message': 'Error uploading image',
-            'error': str(e)
+            'message': 'Image upload failed. Please try again.'
         }), 500
 
 
@@ -1118,7 +1123,7 @@ def add_product():
             image_keys = [DEFAULT_PRODUCT_PLACEHOLDER_IMAGE]
         else:
             image_keys = _parse_key_list(image_input)
-        product.replace_image_urls(image_keys)
+        product.replace_image_urls(image_keys, data.get('image_public_ids'))
 
         db.session.add(product)
         db.session.commit()

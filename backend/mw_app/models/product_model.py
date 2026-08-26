@@ -4,7 +4,7 @@ from ..extensions import db
 from sqlalchemy.orm import validates
 
 
-MAX_PRODUCT_IMAGES = 10
+MAX_PRODUCT_IMAGES = 5
 
 
 def _normalize_image_keys(image_keys):
@@ -101,17 +101,19 @@ class Product(db.Model):
         urls = self.image_urls
         return urls[0] if urls else None
 
-    def replace_image_urls(self, image_keys):
+    def replace_image_urls(self, image_keys, cloudinary_public_ids=None):
         normalized = _normalize_image_keys(image_keys)
         max_allowed = 1 if self.type_ == 'service' else 5
         if len(normalized) > max_allowed:
             raise ValueError(f"A {self.type_} can have at most {max_allowed} images")
 
         self.image_records.clear()
+        public_ids = list(cloudinary_public_ids) if isinstance(cloudinary_public_ids, (list, tuple)) else []
         for idx, image_key in enumerate(normalized):
             self.image_records.append(
                 ProductImage(
                     storage_key=image_key,
+                    cloudinary_public_id=public_ids[idx] if idx < len(public_ids) else None,
                     sort_order=idx,
                     is_primary=(idx == 0),
                 )
@@ -178,6 +180,7 @@ class ProductImage(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     product_id = db.Column(db.Integer, db.ForeignKey("product.id", ondelete="CASCADE"), nullable=False, index=True)
     storage_key = db.Column(db.String(512), nullable=False)
+    cloudinary_public_id = db.Column(db.String(255), nullable=True)
     sort_order = db.Column(db.Integer, nullable=False, default=0, index=True)
     is_primary = db.Column(db.Boolean, nullable=False, default=False, index=True)
     created_at = db.Column(db.DateTime(timezone=True), default=datetime.now(timezone.utc), nullable=False)

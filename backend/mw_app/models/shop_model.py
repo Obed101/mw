@@ -120,7 +120,11 @@ class Shop(db.Model):
     @property
     def primary_image_url(self):
         urls = self.image_urls
-        return urls[0] if urls else None
+        if urls and not (
+            len(urls) == 1 and urls[0].endswith('/mw_logo_trans.png')
+        ):
+            return urls[0]
+        return self.google_image_url or (urls[0] if urls else None)
 
     def replace_image_urls(self, image_keys):
         normalized = _normalize_image_keys(image_keys)
@@ -191,6 +195,7 @@ class ShopImage(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     shop_id = db.Column(db.Integer, db.ForeignKey("shop.id", ondelete="CASCADE"), nullable=False, index=True)
     storage_key = db.Column(db.String(512), nullable=False)
+    cloudinary_public_id = db.Column(db.String(255), nullable=True)
     sort_order = db.Column(db.Integer, nullable=False, default=0, index=True)
     is_primary = db.Column(db.Boolean, nullable=False, default=False, index=True)
     created_at = db.Column(db.DateTime(timezone=True), default=datetime.now(timezone.utc), nullable=False)

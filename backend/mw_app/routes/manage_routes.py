@@ -4,6 +4,7 @@ from ..extensions import db
 from ..models import Shop, Product, Category, USER_ROLE_ADMIN, CATEGORY_LEVEL_LEAF
 from ..models.product_model import ProductImage
 from ..utils.helpers import shop_owner_required, get_managed_shop
+from ..utils.cloudinary_images import process_and_upload_image, delete_image
 from ..services.ai_service import AIService
 from datetime import datetime, timezone
 from flask import current_app
@@ -320,18 +321,13 @@ def edit_product(product_id):
     return render_template('manage/partials/product_row_edit.html', product=product, categories=categories)
 
 def _save_product_image(file_storage, product_id):
-    """Persist an uploaded image file and return its static URL."""
-    filename = secure_filename(file_storage.filename or '')
-    suffix   = Path(filename).suffix.lower()
-    _mime_map = {'image/jpeg': '.jpg', 'image/png': '.png',
-                 'image/webp': '.webp', 'image/gif': '.gif'}
-    if suffix not in {'.jpg', '.jpeg', '.png', '.webp', '.gif'}:
-        suffix = _mime_map.get(file_storage.mimetype or '', '.jpg')
-    upload_dir = Path(current_app.static_folder) / 'uploads' / 'products'
-    upload_dir.mkdir(parents=True, exist_ok=True)
-    stored_name = f"product-{product_id}-{uuid4().hex}{suffix}"
-    file_storage.save(upload_dir / stored_name)
-    return url_for('static', filename=f'uploads/products/{stored_name}')
+    return process_and_upload_image(
+        file_storage,
+        'market_window/products/images',
+        max_dimensions=(1200, 1200),
+        entity_type='product',
+        entity_id=product_id,
+    )
 
 
 @manage_bp.route('/products/<int:product_id>/images', methods=['POST'])
@@ -347,6 +343,7 @@ def update_product_images(product_id):
         abort(403)
 
     incoming = []
+    incoming_public_ids = {}
     upload_errors = []
     for i in range(1, 6):
         file         = request.files.get(f'file_{i}')
@@ -355,8 +352,9 @@ def update_product_images(product_id):
 
         if file and file.filename:
             try:
-                url = _save_product_image(file, product_id)
-                incoming.append(url)
+                upload = _save_product_image(file, product_id)
+                incoming.append(upload['secure_url'])
+                incoming_public_ids[upload['secure_url']] = upload['public_id']
             except Exception as exc:
                 upload_errors.append(f'Slot {i}: {exc}')
         elif remove == '1':
@@ -365,10 +363,9 @@ def update_product_images(product_id):
             incoming.append(existing_url)
 
     if upload_errors:
+        current_app.logger.warning('Product image upload errors for product %s: %s', product_id, upload_errors)
         return (
-            f'<div class="alert alert-danger">'
-            + '<br>'.join(upload_errors)
-            + '</div>',
+            '<div class="alert alert-danger">Image upload failed. Please check the files and try again.</div>',
             400,
         )
 
@@ -389,8 +386,11 @@ def update_product_images(product_id):
         existing_by_url = {rec.storage_key: rec for rec in list(product.image_records)}
         incoming_set    = set(incoming)
 
+        removed_public_ids = []
         for url, rec in list(existing_by_url.items()):
             if url not in incoming_set:
+                if rec.cloudinary_public_id:
+                    removed_public_ids.append(rec.cloudinary_public_id)
                 product.image_records.remove(rec)
 
         for idx, url in enumerate(incoming):
@@ -400,14 +400,22 @@ def update_product_images(product_id):
                 rec.is_primary = (idx == 0)
             else:
                 product.image_records.append(
-                    ProductImage(storage_key=url, sort_order=idx, is_primary=(idx == 0))
+                    ProductImage(
+                        storage_key=url,
+                        cloudinary_public_id=incoming_public_ids.get(url),
+                        sort_order=idx,
+                        is_primary=(idx == 0),
+                    )
                 )
 
         product.updated_at = datetime.now(timezone.utc)
         db.session.commit()
+        for public_id in removed_public_ids:
+            delete_image(public_id)
     except Exception as exc:
         db.session.rollback()
-        return f'<div class="alert alert-danger">{exc}</div>', 400
+        current_app.logger.exception('Product image record update failed for product %s', product_id)
+        return '<div class="alert alert-danger">Image update failed. Please try again.</div>', 400
 
     return render_template('manage/partials/product_row.html', product=product)
 

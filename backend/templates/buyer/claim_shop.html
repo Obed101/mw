@@ -251,7 +251,8 @@
                                         Please verify your phone or email above to check eligibility.
                                         {% else %}
                                         Your verified phone/email contact does not match the stored contact for <strong>{{ shop.name }}</strong>.
-                                        Only users controlling the exact matching contact number or email can claim this listing.
+                                        Only users controlling the exact matching contact number or email can claim this listing. <br>
+                                        Need help? <a href="{{ url_for('support_bp.contact') }}">Leave a message for us</a>.
                                         {% endif %}
                                     </p>
                                 </div>
