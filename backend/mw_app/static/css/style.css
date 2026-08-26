@@ -1066,6 +1066,30 @@ body.mw-page-transitioning .bottom-nav {
     color: #2563eb;
 }
 
+.district-search-switch {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    width: max-content;
+    padding: 0.4rem 0.8rem 0.4rem 0.55rem;
+    border: 1px solid rgba(99, 102, 241, 0.18);
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.78);
+    box-shadow: 0 6px 18px rgba(30, 41, 59, 0.08);
+    backdrop-filter: blur(8px);
+}
+
+.district-search-switch .form-check-input {
+    width: 2.2em;
+    margin: 0;
+    cursor: pointer;
+}
+
+.district-search-switch .form-check-input:checked {
+    background-color: #6366f1;
+    border-color: #6366f1;
+}
+
 .mw-toast.is-leaving {
     animation: toastOut 0.35s ease-in forwards;
 }

@@ -61,7 +61,7 @@
                         {% endif %}
                     </div>
 
-                    <p class="text-muted mb-3">{{ shop.description or "Shop with listed products." }}</p>
+                    <p class="text-gradient mb-3">{{ shop.description or "Standard " ~ (shop.google_category or 'shop') ~ ". Contact owner for details" }}</p>
 
                     <div class="d-flex flex-wrap gap-2 mb-3">
                         {% if shop.town %}<span class="badge rounded-pill text-bg-light border"><i class="bi bi-geo-alt me-1"></i>{{ shop.town }}</span>{% endif %}

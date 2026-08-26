@@ -169,7 +169,7 @@
         background: var(--gradient-primary);
         color: white;
         border: none;
-        border-radius: 12px;
+        border-radius: 32px;
         font-weight: 700;
         padding: 12px;
         display: flex;
@@ -360,7 +360,7 @@
         <div class="col-12 col-lg-6">
             <div class="product-info-section">
                 <div class="price-tag">GH₵ {{ "%.2f"|format(product.price) }}</div>
-                <h1 class="product-title">{{ product.name }}</h1>
+                <h1 class="product-title text-gradient text-capitalize">{{ product.name }}</h1>
 
                 <!-- Shop Card - Make this whole card a link to the shop detail page -->
                 <a href="{{ url_for('main_bp.shop_detail', shop_id=shop.id) }}" class="text-decoration-none text-dark">
@@ -395,9 +395,9 @@
 
                 <!-- Description -->
                 <div class="detail-section" x-data="{ expanded: false }">
-                    <h4 class="section-title"><i class="bi bi-info-circle"></i> Description</h4>
-                    <div class="description-text" :class="expanded ? '' : 'text-truncate-3'">
-                        {{ product.description or 'No description available.' }}
+                    <h4 class="section-title fw-light"><i class="bi bi-info-circle"></i> Description</h4>
+                    <div class="description-text text-gradient" :class="expanded ? '' : 'text-truncate-3'">
+                        {{ product.description or 'Quality product. Contact the seller for more details.' }}
                     </div>
                     {% if product.description and product.description|length > 150 %}
                     <button class="btn btn-link btn-sm p-0 mt-2 text-primary text-decoration-none" @click="expanded = !expanded">

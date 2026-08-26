@@ -1137,8 +1137,12 @@ def categories():
     """Browse categories page"""
     explore_query = request.args.get('q', '').strip()
     search_term = request.args.get('search', '').strip()
-    sort_by = request.args.get('sort_by', 'name')
-    with_products = request.args.get('with_products', '').lower() in ('1', 'true', 'yes', 'on')
+    sort_by = request.args.get('sort_by', 'product_count_desc')
+    with_products_value = request.args.get('with_products')
+    with_products = (
+        True if with_products_value is None
+        else with_products_value.lower() in ('1', 'true', 'yes', 'on')
+    )
     selected_category_id = request.args.get('category_id', type=int)
     shop_id = request.args.get('shop_id', type=int)
 
@@ -1796,9 +1800,14 @@ def seller_shop():
     if redirect_response:
         return redirect_response
 
-    shop = _resolve_setup_shop(current_user) or _resolve_owned_shop(
+    requested_shop_id = request.args.get('shop_id', type=int)
+    shop = _resolve_owned_shop(current_user, requested_shop_id) if requested_shop_id else None
+    if shop and requested_shop_id:
+        session['managed_shop_id'] = shop.id
+        session['active_shop_id'] = shop.id
+    shop = shop or _resolve_setup_shop(current_user) or _resolve_owned_shop(
         current_user,
-        request.args.get('shop_id', type=int),
+        requested_shop_id,
         allow_default=True,
     )
     map_embed_url = _build_shop_map_embed_url(shop) if shop else None

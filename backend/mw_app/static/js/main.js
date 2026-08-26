@@ -413,15 +413,22 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 
-    document.querySelectorAll(".mw-toast").forEach((toast, index) => {
-        const delay = Number(toast.dataset.autodismiss || 15000) + (index * 120);
-        window.setTimeout(() => dismissToast(toast), delay);
+    function initializeToasts(root = document) {
+        root.querySelectorAll(".mw-toast").forEach((toast, index) => {
+            if (toast.dataset.toastInitialized) return;
+            toast.dataset.toastInitialized = "true";
+            const delay = Number(toast.dataset.autodismiss || 15000) + (index * 120);
+            window.setTimeout(() => dismissToast(toast), delay);
 
-        const closeButton = toast.querySelector(".mw-toast-close");
-        if (closeButton) {
-            closeButton.addEventListener("click", () => dismissToast(toast));
-        }
-    });
+            const closeButton = toast.querySelector(".mw-toast-close");
+            if (closeButton) {
+                closeButton.addEventListener("click", () => dismissToast(toast));
+            }
+        });
+    }
+
+    initializeToasts();
+    document.body.addEventListener("htmx:afterSwap", (event) => initializeToasts(event.target));
 
     document.querySelectorAll(".auth-google-btn").forEach((button) => {
         button.addEventListener("click", () => {

@@ -19,6 +19,7 @@ def _product_to_doc(product):
         "price": product.price,
         "shop_id": product.shop_id,
         "shop_name": product.shop.name if product.shop else None,
+        "primary_image_url": product.primary_image_url,
         "category_id": product.category_id,
         "category_name": product.category.name if product.category else None,
         "is_active": product.is_active,
@@ -40,6 +41,7 @@ def _shop_to_doc(shop):
         "google_category": shop.google_category,
         "location": shop.region,  # assuming region field represents location
         "town": shop.town,
+        "primary_image_url": shop.primary_image_url,
         "business_type": _get_value(shop, 'business_type'),
         "is_verified": _get_value(shop, 'is_verified'),
         "is_active": shop.is_active,

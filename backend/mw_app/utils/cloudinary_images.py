@@ -12,6 +12,7 @@ _ALLOWED_FORMATS = {'JPEG', 'PNG', 'WEBP'}
 
 def _cloudinary():
     import cloudinary
+    import cloudinary.uploader
 
     cloudinary.config(
         cloud_name=os.getenv('CLOUDINARY_CLOUD_NAME'),
@@ -60,7 +61,7 @@ def process_and_upload_image(file_storage, folder, max_dimensions=(1600, 1200), 
             use_filename=False,
         )
     except Exception as exc:
-        raise RuntimeError(f'Cloudinary upload failed for {entity_type} {entity_id or "unknown"}') from exc
+        raise RuntimeError(f'{exc} Cloudinary upload failed for {entity_type} {entity_id or "unknown"}') from exc
 
     return {
         'secure_url': result['secure_url'],

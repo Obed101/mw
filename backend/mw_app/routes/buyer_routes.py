@@ -863,7 +863,29 @@ def global_search():
     """Global search across products, shops, and categories using MeiliSearch."""
     q = request.args.get('q', '').strip()
     inline = request.args.get('layout', '').strip().lower() == 'inline'
+    within_district = request.args.get('within_district', '').lower() in ('1', 'true', 'yes', 'on')
+    search_district = None
+    location_prompt = False
+    if within_district:
+        if current_user.is_authenticated and current_user.district:
+            search_district = current_user.district.strip()
+        else:
+            # The search response is an HTMX fragment, so pass the prompt to
+            # that fragment rather than relying on the base template's flash
+            # queue, which is only rendered during a full page response.
+            location_prompt = True
     if len(q) < 2:
+        if location_prompt:
+            return render_template(
+                'public/partials/global_search_results.html',
+                products=[],
+                shops=[],
+                categories=[],
+                query=q,
+                inline=inline,
+                location_prompt=True,
+                location_add_url=url_for('main_bp.home_location_setup'),
+            )
         return ""
 
     products_hits = []
@@ -873,6 +895,18 @@ def global_search():
     try:
         products_res = search_service.search('products', q, {'limit': 50})
         products_hits = products_res.get('hits', [])
+        # Hydrate image URLs from the database so older product index records
+        # also show their current image without requiring an index rebuild.
+        product_ids = [hit.get('id') for hit in products_hits if hit.get('id') is not None]
+        if product_ids:
+            products_by_id = {
+                str(product.id): product
+                for product in Product.query.filter(Product.id.in_(product_ids)).all()
+            }
+            for hit in products_hits:
+                product = products_by_id.get(str(hit.get('id')))
+                if product:
+                    hit['primary_image_url'] = product.primary_image_url
 
         # The public shop detail route only exposes active shops. Keep the
         # global search results consistent with that route so inactive
@@ -899,6 +933,7 @@ def global_search():
                 shop = shops_by_id.get(str(hit.get('id')))
                 if shop:
                     hit['town'] = shop.town
+                    hit['primary_image_url'] = shop.primary_image_url
 
         categories_res = search_service.search('categories', q, {'limit': 30})
         categories_hits = categories_res.get('hits', [])
@@ -931,9 +966,38 @@ def global_search():
         ).all()
 
         # Format exactly like MeiliSearch hits for the template
-        products_hits = [{'id': p.id, 'name': p.name, 'price': p.price, 'primary_image_url': p.primary_image_url, 'shop_name': p.shop.name if p.shop else ''} for p in products_db]
+        products_hits = [{'id': p.id, 'name': p.name, 'price': p.price, 'primary_image_url': p.primary_image_url, 'shop_id': p.shop_id, 'shop_name': p.shop.name if p.shop else ''} for p in products_db]
         shops_hits = [{'id': s.id, 'name': s.name, 'town': s.town, 'primary_image_url': s.primary_image_url} for s in shops_db]
         categories_hits = [{'id': c.id, 'name': c.name} for c in categories_db]
+
+    if search_district:
+        # Shop documents and product documents do not consistently carry the
+        # district in older indexes. Resolve the matching shop IDs from the
+        # database so the filter remains correct without requiring a rebuild.
+        district_shops = Shop.query.filter(
+            Shop.is_active.is_(True),
+            Shop.district.ilike(search_district),
+        ).all()
+        district_shop_ids = {str(shop.id) for shop in district_shops}
+        shops_hits = [
+            hit for hit in shops_hits
+            if str(hit.get('id')) in district_shop_ids
+        ]
+        product_shop_ids = {
+            str(hit.get('shop_id')) for hit in products_hits
+            if hit.get('shop_id') is not None
+        }
+        product_shop_map = {
+            str(shop.id): shop
+            for shop in Shop.query.filter(Shop.id.in_(product_shop_ids)).all()
+        } if product_shop_ids else {}
+        products_hits = [
+            hit for hit in products_hits
+            if product_shop_map.get(str(hit.get('shop_id')))
+            and product_shop_map[str(hit.get('shop_id'))].is_active
+            and product_shop_map[str(hit.get('shop_id'))].district
+            and product_shop_map[str(hit.get('shop_id'))].district.strip().lower() == search_district.lower()
+        ]
 
     save_search_query(
         q,
@@ -948,7 +1012,9 @@ def global_search():
         shops=shops_hits,
         categories=categories_hits,
         query=q,
-        inline=inline
+        inline=inline,
+        location_prompt=location_prompt,
+        location_add_url=url_for('main_bp.home_location_setup'),
     )
 
 @buyer_bp.route("/products/compare")

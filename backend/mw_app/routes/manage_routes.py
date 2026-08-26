@@ -95,7 +95,7 @@ def switch_shop(shop_id):
 @shop_owner_required
 def products():
     """Main product management page"""
-    shop, error = get_managed_shop(current_user)
+    shop, error = get_managed_shop(current_user, request.args.get('shop_id', type=int))
     if error:
         flash(error, "danger")
         return redirect(url_for('main_bp.index'))
@@ -364,8 +364,9 @@ def update_product_images(product_id):
 
     if upload_errors:
         current_app.logger.warning('Product image upload errors for product %s: %s', product_id, upload_errors)
+        print("upload error = ", upload_errors)
         return (
-            '<div class="alert alert-danger">Image upload failed. Please check the files and try again.</div>',
+            '<div class="alert alert-danger">Upload failed. ' + upload_errors[0] + '</div>',
             400,
         )
 

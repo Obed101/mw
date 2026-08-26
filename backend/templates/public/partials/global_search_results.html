@@ -1,5 +1,18 @@
 {% set total_results = (products|length if products else 0) + (shops|length if shops else 0) + (categories|length if categories else 0) %}
 
+{% if location_prompt %}
+<div class="mw-toast-container search-location-toast-container" aria-live="polite" aria-atomic="true">
+    <div class="mw-toast mw-toast-warning" data-autodismiss="15000" role="status">
+        <div class="mw-toast-icon"><i class="bi bi-exclamation-triangle-fill"></i></div>
+        <div class="mw-toast-message">
+            Set your home district to search within your district.
+            <a href="{{ location_add_url }}" class="btn btn-sm btn-warning rounded-pill ms-2 px-3">Add</a>
+        </div>
+        <button type="button" class="mw-toast-close" aria-label="Dismiss notification"><i class="bi bi-x-lg"></i></button>
+    </div>
+</div>
+{% endif %}
+
 {% if inline %}
 <section class="explore-search-results mb-4">
     {% if products or shops or categories %}
