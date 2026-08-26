@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
+from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, current_app
 from flask_login import login_required, current_user
 from sqlalchemy.orm import joinedload
 from ..extensions import db
@@ -15,6 +15,8 @@ from ..models import (
     SUPPORT_NOTIFICATION_TYPES,
 )
 from datetime import datetime, timezone
+import threading
+from ..services import email_service
 
 support_bp = Blueprint('support_bp', __name__)
 
@@ -79,6 +81,64 @@ def _notify_admins_of_support_message(conversation, actor, message_text, is_new_
     )
 
 
+def _send_admin_email_if_unanswered(conversation_id, user_message_id):
+    """Email admins only when the triggering user message is still unanswered."""
+    conversation = SupportConversation.query.get(conversation_id)
+    user_message = SupportMessage.query.get(user_message_id)
+    if not conversation or not user_message:
+        return
+
+    admin_replied = SupportMessage.query.filter(
+        SupportMessage.conversation_id == conversation_id,
+        SupportMessage.is_admin.is_(True),
+        SupportMessage.created_at > user_message.created_at,
+    ).first()
+    if admin_replied:
+        return
+
+    recipients = [
+        email for email, in User.query.with_entities(User.email).filter(
+            User.role == USER_ROLE_ADMIN,
+            User.email.isnot(None),
+        ).all()
+        if email
+    ]
+    if not recipients:
+        return
+
+    subject = conversation.subject or f'Ticket #{conversation.id}'
+    email_service.send_email(
+        subject=f'Unanswered support ticket: {subject}',
+        recipients=recipients,
+        html_body=(
+            f'<p>No admin has replied to support ticket <strong>{subject}</strong> '
+            f'within five minutes.</p><p>{user_message.message}</p>'
+        ),
+    )
+
+
+def _schedule_admin_email_fallback(conversation, user_message):
+    app = current_app._get_current_object()
+    timer = threading.Timer(
+        300,
+        _run_admin_email_fallback,
+        args=(app, conversation.id, user_message.id),
+    )
+    timer.daemon = True
+    timer.start()
+
+
+def _run_admin_email_fallback(app, conversation_id, user_message_id):
+    with app.app_context():
+        try:
+            _send_admin_email_if_unanswered(conversation_id, user_message_id)
+        except Exception:
+            current_app.logger.exception(
+                'Failed to send unanswered support ticket email for conversation %s',
+                conversation_id,
+            )
+
+
 def _mark_admin_support_notifications_read(conversation_id):
     notifications = Notification.query.filter(
         Notification.recipient_user_id == current_user.id,
@@ -141,6 +201,7 @@ def contact():
         )
             
         db.session.commit()
+        _schedule_admin_email_fallback(conversation, msg)
 
         if _is_htmx_request():
             return render_template('public/partials/contact_success.html')
@@ -203,6 +264,7 @@ def my_support_reply(id):
     )
         
     db.session.commit()
+    _schedule_admin_email_fallback(conversation, msg)
     
     if _is_htmx_request():
         return render_template('support/partials/message_bubble.html', message=msg, is_admin=False)

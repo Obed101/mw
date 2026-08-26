@@ -21,10 +21,11 @@ from ..models import (
     UserFollowShop,
 )
 from ..utils.location import get_user_location, haversine_distance_expr, NEAR_YOU_KM
+from ..services.analytics_service import save_search_query
 
 buyer_bp = Blueprint('buyer_bp', __name__, url_prefix='/explore')
-SHOPS_PER_PAGE = 3
-PRODUCTS_PER_PAGE = 12
+SHOPS_PER_PAGE = 10
+PRODUCTS_PER_PAGE = 20
 
 
 def _is_htmx_request():
@@ -933,6 +934,13 @@ def global_search():
         products_hits = [{'id': p.id, 'name': p.name, 'price': p.price, 'primary_image_url': p.primary_image_url, 'shop_name': p.shop.name if p.shop else ''} for p in products_db]
         shops_hits = [{'id': s.id, 'name': s.name, 'town': s.town, 'primary_image_url': s.primary_image_url} for s in shops_db]
         categories_hits = [{'id': c.id, 'name': c.name} for c in categories_db]
+
+    save_search_query(
+        q,
+        user=current_user,
+        request=request,
+        success=bool(products_hits or shops_hits or categories_hits),
+    )
 
     return render_template(
         'public/partials/global_search_results.html',

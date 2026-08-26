@@ -7,7 +7,7 @@
 </h2>
 
 <p>
-    Hello, {{ user.name }}!
+    Hello, {{ current_user.first_name }}!
 </p>
 
 <p>
@@ -49,7 +49,7 @@
 </div>
 
 <p style="margin-top:25px;">
-    If you have any questions, feel free to reach out to our support team.
+    If you have any questions, feel free to reach out to our <a href="{{ url_for('support_bp.contact') }}">support team</a>.
 </p>
 
 {% endblock %}

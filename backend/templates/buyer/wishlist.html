@@ -151,9 +151,9 @@
                                 <span class="bi bi-patch-check text-mw" aria-label="Verified shop"></span>
                                 {% endif %}
                             </div>
-                            
-                            <p class="card-text text-muted small flex-grow-1 wishlist-description">{{ shop.description[:70] }}{% if shop.description|length > 70 %}...{% endif %}</p>
-                            
+                            {%if shop.description%}
+                            <p class="card-text text-muted small flex-grow-1 wishlist-description">{{ shop.description[:70] or ""}}{% if shop.description|length > 70 %}...{% endif %}</p>
+                            {%endif%}
                             <div class="wishlist-meta">
                                 {% if shop.town %}<span class="badge rounded-pill text-bg-light border me-1 wishlist-chip"><i class="bi bi-geo-alt me-1"></i>{{ shop.town }}</span>{% endif %}
                                 {% if shop.region %}<span class="badge rounded-pill text-bg-light border wishlist-chip">{{ shop.region }}</span>{% endif %}
@@ -219,7 +219,7 @@
                         </div>
                         <div class="card-body d-flex flex-column">
                             <h5 class="card-title fw-semibold wishlist-title">{{ product.name }}</h5>
-                            <p class="card-text text-muted small flex-grow-1 wishlist-description">{{ product.description[:70] }}{% if product.description|length > 70 %}...{% endif %}</p>
+                            <p class="card-text text-muted small flex-grow-1 wishlist-description">{{ product.description[:70] or ""}}{% if product.description|length > 70 %}...{% endif %}</p>
                             
                             <div class="wishlist-meta">
                                 {% if product.shop_name %}
