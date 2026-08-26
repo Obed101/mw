@@ -4,6 +4,7 @@ import io
 from ..services import email_service
 from datetime import datetime, timedelta, timezone
 from ..services.analytics_service import track_event
+from ..models.analytics_model import Event
 import json
 from pathlib import Path
 from uuid import uuid4
@@ -20,10 +21,12 @@ from ..services.geocoding_service import reverse_geocode
 from ..utils.location import get_user_location, haversine_distance_expr, NEAR_YOU_KM
 from ..utils.ids_parser import IDSParser
 from ..utils.threading_utils import run_in_background
+from ..utils.cloudinary_images import process_and_upload_image, delete_image
 from ..models import (
     Category,
     Product,
     Shop,
+    ShopImage,
     StockUpdate,
     UserFollowShop,
     UserFavoriteProduct,
@@ -56,6 +59,41 @@ ALLOWED_SHOP_IMAGE_EXTENSIONS = {
     '.png',
     '.webp',
 }
+
+IRREGULAR_PLURALS = {
+    'pharmacy': 'pharmacies',
+    'grocery': 'groceries',
+    'bakery': 'bakeries',
+    'category': 'categories',
+}
+
+
+def pluralize_category(category):
+    """Convert a category name to a human-friendly plural label."""
+    if not category:
+        return ''
+
+    category = category.strip().lower()
+    words = category.split()
+    last_word = words[-1]
+
+    if last_word.endswith('s'):
+        return category.title()
+
+    if last_word in IRREGULAR_PLURALS:
+        words[-1] = IRREGULAR_PLURALS[last_word]
+    elif last_word.endswith(('s', 'x', 'z', 'ch', 'sh')):
+        words[-1] = last_word + 'es'
+    elif (
+        last_word.endswith('y')
+        and len(last_word) > 1
+        and last_word[-2] not in 'aeiou'
+    ):
+        words[-1] = last_word[:-1] + 'ies'
+    else:
+        words[-1] = last_word + 's'
+
+    return ' '.join(words).title()
 
 
 def login_required(func):
@@ -331,16 +369,17 @@ def _infer_image_suffix(file_storage):
 
 
 def _store_shop_front_image(file_storage, shop_id):
-    suffix = _infer_image_suffix(file_storage)
-    if not suffix:
-        raise ValueError('Upload a JPG, PNG, or WEBP image.')
-
-    upload_dir = Path(current_app.static_folder) / 'uploads' / 'shops'
-    upload_dir.mkdir(parents=True, exist_ok=True)
-
-    stored_name = f"shop-{shop_id}-{uuid4().hex}{suffix}"
-    file_storage.save(upload_dir / stored_name)
-    return url_for('static', filename=f'uploads/shops/{stored_name}')
+    try:
+        return process_and_upload_image(
+            file_storage,
+            'market_window/shops/storefronts',
+            max_dimensions=(1600, 1200),
+            entity_type='shop',
+            entity_id=shop_id,
+        )
+    except Exception:
+        current_app.logger.exception('Shop image upload failed for shop %s', shop_id)
+        raise
 
 
 def _build_shop_directions_url(shop):
@@ -634,16 +673,30 @@ def index():
             product._near_you = False
 
     category_rows = db.session.query(
-        Category.id,
-        Category.name,
-        func.count(Product.id).label("product_count"),
-    ).outerjoin(
-        Product, Product.category_id == Category.id
+        func.min(Shop.google_category).label('name'),
+        func.count(Event.id).label('visit_count'),
+    ).join(
+        Event,
+        (Event.entity_id == Shop.id)
+        & (Event.entity_type == 'shop')
+        & (Event.event_type == 'shop_view'),
+    ).filter(
+        Shop.is_active.is_(True),
+        Shop.google_category.isnot(None),
+        func.trim(Shop.google_category) != '',
     ).group_by(
-        Category.id, Category.name
+        func.lower(Shop.google_category),
     ).order_by(
-        func.count(Product.id).desc(), Category.name.asc()
+        func.count(Event.id).desc(), func.min(Shop.google_category).asc()
     ).limit(12).all()
+
+    category_rows = [
+        {
+            'name': pluralize_category(row.name),
+            'visit_count': row.visit_count,
+        }
+        for row in category_rows
+    ]
 
     # Fetch personalized grids for the homepage
     from ..services.personalization_service import (
@@ -758,6 +811,15 @@ def shop_detail(shop_id):
         Shop.id == shop_id,
         Shop.is_active.is_(True),
     ).first_or_404()
+
+    from ..utils.tracking import track_event_async
+    track_event_async(
+        'shop_view',
+        user=current_user._get_current_object() if current_user.is_authenticated else None,
+        entity_type='shop',
+        entity_id=shop.id,
+        payload={'source': 'shop_detail'},
+    )
 
     map_embed_url = _build_shop_map_embed_url(shop)
     directions_url = _build_shop_directions_url(shop)
@@ -1073,6 +1135,7 @@ def clear_all_notifications():
 @main_bp.route('/categories')
 def categories():
     """Browse categories page"""
+    explore_query = request.args.get('q', '').strip()
     search_term = request.args.get('search', '').strip()
     sort_by = request.args.get('sort_by', 'name')
     with_products = request.args.get('with_products', '').lower() in ('1', 'true', 'yes', 'on')
@@ -1146,6 +1209,7 @@ def categories():
         selected_category=selected_category,
         selected_children=selected_children,
         shop=Shop.query.get(shop_id),
+        explore_query=explore_query,
     )
 
 @main_bp.route('/profile', methods=['GET', 'POST'])
@@ -1862,13 +1926,23 @@ def save_shop_image_step():
         if not uploaded_file or not uploaded_file.filename:
             return _build_shop_feedback_response('Choose a front image to continue.', tone='danger')
 
-        image_url = _store_shop_front_image(uploaded_file, shop.id)
-        remaining_images = [
-            image_key for image_key in shop.image_urls
-            if image_key and image_key not in {DEFAULT_SHOP_PLACEHOLDER_IMAGE, image_url}
-        ]
-        shop.replace_image_urls([image_url, *remaining_images][:3])
+        upload = _store_shop_front_image(uploaded_file, shop.id)
+        existing_records = list(shop.image_records)
+        old_primary = existing_records[0] if existing_records else None
+        for record in existing_records[1:]:
+            record.sort_order -= 1
+            record.is_primary = False
+        if old_primary:
+            shop.image_records.remove(old_primary)
+        shop.image_records.append(ShopImage(
+            storage_key=upload['secure_url'],
+            cloudinary_public_id=upload['public_id'],
+            sort_order=0,
+            is_primary=True,
+        ))
         db.session.commit()
+        if old_primary and old_primary.cloudinary_public_id:
+            delete_image(old_primary.cloudinary_public_id)
 
         return _build_shop_setup_success('image', 'Front image saved.', shop)
 

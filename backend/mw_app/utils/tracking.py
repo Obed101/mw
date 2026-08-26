@@ -19,6 +19,7 @@ def track_event_async(
 ):
     """Track an analytics event without blocking the request thread."""
     try:
+        safe_user_id = getattr(user, 'id', None) if user else None
         if not has_app_context():
             return _sync_track_event(
                 event_type=event_type,
@@ -26,6 +27,7 @@ def track_event_async(
                 entity_type=entity_type,
                 entity_id=entity_id,
                 payload=payload,
+                user_id=safe_user_id,
             )
 
         app = current_app._get_current_object()
@@ -35,7 +37,8 @@ def track_event_async(
                 app,
                 {
                     'event_type': event_type,
-                    'user': user,
+                    'user': None,
+                    'user_id': safe_user_id,
                     'entity_type': entity_type,
                     'entity_id': entity_id,
                     'payload': payload,
@@ -45,4 +48,3 @@ def track_event_async(
         ).start()
     except Exception:
         current_app.logger.exception("Failed to queue analytics event: %s", event_type)
-

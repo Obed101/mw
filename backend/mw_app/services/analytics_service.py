@@ -7,7 +7,7 @@ from ..models.analytics_model import Event, SearchHistory
 from ..models.user_model import User
 from ..models.engagement_model import Notification
 
-def track_event(event_type, user=None, entity_type=None, entity_id=None, payload=None, request=None):
+def track_event(event_type, user=None, entity_type=None, entity_id=None, payload=None, request=None, user_id=None):
     """
     Centralized event tracking helper.
     Extracts session, IP, and user-agent details from request.
@@ -15,8 +15,7 @@ def track_event(event_type, user=None, entity_type=None, entity_id=None, payload
     """
     try:
         # Determine the user ID
-        user_id = None
-        if user and not getattr(user, 'is_anonymous', True):
+        if user_id is None and user and not getattr(user, 'is_anonymous', True):
             user_id = getattr(user, 'id', None)
         elif has_request_context():
             from flask_login import current_user

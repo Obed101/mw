@@ -153,13 +153,13 @@
 <section class="py-5 bg-white">
     <div class="container-fluid px-3 px-lg-4 pb-3">
         <div class="d-flex justify-content-between align-items-center mb-3">
-            <h3 class="fw-bold mb-0">Top Categories</h3>
+            <h3 class="fw-bold mb-0">Most Popular</h3>
         </div>
         <div class="category-pill-scroll pe-2">
             {% for category in top_categories %}
-                <a href="{{ url_for('main_bp.products', category_id=category.id) }}" class="text-decoration-none rounded-pill px-3 py-2 d-inline-flex align-items-center me-2 category-pill shadow-sm">
+                <a href="{{ url_for('main_bp.categories', q=category.name) }}" class="text-decoration-none rounded-pill px-3 py-2 d-inline-flex align-items-center me-2 category-pill shadow-sm">
                     <span class="fw-semibold text-dark small me-2">{{ category.name }}</span>
-                    <span class="badge bg-primary bg-opacity-10 text-primary rounded-pill">{{ category.product_count }}</span>
+                    <span class="badge bg-primary bg-opacity-10 text-primary rounded-pill">{{ category.visit_count }}</span>
                 </a>
             {% endfor %}
         </div>
