@@ -1,0 +1,34 @@
+{% set location_id = 'shop-location-' ~ shop.id if compact else 'shop-detail-location' %}
+{% set has_location = shop.town or shop.district or shop.region %}
+{% if compact %}<span{% else %}<div{% endif %}
+    id="{{ location_id }}"
+    {% if auto_load %}
+    hx-post="{{ url_for('main_bp.check_shop_location', shop_id=shop.id) }}?compact={{ 1 if compact else 0 }}"
+    hx-trigger="load"
+    hx-target="this"
+    hx-swap="outerHTML"
+    hx-headers='{"X-CSRFToken": "{{ csrf_token() }}"}'
+    {% elif pending %}
+    hx-get="{{ url_for('main_bp.check_shop_location', shop_id=shop.id) }}?compact={{ 1 if compact else 0 }}"
+    hx-trigger="every 1500ms"
+    hx-target="this"
+    hx-swap="outerHTML"
+    {% endif %}
+>
+    {% if compact %}
+    <span class="bi bi-geo-alt me-1"></span>
+    {% if has_location %}
+        {{ shop.town or 'Location pending' }}{% if shop.district %}, {{ shop.district }}{% endif %}{% if shop.region %}, {{ shop.region }}{% endif %}
+    {% else %}
+        Location unavailable
+    {% endif %}
+    {% if pending %}<span class="text-muted ms-1 small">Updating location…</span>{% endif %}
+    {% else %}
+    <div class="d-flex flex-wrap gap-2">
+        {% if shop.town %}<span class="badge rounded-pill text-bg-light border"><i class="bi bi-geo-alt me-1"></i>{{ shop.town }}</span>{% endif %}
+        {% if shop.district %}<span class="badge rounded-pill text-bg-light border">{{ shop.district }}</span>{% endif %}
+        {% if shop.region %}<span class="badge rounded-pill text-bg-light border">{{ shop.region }}</span>{% endif %}
+        {% if pending %}<span class="small text-muted align-self-center">Updating location…</span>{% endif %}
+    </div>
+    {% endif %}
+{% if compact %}</span>{% else %}</div>{% endif %}

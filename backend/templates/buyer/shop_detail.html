@@ -7,7 +7,7 @@
     <section class="card border-0 shadow-sm mb-4 overflow-hidden">
         <div class="row g-0">
             <div class="col-md-4">
-                <img src="{{ shop.primary_image_url or url_for('static', filename='images/mw_logo_trans.png') }}" alt="{{ shop.name }}" class="w-100 h-100 object-fit-cover shop-hero-image">
+                <img src="{{ shop.primary_image_url|google_image_url(GOOGLE_IMAGE_LARGE) or url_for('static', filename='images/mw_logo_trans.png') }}" alt="{{ shop.name }}" class="w-100 h-100 object-fit-cover shop-hero-image">
             </div>
             <div class="col-md-8">
                 <div class="p-3 p-md-4">
@@ -64,8 +64,9 @@
                     <p class="text-gradient mb-3">{{ shop.description or "Standard " ~ (shop.google_category or 'shop') ~ ". Contact owner for details" }}</p>
 
                     <div class="d-flex flex-wrap gap-2 mb-3">
-                        {% if shop.town %}<span class="badge rounded-pill text-bg-light border"><i class="bi bi-geo-alt me-1"></i>{{ shop.town }}</span>{% endif %}
-                        {% if shop.region %}<span class="badge rounded-pill text-bg-light border">{{ shop.region }}</span>{% endif %}
+                        {% with compact=false, auto_load=(shop.gps and not (shop.town and shop.district and shop.region)), pending=false %}
+                        {% include 'buyer/partials/shop_location.html' with context %}
+                        {% endwith %}
                         {% if shop.phone %}
                             <a href="tel:+{{ shop.phone }}"
                             class="badge rounded-pill text-bg-success border text-decoration-none">
@@ -203,38 +204,10 @@
                 <h3 class="h5 fw-bold mb-0">More Shops Near You</h3>
                 <a href="{{ url_for('buyer_template_bp.buyer_shops') }}" class="btn btn-sm btn-outline-primary">View All Shops</a>
             </div>
-            <div class="market-grid market-grid-shops">
-                {% for s in more_shops %}
-                <div class="market-grid-item">
-                    <a href="{{ url_for('main_bp.shop_detail', shop_id=s.id) }}" class="text-decoration-none">
-                        <div class="card border-0 shadow-sm shop-card shop-card-compact">
-                            <img src="{{ s.primary_image_url or url_for('static', filename='images/mw_logo_trans.png') }}" class="card-img-top market-card-image" alt="{{ s.name }}">
-                            <div class="card-body shop-card-body-compact">
-                                <div class="d-flex justify-content-between align-items-start mb-2">
-                                    <h6 class="fw-bold mb-0 shop-card-title text-dark">
-                                        {{ s.name }}
-                                        {% if s.verification_status == 'verified' %}
-                                        <span class="bi bi-patch-check text-mw small" aria-label="Verified shop"></span>
-                                        {% endif %}
-                                    </h6>
-                                </div>
-                                <p class="card-text text-muted small mb-1 shop-card-location">
-                                    <i class="bi bi-geo-alt me-1"></i>{{ s.town or s.region or "Location unavailable" }}
-                                    {% if s._near_you is defined and s._near_you %}
-                                    <span class="badge small rounded-pill near-you-badge ms-1">
-                                        <i class="bi bi-geo-alt-fill me-1"></i>Near you
-                                        {% if s._distance_km is defined and s._distance_km is not none %}
-                                        &middot; ~{{ s._distance_km|round(0)|int }} km
-                                        {% endif %}
-                                    </span>
-                                    {% endif %}
-                                </p>
-                                <p class="card-text text-muted mb-2 line-clamp-2 shop-card-description">{{ s.description or 'Quality products and service' }}</p>
-                            </div>
-                        </div>
-                    </a>
-                </div>
-                {% endfor %}
+            <div class="market-grid market-grid-shops" id="shop-recommendations-container">
+                {% with shops=more_shops, has_next=more_shops_has_next, next_page=more_shops_next_page, next_url=(more_shops_url ~ '?page=' ~ more_shops_next_page if more_shops_has_next else None), search_term='', sort_by='nearest', category_id=None, user_id=None, load_more_target='#shop-recommendations-container' %}
+                {% include 'buyer/shop_cards.html' with context %}
+                {% endwith %}
             </div>
         </section>
         {% endif %}
@@ -342,16 +315,6 @@
 
 {% block scripts %}
 <script>
-    {% if shop.gps and not (shop.town and shop.district and shop.region) %}
-    fetch({{ location_check_url|tojson }}, {
-        method: 'POST',
-        headers: {
-            'X-Requested-With': 'XMLHttpRequest',
-            'X-CSRFToken': document.querySelector('meta[name="csrf-token"]')?.content || '',
-        },
-        credentials: 'same-origin',
-    }).catch(() => {});
-    {% endif %}
     const claimButton = document.getElementById('claim-shop-btn');
     if (claimButton) {
         claimButton.addEventListener('click', async () => {

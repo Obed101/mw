@@ -10,7 +10,7 @@ from pathlib import Path
 from uuid import uuid4
 
 from flask import Blueprint, render_template, request, redirect, url_for, flash, session, current_app, make_response, jsonify
-from sqlalchemy import func, or_, nullslast
+from sqlalchemy import case, func, or_, nullslast
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import aliased
 from flask_login import login_user, current_user, logout_user
@@ -525,6 +525,43 @@ def _sequential_shop_setup_step(step):
     return step_order[current_idx + 1]
 
 
+def _build_more_shop_page(shop, page=1, per_page=8):
+    """Return active shops with same-category shops first, then all others."""
+    user_lat, user_lng = get_user_location(current_user)
+    if user_lat is None and shop.gps:
+        from ..services.personalization_service import parse_gps
+        user_lat, user_lng = parse_gps(shop.gps)
+
+    query = Shop.query.filter(
+        Shop.is_active.is_(True),
+        Shop.id != shop.id,
+    )
+    category_rank = case(
+        (func.lower(Shop.google_category) == func.lower(shop.google_category), 0),
+        else_=1,
+    ) if shop.google_category else case((Shop.id == shop.id, 1), else_=1)
+    dist_expr = haversine_distance_expr(user_lat, user_lng) if user_lat is not None and user_lng is not None else None
+
+    if dist_expr is not None:
+        query = query.add_columns(dist_expr.label('distance_km')).order_by(
+            category_rank.asc(),
+            nullslast(dist_expr.asc()),
+            Shop.name.asc(),
+            Shop.id.asc(),
+        )
+    else:
+        query = query.order_by(category_rank.asc(), Shop.name.asc(), Shop.id.asc())
+
+    pagination = query.paginate(page=page, per_page=per_page, error_out=False)
+    shops = []
+    for row in pagination.items:
+        recommended, distance = row if dist_expr is not None else (row, None)
+        recommended._distance_km = distance
+        recommended._near_you = distance is not None and distance <= NEAR_YOU_KM
+        shops.append(recommended)
+    return shops, pagination
+
+
 def _build_shop_feedback_response(message, tone='success', trigger_payload=None):
     response = make_response(
         render_template(
@@ -539,9 +576,9 @@ def _build_shop_feedback_response(message, tone='success', trigger_payload=None)
     return response
 
 
-def _build_shop_setup_success(step, message, shop):
+def _build_shop_setup_success(step, message, shop, next_step=None):
     setup_state = _build_shop_setup_state(shop)
-    next_step = _sequential_shop_setup_step(step)
+    next_step = next_step or _sequential_shop_setup_step(step)
     setup_state['active_step'] = next_step
     return _build_shop_feedback_response(
         message=message,
@@ -832,35 +869,7 @@ def shop_detail(shop_id):
             shop_id=shop.id,
         ).first() is not None
 
-    # Fetch other active shops near user/this shop
-    user_lat, user_lng = get_user_location(current_user)
-    lat, lng = user_lat, user_lng
-    if lat is None and shop.gps:
-        from ..services.personalization_service import parse_gps
-        lat, lng = parse_gps(shop.gps)
-
-    more_shops_query = Shop.query.filter(
-        Shop.is_active.is_(True),
-        Shop.id != shop.id
-    )
-
-    if lat is not None and lng is not None:
-        from sqlalchemy import nullslast
-        dist_expr = haversine_distance_expr(lat, lng)
-        more_shops_query = more_shops_query.order_by(nullslast(dist_expr.asc()))
-        more_shops = more_shops_query.limit(4).all()
-        # Annotate distance
-        for s in more_shops:
-            s_lat, s_lng = None, None
-            if s.gps:
-                from ..services.personalization_service import parse_gps
-                s_lat, s_lng = parse_gps(s.gps)
-            if s_lat is not None and s_lng is not None:
-                from ..services.personalization_service import haversine_distance
-                s._distance_km = haversine_distance(lat, lng, s_lat, s_lng)
-                s._near_you = (s._distance_km <= NEAR_YOU_KM)
-    else:
-        more_shops = more_shops_query.order_by(Shop.name.asc()).limit(4).all()
+    more_shops, more_shops_page = _build_more_shop_page(shop)
 
     return render_template(
         'buyer/shop_detail.html',
@@ -871,7 +880,34 @@ def shop_detail(shop_id):
         shop_is_favorited=shop_is_favorited,
         shop_is_owner=shop_is_owner,
         more_shops=more_shops,
+        more_shops_has_next=more_shops_page.has_next,
+        more_shops_next_page=more_shops_page.next_num if more_shops_page.has_next else None,
+        more_shops_url=url_for('main_bp.shop_detail_recommendations', shop_id=shop.id),
         location_check_url=url_for('main_bp.check_shop_location', shop_id=shop.id),
+    )
+
+
+@main_bp.route('/shops/<int:shop_id>/more')
+def shop_detail_recommendations(shop_id):
+    """Return the next page of category-first shop recommendations."""
+    shop = Shop.query.filter(
+        Shop.id == shop_id,
+        Shop.is_active.is_(True),
+    ).first_or_404()
+    page = max(request.args.get('page', 1, type=int), 1)
+    shops, pagination = _build_more_shop_page(shop, page=page)
+    return render_template(
+        'buyer/shop_cards.html',
+        shops=shops,
+        has_next=pagination.has_next,
+        next_page=pagination.next_num if pagination.has_next else None,
+        next_url=(url_for('main_bp.shop_detail_recommendations', shop_id=shop.id,
+                          page=pagination.next_num) if pagination.has_next else None),
+        search_term='',
+        sort_by='nearest',
+        category_id=None,
+        user_id=None,
+        user_has_location=True,
     )
 
 
@@ -882,7 +918,23 @@ def check_shop_location(shop_id):
     ready = all(location.values())
     if request.method == 'POST' and not ready and shop.gps:
         _geocode_shop_location(shop.id)
+        if request.headers.get('HX-Request') == 'true':
+            return render_template(
+                'buyer/partials/shop_location.html',
+                shop=shop,
+                compact=request.args.get('compact') == '1',
+                auto_load=False,
+                pending=True,
+            )
         return jsonify(success=True, started=True, location=location), 202
+    if request.headers.get('HX-Request') == 'true':
+        return render_template(
+            'buyer/partials/shop_location.html',
+            shop=shop,
+            compact=request.args.get('compact') == '1',
+            auto_load=False,
+            pending=not ready and bool(shop.gps),
+        )
     return jsonify(success=True, ready=ready, location=location)
 
 
@@ -1927,6 +1979,21 @@ def save_shop_image_step():
         shop = _resolve_setup_shop(current_user)
         if not shop:
             return _build_shop_feedback_response('Save your basic shop details first.', tone='danger')
+
+        if request.form.get('remove_image') == '1':
+            records = list(shop.image_records)
+            old_primary = records[0] if records else None
+            if not old_primary or old_primary.storage_key == DEFAULT_SHOP_PLACEHOLDER_IMAGE:
+                return _build_shop_feedback_response('There is no custom front image to remove.', tone='info')
+
+            shop.image_records.remove(old_primary)
+            for index, record in enumerate(shop.image_records):
+                record.sort_order = index
+                record.is_primary = index == 0
+            db.session.commit()
+            if old_primary.cloudinary_public_id:
+                delete_image(old_primary.cloudinary_public_id)
+            return _build_shop_setup_success('image', 'Front image removed.', shop, next_step='image')
 
         if request.content_length and request.content_length > 6 * 1024 * 1024:
             return _build_shop_feedback_response('Image is too large. Use a file under 6MB.', tone='danger')

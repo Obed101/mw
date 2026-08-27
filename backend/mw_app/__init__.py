@@ -14,6 +14,19 @@ def create_app():
                 instance_relative_config=True,
                 template_folder=template_dir)
     app.config.from_object("config.Config")
+
+    from .utils.google_images import (
+        get_google_image_url,
+        GOOGLE_IMAGE_SMALL,
+        GOOGLE_IMAGE_MEDIUM,
+        GOOGLE_IMAGE_LARGE,
+    )
+    app.jinja_env.filters['google_image_url'] = get_google_image_url
+    app.jinja_env.globals.update(
+        GOOGLE_IMAGE_SMALL=GOOGLE_IMAGE_SMALL,
+        GOOGLE_IMAGE_MEDIUM=GOOGLE_IMAGE_MEDIUM,
+        GOOGLE_IMAGE_LARGE=GOOGLE_IMAGE_LARGE,
+    )
     
     # Configure CSRF protection
     csrf = CSRFProtect(app)

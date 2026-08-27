@@ -260,7 +260,7 @@
                 <div class="dashboard-card-body">
                     <div class="row g-4 align-items-start">
                         <div class="col-12 col-lg-4 text-center text-lg-start">
-                            <img src="{{ shop.primary_image_url or url_for('static', filename='images/mw_logo_trans.png') }}" alt="{{ shop.name }}" class="shop-hero__image mb-3">
+                            <img src="{{ shop.primary_image_url|google_image_url(GOOGLE_IMAGE_MEDIUM) or url_for('static', filename='images/mw_logo_trans.png') }}" alt="{{ shop.name }}" class="shop-hero__image mb-3">
                             <div class="d-flex justify-content-center justify-content-lg-start align-items-center gap-2 mb-3">
                                 <span class="shop-hero__logo d-inline-flex align-items-center justify-content-center">
                                     {% if logo_image_url %}

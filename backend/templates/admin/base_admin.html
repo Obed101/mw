@@ -346,13 +346,15 @@ document.addEventListener('click', function(e) {
   document.getElementById('confirmModalBtn').textContent = btn.dataset.confirmBtn || 'Confirm';
   document.getElementById('confirmModalBtn').className = 'btn btn-sm ' + (btn.dataset.confirmClass || 'btn-danger');
   const form = document.getElementById('confirmModalForm');
-  form.action = btn.dataset.confirmAction || btn.closest('form')?.action || '';
+  // A form control named "action" shadows HTMLFormElement.action and can
+  // make it resolve to a RadioNodeList instead of the form's URL.
+  const originalForm = btn.closest('form');
+  form.action = btn.dataset.confirmAction || originalForm?.getAttribute('action') || '';
   
   // Clear any previously cloned inputs
   form.querySelectorAll('.cloned-input').forEach(el => el.remove());
   
   // Clone inputs from the original form (except CSRF, which is already in the modal)
-  const originalForm = btn.closest('form');
   if (originalForm) {
     originalForm.querySelectorAll('input:not([name="csrf_token"]), select, textarea').forEach(input => {
       const clone = input.cloneNode(true);

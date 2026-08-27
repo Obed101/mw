@@ -167,7 +167,7 @@
                     <div class="card border-0 shadow-sm wishlist-card">
                         <a href="{{ url_for('main_bp.shop_detail', shop_id=shop.id) }}" class="wishlist-card-link">
                         <div class="position-relative">
-                            <img src="{{ shop.primary_image_url or url_for('static', filename='images/mw_logo_trans.png') }}" 
+                            <img src="{{ shop.primary_image_url|google_image_url(GOOGLE_IMAGE_MEDIUM) or url_for('static', filename='images/mw_logo_trans.png') }}"
                                  alt="{{ shop.name }}" 
                                  class="card-img-top shop-image wishlist-image">
                         </div>

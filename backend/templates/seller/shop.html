@@ -821,6 +821,17 @@
                     <button type="submit" class="btn btn-primary btn-pill px-4" :disabled="!selectedImageName">
                         Save &amp; Continue
                     </button>
+                    <button
+                        type="submit"
+                        name="remove_image"
+                        value="1"
+                        class="btn btn-outline-danger btn-pill"
+                        x-show="imagePreviewUrl"
+                        x-cloak
+                        @click="if (!window.confirm('Remove this shop front image?')) $event.preventDefault()"
+                    >
+                        <i class="bi bi-trash me-1"></i>Remove image
+                    </button>
                     <button type="button" class="btn btn-outline-primary btn-pill" @click="goToStep('basic')">
                         Back
                     </button>

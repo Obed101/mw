@@ -24,23 +24,63 @@
         <span class="badge rounded-pill text-bg-light border">{{ total_results }} found</span>
     </div>
 
+    {% if shops %}
+    <div class="mb-4">
+        <div class="d-flex justify-content-between align-items-center gap-3 mb-2">
+            <div class="d-flex align-items-center gap-2">
+                <h3 class="h6 fw-bold mb-0">Shops</h3>
+                <span class="small text-muted">{{ shops|length }}</span>
+                <button type="button"
+                    class="btn btn-sm btn-outline-secondary rounded-pill px-3 explore-collapse-toggle"
+                    data-bs-toggle="collapse"
+                    data-bs-target="#explore-shops-results"
+                    aria-expanded="true"
+                    aria-controls="explore-shops-results">
+                <i class="bi bi-caret-up-fill explore-caret-open me-1"></i>
+                <i class="bi bi-caret-down-fill explore-caret-closed me-1"></i>
+                <span>Hide shops</span>
+            </button>
+            </div>
+        </div>
+        <div class="collapse show" id="explore-shops-results">
+            <div class="row g-3">
+            {% for shop in shops %}
+            {% set result_shop_id = shop.id or shop.shop_id %}
+            {% if result_shop_id %}
+            <div class="col-12 col-md-6 col-xl-4">
+                <a href="{{ url_for('main_bp.shop_detail', shop_id=result_shop_id) }}" class="d-flex align-items-center gap-3 p-3 rounded-4 border bg-white text-decoration-none shadow-sm h-100 explore-result-row">
+                    <img src="{{ shop.primary_image_url|google_image_url(GOOGLE_IMAGE_SMALL) or url_for('static', filename='images/mw_logo_color.png') }}" class="rounded-circle object-fit-cover flex-shrink-0" width="52" height="52" alt="{{ shop.name }}">
+                    <div class="flex-grow-1">
+                        <h6 class="mb-1 fw-bold text-dark">{{ shop.name or 'no name' }}</h6>
+                        <small class="text-muted d-block"><i class="bi bi-geo-alt me-1"></i>{{ shop.town or 'Location unknown' }}</small>
+                    </div>
+                    <i class="bi bi-arrow-right text-muted"></i>
+                </a>
+            </div>
+            {% endif %}
+            {% endfor %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
     {% if products %}
     <div class="mb-4">
         <div class="d-flex justify-content-between align-items-center gap-3 mb-2">
             <div class="d-flex align-items-center gap-2">
                 <h3 class="h6 fw-bold mb-0">Products</h3>
                 <span class="small text-muted">{{ products|length }}</span>
+                <button type="button"
+                        class="btn btn-sm btn-outline-secondary rounded-pill px-3 explore-collapse-toggle"
+                        data-bs-toggle="collapse"
+                        data-bs-target="#explore-products-results"
+                        aria-expanded="true"
+                        aria-controls="explore-products-results">
+                    <i class="bi bi-caret-up-fill explore-caret-open me-1"></i>
+                    <i class="bi bi-caret-down-fill explore-caret-closed me-1"></i>
+                    <span>Hide products</span>
+                </button>
             </div>
-            <button type="button"
-                    class="btn btn-sm btn-outline-secondary rounded-pill px-3 explore-collapse-toggle"
-                    data-bs-toggle="collapse"
-                    data-bs-target="#explore-products-results"
-                    aria-expanded="true"
-                    aria-controls="explore-products-results">
-                <i class="bi bi-caret-up-fill explore-caret-open me-1"></i>
-                <i class="bi bi-caret-down-fill explore-caret-closed me-1"></i>
-                <span>Hide</span>
-            </button>
         </div>
         <div class="collapse show" id="explore-products-results">
             <div class="market-grid market-grid-products">
@@ -59,46 +99,6 @@
                     </div>
                 </a>
             </div>
-            {% endfor %}
-            </div>
-        </div>
-    </div>
-    {% endif %}
-
-    {% if shops %}
-    <div class="mb-4">
-        <div class="d-flex justify-content-between align-items-center gap-3 mb-2">
-            <div class="d-flex align-items-center gap-2">
-                <h3 class="h6 fw-bold mb-0">Shops</h3>
-                <span class="small text-muted">{{ shops|length }}</span>
-            </div>
-            <button type="button"
-                    class="btn btn-sm btn-outline-secondary rounded-pill px-3 explore-collapse-toggle"
-                    data-bs-toggle="collapse"
-                    data-bs-target="#explore-shops-results"
-                    aria-expanded="true"
-                    aria-controls="explore-shops-results">
-                <i class="bi bi-caret-up-fill explore-caret-open me-1"></i>
-                <i class="bi bi-caret-down-fill explore-caret-closed me-1"></i>
-                <span>Hide</span>
-            </button>
-        </div>
-        <div class="collapse show" id="explore-shops-results">
-            <div class="row g-3">
-            {% for shop in shops %}
-            {% set result_shop_id = shop.id or shop.shop_id %}
-            {% if result_shop_id %}
-            <div class="col-12 col-md-6 col-xl-4">
-                <a href="{{ url_for('main_bp.shop_detail', shop_id=result_shop_id) }}" class="d-flex align-items-center gap-3 p-3 rounded-4 border bg-white text-decoration-none shadow-sm h-100 explore-result-row">
-                    <img src="{{ shop.primary_image_url or url_for('static', filename='images/mw_logo_color.png') }}" class="rounded-circle object-fit-cover flex-shrink-0" width="52" height="52" alt="{{ shop.name }}">
-                    <div class="flex-grow-1">
-                        <h6 class="mb-1 fw-bold text-dark">{{ shop.name or 'no name' }}</h6>
-                        <small class="text-muted d-block"><i class="bi bi-geo-alt me-1"></i>{{ shop.town or 'Location unknown' }}</small>
-                    </div>
-                    <i class="bi bi-arrow-right text-muted"></i>
-                </a>
-            </div>
-            {% endif %}
             {% endfor %}
             </div>
         </div>
@@ -173,7 +173,7 @@
                 {% set result_shop_id = shop.id or shop.shop_id %}
                 {% if result_shop_id %}
                 <a href="{{ url_for('main_bp.shop_detail', shop_id=result_shop_id) }}" class="list-group-item list-group-item-action d-flex align-items-center py-2 px-0 border-0 bg-transparent">
-                    <img src="{{ shop.primary_image_url or url_for('static', filename='images/mw_logo_color.png') }}" class="rounded-circle me-3 object-fit-cover" width="40" height="40" alt="{{ shop.name }}">
+                            <img src="{{ shop.primary_image_url|google_image_url(GOOGLE_IMAGE_SMALL) or url_for('static', filename='images/mw_logo_color.png') }}" class="rounded-circle me-3 object-fit-cover" width="40" height="40" alt="{{ shop.name }}">
                     <div>
                         <h6 class="mb-0 fw-bold text-dark">{{ shop.name or 'no name'}}</h6>
                         <small class="text-muted"><i class="bi bi-geo-alt me-1"></i>{{ shop.town or 'Location unknown' }}</small>
