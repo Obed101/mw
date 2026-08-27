@@ -915,7 +915,8 @@ def shop_detail_recommendations(shop_id):
 def check_shop_location(shop_id):
     shop = Shop.query.filter(Shop.id == shop_id, Shop.is_active.is_(True)).first_or_404()
     location = {'town': shop.town, 'district': shop.district, 'region': shop.region}
-    ready = all(location.values())
+    ready = bool(shop.town)
+    poll_attempt = request.args.get('poll_attempt', 0, type=int)
     if request.method == 'POST' and not ready and shop.gps:
         _geocode_shop_location(shop.id)
         if request.headers.get('HX-Request') == 'true':
@@ -925,6 +926,7 @@ def check_shop_location(shop_id):
                 compact=request.args.get('compact') == '1',
                 auto_load=False,
                 pending=True,
+                poll_attempt=0,
             )
         return jsonify(success=True, started=True, location=location), 202
     if request.headers.get('HX-Request') == 'true':
@@ -933,7 +935,8 @@ def check_shop_location(shop_id):
             shop=shop,
             compact=request.args.get('compact') == '1',
             auto_load=False,
-            pending=not ready and bool(shop.gps),
+            pending=not ready and bool(shop.gps) and poll_attempt < 5,
+            poll_attempt=poll_attempt,
         )
     return jsonify(success=True, ready=ready, location=location)
 

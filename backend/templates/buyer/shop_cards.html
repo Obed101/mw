@@ -15,7 +15,7 @@
                     </h6>
                 </div>
                 <p class="card-text text-muted small mb-1 shop-card-location">
-                    {% with compact=true, auto_load=(shop.gps and not (shop.town and shop.district and shop.region)), pending=false %}
+                    {% with compact=true, auto_load=(shop.gps and not shop.town), pending=false %}
                     {% include 'buyer/partials/shop_location.html' with context %}
                     {% endwith %}
                     {% if shop._near_you is defined and shop._near_you %}

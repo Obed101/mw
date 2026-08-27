@@ -7,7 +7,18 @@
     <section class="card border-0 shadow-sm mb-4 overflow-hidden">
         <div class="row g-0">
             <div class="col-md-4">
-                <img src="{{ shop.primary_image_url|google_image_url(GOOGLE_IMAGE_LARGE) or url_for('static', filename='images/mw_logo_trans.png') }}" alt="{{ shop.name }}" class="w-100 h-100 object-fit-cover shop-hero-image">
+                <div class="shop-hero-media">
+                    {% if shop.primary_image_url %}
+                    <a href="{{ shop.primary_image_url|google_image_url(GOOGLE_IMAGE_LARGE) }}" class="shop-gallery-link" data-pswp-width="1600" data-pswp-height="1000" aria-label="Expand image of {{ shop.name }}">
+                        <img src="{{ shop.primary_image_url|google_image_url(GOOGLE_IMAGE_LARGE) }}" alt="{{ shop.name }}" class="w-100 h-100 object-fit-cover shop-hero-image">
+                    </a>
+                    {% else %}
+                    <img src="{{ url_for('static', filename='images/mw_logo_trans.png') }}" alt="{{ shop.name }}" class="w-100 h-100 object-fit-cover shop-hero-image">
+                    {% endif %}
+                    <button type="button" class="shop-message-action" aria-label="Message shop" title="Message shop">
+                        <i class="bi bi-chat-dots-fill" aria-hidden="true"></i>
+                    </button>
+                </div>
             </div>
             <div class="col-md-8">
                 <div class="p-3 p-md-4">
@@ -64,7 +75,7 @@
                     <p class="text-gradient mb-3">{{ shop.description or "Standard " ~ (shop.google_category or 'shop') ~ ". Contact owner for details" }}</p>
 
                     <div class="d-flex flex-wrap gap-2 mb-3">
-                        {% with compact=false, auto_load=(shop.gps and not (shop.town and shop.district and shop.region)), pending=false %}
+                        {% with compact=false, auto_load=(shop.gps and not shop.town), pending=false %}
                         {% include 'buyer/partials/shop_location.html' with context %}
                         {% endwith %}
                         {% if shop.phone %}
@@ -216,7 +227,51 @@
 {% endblock %}
 
 {% block styles %}
+{% if shop.primary_image_url %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/photoswipe@5.4.4/dist/photoswipe.css">
+{% endif %}
 <style>
+    .shop-hero-media {
+        position: relative;
+        height: 100%;
+        min-height: 180px;
+        max-height: 280px;
+        background: #000;
+        overflow: hidden;
+    }
+
+    .shop-gallery-link {
+        display: block;
+        width: 100%;
+        height: 100%;
+        cursor: zoom-in;
+        -webkit-tap-highlight-color: transparent;
+        touch-action: manipulation;
+    }
+
+    .shop-gallery-link img {
+        display: block;
+        pointer-events: none;
+    }
+
+    .shop-message-action {
+        position: absolute;
+        right: 15px;
+        bottom: 15px;
+        z-index: 2;
+        width: 45px;
+        height: 45px;
+        border: 1px solid #ffffff8b;
+        border-radius: 50%;
+        background: #ffffff67;
+        backdrop-filter: blur(10px);
+        box-shadow: 0 0 8px rgba(0, 0, 0, 0.5);
+        color: #fff;
+        text-shadow: 0 0 6px #00000080;
+        font-size: 1.2rem;
+        cursor: pointer;
+    }
+
     .shop-hero-image {
         min-height: 180px;
         max-height: 280px;
@@ -314,6 +369,31 @@
 {% endblock %}
 
 {% block scripts %}
+{% if shop.primary_image_url %}
+<script type="module">
+    import PhotoSwipeLightbox from 'https://cdn.jsdelivr.net/npm/photoswipe@5.4.4/dist/photoswipe-lightbox.esm.js';
+
+    const lightbox = new PhotoSwipeLightbox({
+        gallery: '.shop-hero-media',
+        children: '.shop-gallery-link',
+        pswpModule: () => import('https://cdn.jsdelivr.net/npm/photoswipe@5.4.4/dist/photoswipe.esm.js'),
+        tapAction: 'close'
+    });
+
+    const image = document.querySelector('.shop-gallery-link img');
+    const link = document.querySelector('.shop-gallery-link');
+    if (image && link) {
+        const setDimensions = () => {
+            if (image.naturalWidth && image.naturalHeight) {
+                link.dataset.pswpWidth = String(image.naturalWidth);
+                link.dataset.pswpHeight = String(image.naturalHeight);
+            }
+        };
+        image.complete ? setDimensions() : image.addEventListener('load', setDimensions, { once: true });
+    }
+    lightbox.init();
+</script>
+{% endif %}
 <script>
     const claimButton = document.getElementById('claim-shop-btn');
     if (claimButton) {
