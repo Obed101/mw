@@ -37,6 +37,14 @@
                             Continue with Google
                         </a>
                     </div>
+                    <!-- A notice os privacy policy and market window rules -->
+                    <div class="auth-terms">
+                        <p class="auth-terms-text">
+                            By creating an account, you agree to Market Window's
+                            <a href="{{ url_for('main_bp.terms_of_use') }}" target="_blank">Terms of Use</a>
+                            and <a href="{{ url_for('main_bp.privacy_policy') }}" target="_blank">Privacy Policy</a>.
+                        </p>
+                    </div>
 
                     <div class="auth-divider">
                         <span>or sign up with email</span>
@@ -142,7 +150,7 @@
                                 <input type="checkbox" id="terms" name="terms" class="auth-checkbox" required>
                                 <span class="auth-checkbox-custom"></span>
                                 <span class="auth-terms-text">
-                                    I agree to the <a href="/terms" target="_blank">Terms of Service</a> and <a href="/privacy" target="_blank">Privacy Policy</a>
+                                    I agree to the <a href="{{ url_for('main_bp.terms_of_use') }}" target="_blank">Market Window Rules</a> and <a href="{{ url_for('main_bp.privacy_policy') }}" target="_blank">Privacy Policy</a>
                                 </span>
                             </label>
                             <div class="auth-field-error" id="err-terms"></div>
@@ -191,7 +199,7 @@
                         Start Shopping →
                     </a>
                     <p class="reveal-signin-hint">
-                        <a href="/login">Go to sign in page instead</a>
+                        <a href="/login">Log in to my existing account</a>
                     </p>
                 </div>
 

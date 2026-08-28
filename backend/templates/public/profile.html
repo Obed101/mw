@@ -94,6 +94,28 @@
     transition: transform 0.3s ease, box-shadow 0.3s ease;
 }
 
+.profile-header,
+.modern-card {
+    border: 1px solid rgba(99, 102, 241, 0.1);
+}
+
+.card-header-modern {
+    display: flex;
+    align-items: center;
+    min-height: 72px;
+}
+
+.profile-card-body {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(102, 126, 234, 0.35) transparent;
+}
+
+.owned-shops-list {
+    max-height: 400px;
+    overflow-y: auto;
+    padding-right: 0.25rem;
+}
+
 .modern-card:hover {
     transform: translateY(-2px);
     box-shadow: 0 20px 60px rgba(0, 0, 0, 0.12);
@@ -199,6 +221,24 @@
     padding: 1.1rem;
     background: #fafaff;
     color: #6b7280;
+}
+
+.profile-policy-card {
+    max-width: 720px;
+    margin: 0 auto;
+    padding: 0.75rem 1rem;
+    border: 1px solid rgba(102, 126, 234, 0.16);
+    border-radius: 16px;
+    background: linear-gradient(135deg, #fafaff, #f7f9ff);
+    color: #7b8190;
+    font-size: 0.7rem;
+    text-align: center;
+}
+
+.profile-policy-card a {
+    color: #667eea;
+    font-weight: 600;
+    text-decoration: none;
 }
 
 @media (max-width: 768px) {
@@ -440,7 +480,8 @@
                         </a>
                     </div>
                 </div>
-                <div class="card-body p-4">
+                <div class="card-body p-4 profile-card-body">
+                    <div class="owned-shops-list">
                     {% if owned_shops %}
                         {% for shop in owned_shops %}
                         <div class="owned-shop-item">
@@ -460,7 +501,7 @@
                                 </div>
                                 <div class="d-flex gap-2 flex-wrap">
                                     <a href="{{ url_for('seller_template_bp.seller_shop_preview', shop_id=shop.id) }}" class="btn btn-outline-primary btn-sm">
-                                        <i class="bi bi-eye me-1"></i>Public View
+                                        <i class="bi bi-eye me-1"></i>View as visitor
                                     </a>
                                     <form action="{{ url_for('manage_bp.switch_shop', shop_id=shop.id) }}" method="POST" class="m-0">
                                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
@@ -481,6 +522,7 @@
                             </a>
                         </div>
                     {% endif %}
+                    </div>
                 </div>
             </div>
 
@@ -517,6 +559,17 @@
                 </div>
             </div>
         </div>
+    </div>
+</div>
+
+<div class="container-fluid px-3 px-lg-4 pb-4">
+    <div class="profile-policy-card">
+        <i class="bi bi-shield-check me-1"></i>
+        <span>By using Market Window, you agree to our
+            <a href="{{ url_for('main_bp.terms_of_use') }}">Terms of Use</a>
+            and acknowledge our
+            <a href="{{ url_for('main_bp.privacy_policy') }}">Privacy Policy</a>.
+        </span>
     </div>
 </div>
 

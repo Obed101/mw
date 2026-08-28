@@ -1,0 +1,844 @@
+{% extends "base.html" %}
+
+{% block title %}Privacy Policy | Market Window{% endblock %}
+
+{% block content %}
+
+<div class="container py-5" style="max-width: 1050px;">
+
+    <!-- Header -->
+    <div class="text-center mb-5">
+        <span class="badge rounded-pill bg-primary-subtle text-primary px-3 py-2 mb-3">
+            Privacy & Data Protection
+        </span>
+
+        <h1 class="display-5 fw-bold mb-3">Your Privacy Matters to Us</h1>
+
+        <p class="lead text-muted mx-auto" style="max-width: 780px;">
+            Market Window is built to help people discover shops and products around
+            them. We also believe that discovering a market should not require giving
+            up your privacy. This policy explains what information we collect, why we
+            use it, how we protect it, and the choices available to you.
+        </p>
+
+        <p class="small text-muted mb-0">
+            <strong>Last updated:</strong> {{ privacy_policy_updated_at | default("27 August 2026") }}
+        </p>
+    </div>
+
+
+    <!-- Trust statement -->
+    <div class="card border-0 shadow-sm rounded-4 mb-5">
+        <div class="card-body p-4 p-lg-5">
+            <div class="d-flex align-items-start gap-3">
+                <div class="fs-3 text-primary">
+                    <i class="bi bi-shield-check"></i>
+                </div>
+
+                <div>
+                    <h2 class="h4 fw-bold">Our privacy commitment</h2>
+
+                    <p class="mb-2">
+                        We collect and use personal information only for legitimate,
+                        clearly explained purposes connected with providing and
+                        improving Market Window.
+                    </p>
+
+                    <p class="mb-0">
+                        We aim to collect only information that is necessary,
+                        relevant and proportionate to those purposes. We do not
+                        believe that personal information should be collected simply
+                        because it is technically possible to collect it.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- 1 -->
+    <section class="mb-5">
+        <h2 class="h3 fw-bold">1. Who we are</h2>
+
+        <p>
+            Market Window ("Market Window", "MW", "we", "us", or "our") is a
+            marketplace-discovery service designed to help people discover physical
+            shops, businesses and products around them before they go out to buy.
+        </p>
+
+        <p>
+            Market Window may operate through its website, progressive web
+            application, mobile interfaces, APIs and other related services.
+        </p>
+
+        <p>
+            For questions concerning privacy or the handling of personal information,
+            please contact:
+        </p>
+
+        <div class="bg-light rounded-4 p-4">
+            <strong>Market Window</strong><br>
+            Data Protection / Privacy Contact<br>
+            Email:
+            <a href="mailto:privacy@marketwindowgh.com">
+                privacy@marketwindowgh.com
+            </a><br>
+            Website:
+            <a href="{{ url_for('main_bp.index') }}">
+                Market Window
+            </a>
+        </div>
+    </section>
+
+
+    <!-- 2 -->
+    <section class="mb-5">
+        <h2 class="h3 fw-bold">2. What personal information we collect</h2>
+
+        <p>
+            Personal information is information that identifies, relates to, or can
+            reasonably be associated with a living individual.
+        </p>
+
+        <p>
+            Depending on how you use Market Window, we may process some of the
+            following information:
+        </p>
+
+        <ul>
+            <li>Name and profile information.</li>
+            <li>Email address.</li>
+            <li>Telephone or WhatsApp number.</li>
+            <li>Account credentials and verification information.</li>
+            <li>Location information that you choose to provide.</li>
+            <li>Searches, saved shops, follows, wishlists and similar interactions.</li>
+            <li>Information you provide when contacting a shop through Market Window.</li>
+            <li>Images or photographs uploaded by users.</li>
+            <li>Technical information such as IP address, browser and device information where necessary.</li>
+            <li>Information relating to shops or businesses where that information identifies an individual.</li>
+        </ul>
+
+        <p class="mb-0">
+            We do not require every user to provide every category of information.
+            The information collected depends on the features you use.
+        </p>
+    </section>
+
+
+    <!-- 3 -->
+    <section class="mb-5">
+        <h2 class="h3 fw-bold">3. Why we collect and use information</h2>
+
+        <p>
+            We use personal information for specific purposes, including:
+        </p>
+
+        <ul>
+            <li>Creating and maintaining user accounts.</li>
+            <li>Verifying accounts and preventing abuse.</li>
+            <li>Showing shops and products relevant to your location.</li>
+            <li>Providing location-based discovery features.</li>
+            <li>Allowing users to save, follow or interact with shops.</li>
+            <li>Allowing shop owners to manage and claim their businesses.</li>
+            <li>Communicating with users about their accounts and requests.</li>
+            <li>Protecting Market Window against fraud, abuse and security threats.</li>
+            <li>Maintaining and improving the reliability of our services.</li>
+            <li>Complying with applicable legal obligations.</li>
+        </ul>
+
+        <p>
+            We do not use personal information for purposes that are unrelated to the
+            reason it was collected without an appropriate legal basis or, where
+            required, your consent.
+        </p>
+    </section>
+
+
+    <!-- 4 -->
+    <section class="mb-5">
+        <h2 class="h3 fw-bold">4. Location information</h2>
+
+        <p>
+            Location is important to Market Window because the service is designed
+            around discovering businesses near you.
+        </p>
+
+        <p>
+            If you permit location access, we may use your location to determine
+            nearby shops, products or areas of interest. You may also choose to
+            provide a home or preferred location manually.
+        </p>
+
+        <div class="alert alert-primary border-0 rounded-4">
+            <strong>Your location is not automatically public.</strong>
+            Location information used for personalisation is treated separately from
+            public business-location information.
+        </div>
+
+        <p>
+            We aim to use the minimum level of location precision necessary for the
+            feature concerned. Where precise coordinates are not necessary, we may
+            use a broader area instead.
+        </p>
+
+        <p class="mb-0">
+            You can control device location permissions through your device or
+            browser settings.
+        </p>
+    </section>
+
+
+    <!-- 5 -->
+    <section class="mb-5">
+        <h2 class="h3 fw-bold">5. Business and shop information</h2>
+
+        <p>
+            Market Window displays information about physical businesses so that
+            people can discover shops and products before visiting them.
+        </p>
+
+        <p>
+            This may include:
+        </p>
+
+        <ul>
+            <li>Business name.</li>
+            <li>Business category.</li>
+            <li>Business description.</li>
+            <li>Business location and address.</li>
+            <li>Opening hours.</li>
+            <li>Business telephone number or other contact details.</li>
+            <li>Products and services.</li>
+            <li>Ratings and reviews.</li>
+            <li>Business photographs.</li>
+        </ul>
+
+        <p class="mb-0">
+            Where information identifies a particular individual, such as a sole
+            trader or shop owner, that information may also constitute personal
+            information and will be handled accordingly.
+        </p>
+    </section>
+
+
+    <!-- 6 -->
+    <section class="mb-5">
+        <h2 class="h3 fw-bold">6. Publicly available and externally sourced information</h2>
+
+        <p>
+            Market Window may obtain certain business information from public,
+            licensed, authorised or otherwise legitimately accessible sources.
+            This may include publicly available business information and external
+            business listings.
+        </p>
+
+        <p>
+            The fact that information is publicly accessible does not mean that we
+            treat all information as unrestricted personal information. Where
+            information relates to an identifiable individual, we consider the
+            applicable privacy requirements and the purpose for which the information
+            is being used.
+        </p>
+
+        <p class="mb-0">
+            We aim to use publicly sourced information primarily to improve business
+            discovery and accuracy rather than to create unnecessary personal
+            profiles.
+        </p>
+    </section>
+
+
+    <!-- 7 -->
+    <section class="mb-5">
+        <h2 class="h3 fw-bold">7. Photographs and images</h2>
+
+        <p>
+            Market Window may display photographs of shops, products and businesses.
+            Photographs can sometimes contain identifiable people and may therefore
+            constitute personal information.
+        </p>
+
+        <p>
+            We take care to distinguish between a photograph primarily showing a
+            business or storefront and information intentionally collected to identify
+            an individual.
+        </p>
+
+        <p>
+            We do not use ordinary storefront photographs for facial-recognition or
+            biometric identification purposes.
+        </p>
+
+        <p>
+            Where users upload photographs, they should ensure that they have the
+            appropriate rights or permission to upload and use those photographs.
+            Users should avoid uploading photographs containing people where they do
+            not have a lawful basis to publish the image.
+        </p>
+
+        <p class="mb-0">
+            Where appropriate, Market Window may remove, restrict or modify an image
+            where its continued publication creates a legitimate privacy or safety
+            concern.
+        </p>
+    </section>
+
+
+    <!-- 8 -->
+    <section class="mb-5">
+        <h2 class="h3 fw-bold">8. User contacts and address books</h2>
+
+        <p>
+            Market Window does not require users to upload their entire telephone
+            address book in order to use the service.
+        </p>
+
+        <p>
+            If a future feature allows users to invite people from their contacts,
+            we will seek to design that feature around data minimisation. Where
+            practical, contact information will be processed on the user's device
+            and only the minimum information necessary for the requested action
+            will be transmitted.
+        </p>
+
+        <div class="alert alert-light border rounded-4">
+            <strong>We do not sell users' address books.</strong>
+            We do not intend to create personal profiles of people merely because
+            their contact information appears in another user's phone.
+        </div>
+    </section>
+
+
+    <!-- 9 -->
+    <section class="mb-5">
+        <h2 class="h3 fw-bold">9. Information about shop owners and representatives</h2>
+
+        <p>
+            A shop owner or authorised representative may provide information when
+            creating, claiming, verifying or managing a business on Market Window.
+        </p>
+
+        <p>
+            This may include a name, telephone number, email address or other
+            information needed to establish that the person is authorised to manage
+            the business.
+        </p>
+
+        <p>
+            We distinguish, where reasonably possible, between information intended
+            for public business communication and private information used only for
+            account administration or verification.
+        </p>
+
+        <p class="mb-0">
+            Private verification information will not be published simply because it
+            was provided to us for verification.
+        </p>
+    </section>
+
+
+    <!-- 10 -->
+    <section class="mb-5">
+        <h2 class="h3 fw-bold">10. Cookies and technical information</h2>
+
+        <p>
+            Market Window may use cookies, sessions and similar technologies required
+            for the operation, security and functionality of the service.
+        </p>
+
+        <p>
+            Depending on the features enabled, we may process technical information
+            such as:
+        </p>
+
+        <ul>
+            <li>IP address.</li>
+            <li>Browser type and version.</li>
+            <li>Operating system or device information.</li>
+            <li>Session information.</li>
+            <li>Security and error information.</li>
+        </ul>
+
+        <p class="mb-0">
+            We use such information primarily for security, authentication,
+            reliability, diagnostics and service functionality rather than to build
+            unnecessary personal profiles.
+        </p>
+    </section>
+
+
+    <!-- 11 -->
+    <section class="mb-5">
+        <h2 class="h3 fw-bold">11. How we use third-party services</h2>
+
+        <p>
+            Market Window may use trusted third-party service providers to operate
+            particular parts of the platform.
+        </p>
+
+        <p>
+            Depending on the features in use, these may include providers of:
+        </p>
+
+        <ul>
+            <li>Cloud image storage and delivery.</li>
+            <li>Website and database hosting.</li>
+            <li>Email communication.</li>
+            <li>Telephone, SMS or messaging verification.</li>
+            <li>Maps and geolocation services.</li>
+            <li>Authentication services.</li>
+            <li>Search infrastructure.</li>
+        </ul>
+
+        <p>
+            Where a service provider processes personal information on our behalf,
+            we expect the processing to be limited to legitimate service purposes
+            and subject to appropriate security and confidentiality requirements.
+        </p>
+    </section>
+
+
+    <!-- 12 -->
+    <section class="mb-5">
+        <h2 class="h3 fw-bold">12. Cloudinary and image storage</h2>
+
+        <p>
+            Market Window may use Cloudinary to store and deliver images uploaded
+            through the platform.
+        </p>
+
+        <p>
+            Uploaded images may be processed to reduce file size, improve delivery
+            performance and convert them into efficient web formats such as WebP.
+        </p>
+
+        <p>
+            Existing external business-image URLs are not automatically downloaded
+            and copied to Cloudinary merely because they are displayed by Market
+            Window.
+        </p>
+
+        <p class="mb-0">
+            When an image is replaced or removed, we aim to remove the corresponding
+            stored asset when it is no longer required.
+        </p>
+    </section>
+
+
+    <!-- 13 -->
+    <section class="mb-5">
+        <h2 class="h3 fw-bold">13. Data security</h2>
+
+        <p>
+            We take reasonable technical and organisational measures to protect
+            personal information against unauthorised access, accidental loss,
+            destruction, alteration, disclosure or misuse.
+        </p>
+
+        <p>
+            Depending on the type of information, these measures may include:
+        </p>
+
+        <ul>
+            <li>Secure password hashing.</li>
+            <li>Authentication and access controls.</li>
+            <li>Secure HTTPS connections.</li>
+            <li>Restricted access to administrative systems.</li>
+            <li>Protected application secrets and credentials.</li>
+            <li>Controlled database access.</li>
+            <li>Security monitoring and error handling.</li>
+            <li>Appropriate backup and recovery procedures.</li>
+        </ul>
+
+        <p class="mb-0">
+            No internet service can guarantee absolute security. Nevertheless, we
+            continuously seek to improve the technical and organisational safeguards
+            used to protect Market Window and its users.
+        </p>
+    </section>
+
+
+    <!-- 14 -->
+    <section class="mb-5">
+        <h2 class="h3 fw-bold">14. Data retention</h2>
+
+        <p>
+            We do not intend to keep personal information indefinitely without a
+            legitimate reason.
+        </p>
+
+        <p>
+            Information may be retained for as long as reasonably necessary to:
+        </p>
+
+        <ul>
+            <li>Provide an active service.</li>
+            <li>Maintain account and business records.</li>
+            <li>Meet legal or regulatory requirements.</li>
+            <li>Resolve disputes.</li>
+            <li>Prevent fraud or abuse.</li>
+            <li>Maintain security and system integrity.</li>
+        </ul>
+
+        <p class="mb-0">
+            Temporary information, such as verification codes and certain security
+            records, may be retained for shorter periods according to their purpose.
+        </p>
+    </section>
+
+
+    <!-- 15 -->
+    <section class="mb-5">
+        <h2 class="h3 fw-bold">15. Your rights and choices</h2>
+
+        <p>
+            Depending on applicable law and the circumstances of processing, you may
+            have rights concerning your personal information.
+        </p>
+
+        <p>These may include the ability to:</p>
+
+        <ul>
+            <li>Ask whether we process your personal information.</li>
+            <li>Request information about how your data is being used.</li>
+            <li>Request access to personal information we hold about you.</li>
+            <li>Request correction of inaccurate information.</li>
+            <li>Object to certain processing.</li>
+            <li>Withdraw consent where processing is based on consent.</li>
+            <li>Request deletion where applicable.</li>
+            <li>Request information about relevant recipients of your data.</li>
+        </ul>
+
+        <p class="mb-0">
+            Some requests may be subject to legal or operational limitations. We will
+            explain the reason where we cannot fully comply with a request.
+        </p>
+    </section>
+
+
+    <!-- 16 -->
+    <section class="mb-5">
+        <h2 class="h3 fw-bold">16. Account deletion</h2>
+
+        <p>
+            You may request deletion of your Market Window account and associated
+            personal information by contacting us through the privacy contact
+            provided on this page.
+        </p>
+
+        <p>
+            Where deletion is requested, we will review the information concerned
+            and delete or anonymise information that no longer needs to be retained,
+            subject to legitimate legal, security, fraud-prevention or recordkeeping
+            requirements.
+        </p>
+
+        <p class="mb-0">
+            Deleting an account may not automatically remove information that another
+            person has lawfully published as business information, where that
+            information is independently maintained and does not constitute the
+            requesting user's private account information.
+        </p>
+    </section>
+
+
+    <!-- 17 -->
+    <section class="mb-5">
+        <h2 class="h3 fw-bold">17. Marketing and communications</h2>
+
+        <p>
+            Market Window may send communications necessary to operate your account,
+            including verification messages, security notices, service notifications
+            and important changes.
+        </p>
+
+        <p>
+            Where we send direct marketing communications, we will provide an
+            appropriate way to stop receiving those communications.
+        </p>
+
+        <p class="mb-0">
+            You can contact us if you believe you are receiving marketing
+            communications that you did not request or no longer wish to receive.
+        </p>
+    </section>
+
+
+    <!-- 18 -->
+    <section class="mb-5">
+        <h2 class="h3 fw-bold">18. Children and young users</h2>
+
+        <p>
+            Market Window is a general marketplace-discovery service and is not
+            designed to intentionally collect extensive personal information from
+            children.
+        </p>
+
+        <p>
+            We encourage parents and guardians to help younger users understand
+            what information they share online.
+        </p>
+
+        <p class="mb-0">
+            If we become aware that personal information has been collected in a
+            manner that is inconsistent with applicable requirements concerning
+            children, we will take appropriate steps to investigate and address it.
+        </p>
+    </section>
+
+
+    <!-- 19 -->
+    <section class="mb-5">
+        <h2 class="h3 fw-bold">19. International processing and data transfers</h2>
+
+        <p>
+            Some technology providers used by Market Window may operate servers or
+            services outside Ghana. As a result, personal information may in some
+            circumstances be processed outside Ghana.
+        </p>
+
+        <p>
+            Where personal information is transferred to another country or service
+            provider, we seek to use appropriate contractual, technical and
+            organisational safeguards and to comply with applicable legal
+            requirements.
+        </p>
+
+        <p class="mb-0">
+            The countries and categories of recipients involved may change as the
+            technical infrastructure of Market Window develops. Material changes
+            will be reflected in this policy where appropriate.
+        </p>
+    </section>
+
+
+    <!-- 20 -->
+    <section class="mb-5">
+        <h2 class="h3 fw-bold">20. Data protection compliance in Ghana</h2>
+
+        <p>
+            Market Window recognises the importance of Ghana's data protection
+            framework, including the <strong>Data Protection Act, 2012 (Act 843)</strong>,
+            and seeks to operate its personal-data practices according to applicable
+            legal requirements and recognised data protection principles.
+        </p>
+
+        <p>
+            These principles include accountability, lawfulness, purpose
+            specification, information quality, purpose limitation, openness,
+            security safeguards and data-subject participation.
+        </p>
+
+        <p>
+            The Ghana Data Protection Commission is the statutory regulator responsible
+            for data protection in Ghana. Information about the Commission and Ghana's
+            data protection framework is available through its official website.
+        </p>
+
+        <p>
+            You can learn more from the
+            <a href="https://dataprotection.org.gh/" target="_blank" rel="noopener noreferrer">
+                Data Protection Commission of Ghana
+            </a>.
+        </p>
+
+        <p class="mb-0">
+            Where Market Window is required to register, maintain a data protection
+            supervisor, complete compliance processes or satisfy other regulatory
+            requirements, we will take the necessary steps applicable to our
+            operations.
+        </p>
+    </section>
+
+
+    <!-- 21 -->
+    <section class="mb-5">
+        <h2 class="h3 fw-bold">21. International privacy standards</h2>
+
+        <p>
+            Market Window is primarily designed for the Ghanaian market. However,
+            people may access online services from other countries.
+        </p>
+
+        <p>
+            Where another privacy law applies to a particular processing activity,
+            we will consider the applicable requirements. This may include laws such
+            as the European Union's General Data Protection Regulation (GDPR) where
+            its territorial requirements are met.
+        </p>
+
+        <p class="mb-0">
+            We aim to build our privacy practices around principles that are
+            internationally recognised: transparency, purpose limitation, data
+            minimisation, security, accountability and respect for individual rights.
+        </p>
+    </section>
+
+
+    <!-- 22 -->
+    <section class="mb-5">
+        <h2 class="h3 fw-bold">22. Data accuracy</h2>
+
+        <p>
+            We aim to keep personal information accurate, complete and reasonably
+            up to date for the purposes for which it is used.
+        </p>
+
+        <p>
+            Some business information may originate from business owners, users,
+            public sources or other legitimate sources. Because business information
+            can change, we encourage shop owners and users to report inaccurate or
+            outdated information.
+        </p>
+
+        <p class="mb-0">
+            If you identify inaccurate personal information relating to you, please
+            contact us so that we can investigate and correct it where appropriate.
+        </p>
+    </section>
+
+
+    <!-- 23 -->
+    <section class="mb-5">
+        <h2 class="h3 fw-bold">23. Reviews, comments and information you publish</h2>
+
+        <p>
+            Some Market Window features may allow users to publish reviews,
+            comments, photographs or other information.
+        </p>
+
+        <p>
+            Information intentionally published as public content may be visible to
+            other users and may be copied or shared by third parties outside our
+            control.
+        </p>
+
+        <p>
+            Before publishing information, consider whether it contains another
+            person's private information, telephone number, home address, identity
+            document, private photograph or other information that should not be
+            publicly disclosed.
+        </p>
+
+        <p class="mb-0">
+            We may remove content that violates applicable law, our platform rules,
+            another person's privacy, or the safety and integrity of Market Window.
+        </p>
+    </section>
+
+
+    <!-- 24 -->
+    <section class="mb-5">
+        <h2 class="h3 fw-bold">24. Data breaches and security incidents</h2>
+
+        <p>
+            If we become aware of a security incident involving personal information,
+            we will investigate it and take appropriate steps to contain, remedy and
+            prevent further harm.
+        </p>
+
+        <p>
+            Where notification to affected individuals, regulators or other parties
+            is required by applicable law, we will make the required notifications.
+        </p>
+
+        <p class="mb-0">
+            If you believe that your information may have been compromised through
+            Market Window, please contact us promptly using the privacy contact below.
+        </p>
+    </section>
+
+
+    <!-- 25 -->
+    <section class="mb-5">
+        <h2 class="h3 fw-bold">25. Changes to this Privacy Policy</h2>
+
+        <p>
+            Market Window may update this policy when our services, technology,
+            legal obligations or privacy practices change.
+        </p>
+
+        <p>
+            When we make significant changes, we will take reasonable steps to make
+            the updated policy visible to users.
+        </p>
+
+        <p class="mb-0">
+            The date shown at the beginning of this policy indicates when it was most
+            recently updated.
+        </p>
+    </section>
+
+
+    <!-- 26 -->
+    <section class="mb-5">
+        <h2 class="h3 fw-bold">26. How to contact us about privacy</h2>
+
+        <p>
+            We want users and business owners to feel comfortable asking questions
+            about their information. You do not need to understand legal terminology
+            before contacting us.
+        </p>
+
+        <div class="card border-0 bg-light rounded-4">
+            <div class="card-body p-4">
+                <h3 class="h5 fw-bold">Privacy enquiries</h3>
+
+                <p class="mb-1">
+                    <strong>Email:</strong>
+                    <a href="mailto:privacy@marketwindowgh.com">
+                        privacy@marketwindowgh.com
+                    </a>
+                </p>
+
+                <p class="mb-1">
+                    <strong>Subject:</strong>
+                    Privacy Request — Market Window
+                </p>
+
+                <p class="mb-0">
+                    When making a request, please provide enough information for us
+                    to understand and verify the request without unnecessarily
+                    sending sensitive information by email.
+                </p>
+            </div>
+        </div>
+    </section>
+
+
+    <!-- Final reassurance -->
+    <section class="mb-4">
+        <div class="card border-primary border-opacity-25 shadow-sm rounded-4">
+            <div class="card-body p-4 p-lg-5 text-center">
+
+                <div class="fs-1 text-primary mb-3">
+                    <i class="bi bi-shield-lock"></i>
+                </div>
+
+                <h2 class="h3 fw-bold mb-3">
+                    Privacy is part of how we build Market Window
+                </h2>
+
+                <p class="text-muted mx-auto mb-0" style="max-width: 760px;">
+                    Market Window exists to make local shopping easier and more
+                    informed. We want that convenience to come with confidence.
+                    We will continue improving our systems, policies and practices
+                    so that personal information is handled responsibly, securely
+                    and transparently.
+                </p>
+
+            </div>
+        </div>
+    </section>
+
+
+    <!-- Legal note -->
+    <p class="small text-muted text-center mt-5 mb-0">
+        This Privacy Policy describes Market Window's intended privacy practices
+        and should be read together with our Terms of Use and any feature-specific
+        notices presented when information is collected.
+    </p>
+
+</div>
+
+{% endblock %}

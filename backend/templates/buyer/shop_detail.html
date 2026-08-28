@@ -30,7 +30,7 @@
                             {% endif %}
                         </h1>
                         {% if shop.google_category %}
-                        <div class="small text-muted mt-1">{{ shop.google_category }}</div>
+                        <div class="small text-muted mt-1">({{ shop.google_category }})</div>
                         {% endif %}
                         <div class="d-flex align-items-center gap-2">
                             {% if current_user.is_authenticated %}
@@ -44,7 +44,7 @@
                             </button>
                             {% endif %}
                             {% if shop.promoted %}
-                            <span class="badge rounded-pill text-bg-warning-subtle text-warning-emphasis border">Promoted Shop</span>
+                            <span class="badge rounded-pill text-bg-warning-subtle text-warning-emphasis border">Promoted</span>
                             {% endif %}
                         </div>
                     </div>
@@ -66,8 +66,8 @@
                         </div>
 
                         {% else %}
-                        <div class="alert alert-light border py-2 px-3 mb-0">
-                            <i class="bi bi-shop me-1"></i>This shop has already been claimed.
+                        <div class="alert text-mw alert-light border py-2 px-3 mb-0">
+                            <i class="bi bi-check-circle-fill me-1"></i>Contact details verified.
                         </div>
                         {% endif %}
                     </div>
@@ -80,8 +80,8 @@
                         {% endwith %}
                         {% if shop.phone %}
                             <a href="tel:+{{ shop.phone }}"
-                            class="badge rounded-pill text-bg-success border text-decoration-none">
-                                <i class="bi bi-telephone me-1"></i>{{ shop.phone }}
+                            class="badge rounded-pill text-gradient bg-mw border text-decoration-none">
+                                <i class="bi bi-telephone me-1"></i> Call
                             </a>
 
                             <a href="https://wa.me/{{ shop.phone | replace('+', '') | replace(' ', '') }}?text={{ (

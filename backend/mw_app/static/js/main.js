@@ -39,6 +39,21 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     const bottomNav = document.querySelector(".bottom-nav");
+    if (bottomNav) {
+        let lastScrollY = window.scrollY;
+        window.addEventListener("scroll", () => {
+            const currentScrollY = window.scrollY;
+            const scrollDelta = currentScrollY - lastScrollY;
+
+            if (currentScrollY <= 16 || scrollDelta < -8) {
+                bottomNav.classList.remove("is-hidden");
+            } else if (scrollDelta > 8) {
+                bottomNav.classList.add("is-hidden");
+            }
+            lastScrollY = currentScrollY;
+        }, { passive: true });
+    }
+
     const bottomNavTargets = bottomNav
         ? Array.from(bottomNav.querySelectorAll(".bottom-nav-item"))
             .map((item) => {

@@ -213,6 +213,11 @@
         {% block content %}{% endblock %}
     </main>
 
+    <footer class="text-center py-3 small text-muted">
+        <a href="{{ url_for('main_bp.terms_of_use') }}" class="text-muted text-decoration-none me-3">Terms of Use</a>
+        <a href="{{ url_for('main_bp.privacy_policy') }}" class="text-muted text-decoration-none">Privacy Policy</a>
+    </footer>
+
     <!-- Bottom Navigation (Mobile) -->
     <nav class="bottom-nav">
         <a href="/" class="bottom-nav-item {{ is_active('/') }}">

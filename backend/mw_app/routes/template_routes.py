@@ -1419,6 +1419,16 @@ def profile():
                          owned_shops=owned_shops)
 
 
+@main_bp.route('/privacy')
+def privacy_policy():
+    return render_template('privacy.html')
+
+
+@main_bp.route('/terms-of-use')
+def terms_of_use():
+    return render_template('terms_of_use.html')
+
+
 @main_bp.route('/home-location-setup')
 @login_required
 def home_location_setup():

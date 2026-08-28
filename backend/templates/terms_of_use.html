@@ -1,0 +1,967 @@
+{% extends "base.html" %}
+
+{% block title %}Terms of Use | Market Window{% endblock %}
+
+{% block content %}
+
+<div class="container py-5" style="max-width: 1050px;">
+
+    <!-- Header -->
+    <div class="text-center mb-5">
+        <span class="badge rounded-pill bg-primary-subtle text-primary px-3 py-2 mb-3">
+            Terms of Use
+        </span>
+
+        <h1 class="display-5 fw-bold mb-3">Welcome to Market Window</h1>
+
+        <p class="lead text-muted mx-auto" style="max-width: 780px;">
+            These Terms explain the rules that apply when you use Market Window.
+            They are designed to keep the platform useful, trustworthy, respectful
+            and safe for shoppers, shop owners and other members of our community.
+        </p>
+
+        <p class="small text-muted mb-0">
+            <strong>Last updated:</strong>
+            {{ terms_updated_at | default("27 August 2026") }}
+        </p>
+    </div>
+
+
+    <!-- Important summary -->
+    <div class="card border-0 shadow-sm rounded-4 mb-5">
+        <div class="card-body p-4 p-lg-5">
+
+            <h2 class="h4 fw-bold mb-4">
+                Before you use Market Window
+            </h2>
+
+            <div class="row g-4">
+
+                <div class="col-md-6">
+                    <div class="d-flex gap-3">
+                        <i class="bi bi-search fs-3 text-primary"></i>
+                        <div>
+                            <h3 class="h6 fw-bold">Market Window (MW) is a discovery platform</h3>
+                            <p class="small text-muted mb-0">
+                                Market Window helps you discover shops, products and
+                                businesses. It does not automatically become the seller
+                                of products displayed on the platform.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-6">
+                    <div class="d-flex gap-3">
+                        <i class="bi bi-credit-card fs-3 text-primary"></i>
+                        <div>
+                            <h3 class="h6 fw-bold">MW does not handle your shop payments</h3>
+                            <p class="small text-muted mb-0">
+                                Payments and purchases are made directly between buyers
+                                and the relevant businesses unless Market Window
+                                explicitly provides another service.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-6">
+                    <div class="d-flex gap-3">
+                        <i class="bi bi-info-circle fs-3 text-primary"></i>
+                        <div>
+                            <h3 class="h6 fw-bold">Information can change</h3>
+                            <p class="small text-muted mb-0">
+                                Shop details, prices, opening hours, products and stock
+                                may change. Always confirm important information with
+                                the business.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-6">
+                    <div class="d-flex gap-3">
+                        <i class="bi bi-shield-check fs-3 text-primary"></i>
+                        <div>
+                            <h3 class="h6 fw-bold">Use MW responsibly</h3>
+                            <p class="small text-muted mb-0">
+                                Do not use Market Window for fraud, harassment,
+                                illegal activities, harmful content or abuse of
+                                other users or the platform.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+
+    <!-- 1 -->
+    <section class="mb-5">
+        <h2 class="h3 fw-bold">1. Acceptance of these Terms</h2>
+
+        <p>
+            By accessing, browsing, registering for, or using Market Window
+            ("Market Window", "MW", "we", "us", or "our"), you agree to be bound by
+            these Terms of Use ("Terms").
+        </p>
+
+        <p>
+            These Terms apply to all visitors, registered users, shop owners,
+            representatives, contributors and other persons who use Market Window.
+        </p>
+
+        <p>
+            If you do not agree with these Terms, please do not use Market Window.
+        </p>
+
+        <p class="mb-0">
+            Our Privacy Policy forms an important companion to these Terms and
+            explains how Market Window handles personal information.
+        </p>
+    </section>
+
+
+    <!-- 2 -->
+    <section class="mb-5">
+        <h2 class="h3 fw-bold">2. What Market Window is</h2>
+
+        <p>
+            Market Window is a marketplace-discovery platform. Its purpose is to
+            help people discover physical shops, businesses, products and services
+            around them before they go out to buy.
+        </p>
+
+        <p>
+            Market Window may provide information about businesses and their
+            products, including business names, locations, contact details,
+            descriptions, photographs, opening hours, prices, ratings and stock
+            information where available.
+        </p>
+
+        <div class="alert alert-primary border-0 rounded-4">
+            <strong>Market Window is generally not the seller.</strong>
+            Unless we expressly state otherwise, the business displayed on Market
+            Window is responsible for selling its own products and providing its
+            own services.
+        </div>
+
+        <p class="mb-0">
+            A listing on Market Window does not by itself mean that Market Window
+            owns, operates, represents, endorses or guarantees the business.
+        </p>
+    </section>
+
+
+    <!-- 3 -->
+    <section class="mb-5">
+        <h2 class="h3 fw-bold">3. Eligibility and responsible use</h2>
+
+        <p>
+            You may use Market Window only where you are legally permitted to do so
+            and can enter into a binding agreement under applicable law.
+        </p>
+
+        <p>
+            You are responsible for using Market Window in a lawful, honest and
+            respectful manner.
+        </p>
+
+        <p class="mb-0">
+            If you use Market Window on behalf of a business or another organisation,
+            you confirm that you have appropriate authority to act on its behalf.
+        </p>
+    </section>
+
+
+    <!-- 4 -->
+    <section class="mb-5">
+        <h2 class="h3 fw-bold">4. Your account</h2>
+
+        <p>
+            Some Market Window features may require an account.
+        </p>
+
+        <p>You are responsible for:</p>
+
+        <ul>
+            <li>Providing information that is reasonably accurate.</li>
+            <li>Keeping your login credentials secure.</li>
+            <li>Not sharing your password or verification credentials unnecessarily.</li>
+            <li>Using your account only for legitimate purposes.</li>
+            <li>Not impersonating another person or organisation.</li>
+            <li>Not creating accounts for fraudulent or deceptive purposes.</li>
+        </ul>
+
+        <p class="mb-0">
+            If you believe that someone has obtained unauthorised access to your
+            account, you should contact us and take appropriate steps to secure it.
+        </p>
+    </section>
+
+
+    <!-- 5 -->
+    <section class="mb-5">
+        <h2 class="h3 fw-bold">5. Shop information and accuracy</h2>
+
+        <p>
+            Market Window aims to make business information useful and reliable.
+            However, we do <strong>not guarantee that shop or product information is
+            always accurate, complete, current or available</strong>.
+        </p>
+
+        <p>
+            Information may come from shop owners, authorised representatives,
+            users, public sources, external business information, or other sources
+            that we reasonably consider useful.
+        </p>
+
+        <p>
+            Business information may change without our knowledge, including:
+        </p>
+
+        <ul>
+            <li>Shop location.</li>
+            <li>Opening and closing hours.</li>
+            <li>Telephone numbers.</li>
+            <li>Prices.</li>
+            <li>Product availability.</li>
+            <li>Product specifications.</li>
+            <li>Services offered.</li>
+            <li>Business ownership or management.</li>
+        </ul>
+
+        <div class="alert alert-warning border-0 rounded-4">
+            <strong>Important:</strong>
+            If a particular fact matters to your decision to visit or purchase,
+            confirm it directly with the relevant business before relying on it.
+        </div>
+    </section>
+
+
+    <!-- 6 -->
+    <section class="mb-5">
+        <h2 class="h3 fw-bold">6. Products, prices and stock availability</h2>
+
+        <p>
+            Market Window may display products and, where available, information
+            about their prices or stock.
+        </p>
+
+        <p>
+            Product information and stock availability can change rapidly.
+            A product shown on Market Window as available may have been sold,
+            reserved, removed, or become unavailable by the time you contact or
+            visit the shop.
+        </p>
+
+        <p>
+            Similarly, displayed prices may change, contain errors, exclude
+            additional charges, or differ from the price ultimately offered by
+            the business.
+        </p>
+
+        <p class="mb-0">
+            Market Window does not guarantee that a displayed product, price,
+            quantity or offer will remain available when you contact or visit a
+            business.
+        </p>
+    </section>
+
+
+    <!-- 7 -->
+    <section class="mb-5">
+        <h2 class="h3 fw-bold">7. Transactions between buyers and businesses</h2>
+
+        <div class="alert alert-primary border-0 rounded-4">
+            <strong>Market Window does not handle payments between shop owners and
+            buyers.</strong>
+        </div>
+
+        <p>
+            Unless Market Window expressly introduces a separate transaction or
+            payment service, purchases are made directly between the buyer and
+            the relevant business.
+        </p>
+
+        <p>
+            This means that the business and buyer are responsible for matters such
+            as:
+        </p>
+
+        <ul>
+            <li>Payment.</li>
+            <li>Product quality.</li>
+            <li>Product authenticity.</li>
+            <li>Delivery or collection.</li>
+            <li>Returns and refunds.</li>
+            <li>Warranties.</li>
+            <li>After-sales service.</li>
+            <li>Disputes concerning a purchase.</li>
+        </ul>
+
+        <p class="mb-0">
+            Market Window is not automatically a party to the contract of sale
+            between a shop and its customer.
+        </p>
+    </section>
+
+
+    <!-- 8 -->
+    <section class="mb-5">
+        <h2 class="h3 fw-bold">8. Shop claiming and business representation</h2>
+
+        <p>
+            Market Window may contain businesses that have not yet been claimed or
+            verified by their owners.
+        </p>
+
+        <p>
+            A person who claims a business must provide truthful information and
+            must not falsely claim to own, manage or represent a business.
+        </p>
+
+        <p>
+            Market Window may request information or take other reasonable steps
+            to verify a person's authority to manage a business listing.
+        </p>
+
+        <p class="mb-0">
+            Claiming a listing on Market Window does not itself establish legal
+            ownership of the underlying business.
+        </p>
+    </section>
+
+
+    <!-- 9 -->
+    <section class="mb-5">
+        <h2 class="h3 fw-bold">9. User-submitted content</h2>
+
+        <p>
+            Market Window may allow users to submit photographs, reviews, ratings,
+            descriptions, corrections, product information, comments and other
+            material ("User Content").
+        </p>
+
+        <p>
+            You remain responsible for User Content that you submit.
+        </p>
+
+        <p>By submitting User Content, you confirm that:</p>
+
+        <ul>
+            <li>You have the right or permission to submit it.</li>
+            <li>It is not knowingly false or misleading.</li>
+            <li>It does not unlawfully infringe another person's rights.</li>
+            <li>It does not contain information that you are not permitted to disclose.</li>
+            <li>It complies with these Terms and applicable law.</li>
+        </ul>
+    </section>
+
+
+    <!-- 10 -->
+    <section class="mb-5">
+        <h2 class="h3 fw-bold">10. Permission to use User Content</h2>
+
+        <p>
+            When you submit content to Market Window, you grant Market Window a
+            non-exclusive, worldwide, royalty-free permission to host, store,
+            reproduce, resize, optimise, format, display and distribute that content
+            as reasonably necessary to operate and provide the Market Window
+            service.
+        </p>
+
+        <p>
+            This permission does not mean that Market Window becomes the owner of
+            your original content.
+        </p>
+
+        <p>
+            You retain ownership of content that you own, subject to the rights
+            necessary for Market Window to operate the service.
+        </p>
+
+        <p class="mb-0">
+            You should not submit content to Market Window if you do not have the
+            necessary rights or permission to grant this licence.
+        </p>
+    </section>
+
+
+    <!-- 11 -->
+    <section class="mb-5">
+        <h2 class="h3 fw-bold">11. Photographs and images</h2>
+
+        <p>
+            Images submitted to Market Window must be appropriate for a public
+            marketplace-discovery platform.
+        </p>
+
+        <p>You must not upload photographs or images that:</p>
+
+        <ul>
+            <li>Belong to another person where you do not have permission to use them.</li>
+            <li>Expose another person's private or confidential information.</li>
+            <li>Contain identity documents or sensitive personal records.</li>
+            <li>Are intended to harass, threaten, humiliate or expose another person.</li>
+            <li>Contain sexual or explicitly inappropriate material.</li>
+            <li>Promote hatred, racism or discrimination.</li>
+            <li>Promote illegal activity or prohibited goods.</li>
+            <li>Mislead users about a business, product or service.</li>
+        </ul>
+
+        <p class="mb-0">
+            Market Window may remove or restrict an image where there is a legitimate
+            concern about privacy, legality, safety, ownership, authenticity or
+            suitability for the platform.
+        </p>
+    </section>
+
+
+    <!-- 12 -->
+    <section class="mb-5">
+        <h2 class="h3 fw-bold">12. Prohibited products, services and activities</h2>
+
+        <p>
+            Market Window is intended for legitimate businesses, products and
+            services. Users must not use the platform to advertise, promote,
+            facilitate or sell illegal or prohibited products or services.
+        </p>
+
+        <p>This includes, without limitation:</p>
+
+        <ul>
+            <li>Illegal drugs or controlled substances.</li>
+            <li>Stolen goods or goods known to be unlawfully obtained.</li>
+            <li>Weapons or other prohibited goods where their listing is unlawful or prohibited by our rules.</li>
+            <li>Counterfeit or deliberately fraudulent goods.</li>
+            <li>Fraudulent documents or identity information.</li>
+            <li>Services intended to facilitate criminal activity.</li>
+            <li>Sexually explicit or exploitative products or services.</li>
+            <li>Content or services that exploit or endanger children.</li>
+            <li>Religious services or religious solicitation.</li>
+            <li>Any other product or service that Market Window reasonably determines is unsuitable for the platform.</li>
+        </ul>
+
+        <p class="mb-0">
+            Market Window may restrict additional categories where necessary for
+            safety, legality, platform integrity or the interests of its users.
+        </p>
+    </section>
+
+
+    <!-- 13 -->
+    <section class="mb-5">
+        <h2 class="h3 fw-bold">13. Respectful and non-discriminatory conduct</h2>
+
+        <p>
+            Market Window is intended to be a respectful environment for people
+            from different backgrounds.
+        </p>
+
+        <p>
+            You must not use Market Window to publish, promote or distribute
+            content that is hateful, racist, threatening, dehumanising or intended
+            to discriminate against people or groups.
+        </p>
+
+        <p>
+            This includes discriminatory or hateful text, photographs, symbols,
+            advertisements, comments, reviews or other material.
+        </p>
+
+        <p class="mb-0">
+            Legitimate disagreement or criticism must not be used as a justification
+            for harassment, threats, hateful conduct or targeted abuse.
+        </p>
+    </section>
+
+
+    <!-- 14 -->
+    <section class="mb-5">
+        <h2 class="h3 fw-bold">14. Reviews and ratings</h2>
+
+        <p>
+            Reviews and ratings are intended to help users make better-informed
+            decisions.
+        </p>
+
+        <p>Users must not:</p>
+
+        <ul>
+            <li>Create fake reviews.</li>
+            <li>Review a business they have no legitimate basis to review.</li>
+            <li>Manipulate ratings through multiple accounts.</li>
+            <li>Post reviews in exchange for undisclosed incentives.</li>
+            <li>Deliberately sabotage a competitor's reputation.</li>
+            <li>Threaten a business with a negative review to obtain an improper benefit.</li>
+            <li>Publish private information about an individual in a review.</li>
+            <li>Use reviews for harassment, discrimination or personal attacks.</li>
+        </ul>
+
+        <p class="mb-0">
+            A user's review represents that user's experience or view. It does not
+            automatically represent the position or opinion of Market Window.
+        </p>
+    </section>
+
+
+    <!-- 15 -->
+    <section class="mb-5">
+        <h2 class="h3 fw-bold">15. Accuracy and honesty when submitting information</h2>
+
+        <p>
+            If you add or edit information about a shop, product or service, you
+            should make a reasonable effort to ensure that the information is
+            truthful and not misleading.
+        </p>
+
+        <p>
+            You must not deliberately alter information to mislead customers,
+            damage a competitor, impersonate a business, manipulate search results,
+            or obtain an unfair advantage.
+        </p>
+    </section>
+
+
+    <!-- 16 -->
+    <section class="mb-5">
+        <h2 class="h3 fw-bold">16. Communications with businesses and users</h2>
+
+        <p>
+            Market Window may provide ways for users to contact businesses through
+            telephone, WhatsApp, messaging or other communication channels.
+        </p>
+
+        <p>
+            These channels must be used responsibly.
+        </p>
+
+        <p>You must not use them to:</p>
+
+        <ul>
+            <li>Spam businesses or users.</li>
+            <li>Send threats or abusive messages.</li>
+            <li>Harass or stalk another person.</li>
+            <li>Send fraudulent requests.</li>
+            <li>Impersonate another person or business.</li>
+            <li>Attempt to obtain confidential information unlawfully.</li>
+        </ul>
+    </section>
+
+
+    <!-- 17 -->
+    <section class="mb-5">
+        <h2 class="h3 fw-bold">17. Fraud, impersonation and deception</h2>
+
+        <p>
+            You must not use Market Window to deceive, defraud or manipulate other
+            people.
+        </p>
+
+        <p>This includes:</p>
+
+        <ul>
+            <li>Impersonating another person, shop or organisation.</li>
+            <li>Creating fraudulent shop listings.</li>
+            <li>Using false identities to manipulate reviews.</li>
+            <li>Misrepresenting products or services.</li>
+            <li>Using Market Window to conduct scams.</li>
+            <li>Attempting to obtain money or personal information through deception.</li>
+        </ul>
+    </section>
+
+
+    <!-- 18 -->
+    <section class="mb-5">
+        <h2 class="h3 fw-bold">18. Prohibited technical activities</h2>
+
+        <p>
+            You must not interfere with the operation, security or availability of
+            Market Window.
+        </p>
+
+        <p>This includes:</p>
+
+        <ul>
+            <li>Attempting to gain unauthorised access to accounts or systems.</li>
+            <li>Bypassing authentication or security controls.</li>
+            <li>Introducing malware, viruses or malicious code.</li>
+            <li>Performing denial-of-service or similar attacks.</li>
+            <li>Probing or testing systems without permission.</li>
+            <li>Scraping or harvesting information in a manner that violates our rules or applicable restrictions.</li>
+            <li>Abusing APIs or automated interfaces.</li>
+            <li>Attempting to manipulate rankings or platform functionality.</li>
+            <li>Interfering with another user's access to the service.</li>
+        </ul>
+    </section>
+
+
+    <!-- 19 -->
+    <section class="mb-5">
+        <h2 class="h3 fw-bold">19. Intellectual property</h2>
+
+        <p>
+            Market Window and its original software, branding, logos, interface
+            design, graphics, written material, databases, features and other
+            proprietary material are protected by applicable intellectual property
+            laws.
+        </p>
+
+        <p>
+            Unless we expressly permit it, you may not copy, reproduce, modify,
+            redistribute, commercially exploit or create a competing service from
+            Market Window's proprietary material.
+        </p>
+
+        <p class="mb-0">
+            These Terms do not transfer ownership of Market Window's intellectual
+            property to you.
+        </p>
+    </section>
+
+
+    <!-- 20 -->
+    <section class="mb-5">
+        <h2 class="h3 fw-bold">20. Third-party services and links</h2>
+
+        <p>
+            Market Window may contain links, maps, images, communication tools or
+            other functionality provided by third parties.
+        </p>
+
+        <p>
+            Third-party services operate under their own terms and policies.
+            Market Window does not control every aspect of those services and is
+            not responsible for their independent operation, availability,
+            policies or content.
+        </p>
+
+        <p class="mb-0">
+            Your use of a third-party service may therefore be subject to additional
+            terms between you and that provider.
+        </p>
+    </section>
+
+
+    <!-- 21 -->
+    <section class="mb-5">
+        <h2 class="h3 fw-bold">21. Content moderation and enforcement</h2>
+
+        <p>
+            Market Window reserves the right to review, restrict, remove or disable
+            access to content that violates these Terms, applicable law, the safety
+            of users, or the integrity of the platform.
+        </p>
+
+        <p>
+            Depending on the circumstances, Market Window may also:
+        </p>
+
+        <ul>
+            <li>Remove or hide listings.</li>
+            <li>Remove reviews or User Content.</li>
+            <li>Restrict particular features.</li>
+            <li>Require additional verification.</li>
+            <li>Temporarily suspend an account.</li>
+            <li>Terminate an account.</li>
+            <li>Prevent repeated abuse from returning to the platform.</li>
+            <li>Refer matters to appropriate authorities where legally or reasonably necessary.</li>
+        </ul>
+
+        <p class="mb-0">
+            We may take action even where the violation has not resulted in a
+            complaint, particularly where immediate action is necessary to protect
+            users or the platform.
+        </p>
+    </section>
+
+
+    <!-- 22 -->
+    <section class="mb-5">
+        <h2 class="h3 fw-bold">22. Account suspension and termination</h2>
+
+        <p>
+            We may suspend or terminate an account where we reasonably believe that
+            the account has been used in violation of these Terms, applicable law,
+            or the safety and integrity of Market Window.
+        </p>
+
+        <p>
+            We may also restrict access where necessary to investigate suspected
+            fraud, abuse, security incidents or other serious misuse.
+        </p>
+
+        <p class="mb-0">
+            Where appropriate, we may allow a user to request a review of an
+            enforcement decision.
+        </p>
+    </section>
+
+
+    <!-- 23 -->
+    <section class="mb-5">
+        <h2 class="h3 fw-bold">23. Availability of Market Window</h2>
+
+        <p>
+            We work to keep Market Window available and reliable, but we do not
+            guarantee uninterrupted or error-free operation.
+        </p>
+
+        <p>
+            The service may occasionally be unavailable because of maintenance,
+            updates, technical failures, network problems, security incidents,
+            third-party service failures or circumstances beyond our reasonable
+            control.
+        </p>
+
+        <p class="mb-0">
+            We may change, suspend or discontinue particular features as Market
+            Window develops.
+        </p>
+    </section>
+
+
+    <!-- 24 -->
+    <section class="mb-5">
+        <h2 class="h3 fw-bold">24. No guarantee of businesses or products</h2>
+
+        <p>
+            Market Window does not guarantee the quality, safety, legality,
+            authenticity, availability or suitability of every product or service
+            listed by a business.
+        </p>
+
+        <p>
+            We do not guarantee that every business displayed on the platform is
+            trustworthy, licensed, authorised, available at a particular location,
+            or suitable for a particular purpose.
+        </p>
+
+        <p>
+            Users should exercise reasonable judgment and conduct appropriate
+            verification before purchasing products, visiting unfamiliar businesses,
+            sending money, or providing personal information.
+        </p>
+    </section>
+
+
+    <!-- 25 -->
+    <section class="mb-5">
+        <h2 class="h3 fw-bold">25. User responsibility and risk</h2>
+
+        <p>
+            You are responsible for your decisions when using information obtained
+            through Market Window.
+        </p>
+
+        <p>
+            This includes deciding whether to visit a business, purchase a product,
+            contact a business, provide information, rely on a price, or otherwise
+            interact with a person or business discovered through the platform.
+        </p>
+
+        <p class="mb-0">
+            Where an action involves significant financial, legal, health, safety
+            or personal consequences, you should independently verify the relevant
+            information before acting.
+        </p>
+    </section>
+
+
+    <!-- 26 -->
+    <section class="mb-5">
+        <h2 class="h3 fw-bold">26. Limitation of responsibility</h2>
+
+        <p>
+            To the extent permitted by applicable law, Market Window is not
+            responsible for losses arising solely from your reliance on information
+            supplied by a business, user, third party or external source where
+            Market Window did not create or independently guarantee that information.
+        </p>
+
+        <p>
+            Nothing in these Terms is intended to exclude or limit liability where
+            doing so would be prohibited by applicable law.
+        </p>
+
+        <p class="mb-0">
+            Nothing in these Terms removes rights or remedies that cannot lawfully
+            be excluded.
+        </p>
+    </section>
+
+
+    <!-- 27 -->
+    <section class="mb-5">
+        <h2 class="h3 fw-bold">27. Your responsibility for unlawful or harmful use</h2>
+
+        <p>
+            If your use of Market Window violates these Terms or applicable law and
+            causes legitimate loss, damage, claims or expenses to Market Window or
+            another person, you may be responsible to the extent provided by law.
+        </p>
+
+        <p class="mb-0">
+            This provision does not make you responsible for matters that were not
+            caused by your conduct or that cannot lawfully be assigned to you.
+        </p>
+    </section>
+
+
+    <!-- 28 -->
+    <section class="mb-5">
+        <h2 class="h3 fw-bold">28. Privacy and personal information</h2>
+
+        <p>
+            Your use of Market Window may involve the processing of personal
+            information.
+        </p>
+
+        <p>
+            Our
+            <a href="{{ url_for('main_bp.privacy_policy') }}">
+                Privacy Policy
+            </a>
+            explains what information we collect, why we use it, how we protect it,
+            and the choices and rights available to you.
+        </p>
+
+        <p class="mb-0">
+            By using Market Window, you acknowledge that you have had an opportunity
+            to review the Privacy Policy.
+        </p>
+    </section>
+
+
+    <!-- 29 -->
+    <section class="mb-5">
+        <h2 class="h3 fw-bold">29. Changes to these Terms</h2>
+
+        <p>
+            Market Window may update these Terms when our services, features,
+            business practices or legal requirements change.
+        </p>
+
+        <p>
+            The updated version will be published on this page together with its
+            effective or updated date.
+        </p>
+
+        <p class="mb-0">
+            Where a change is material, we will take reasonable steps to bring the
+            change to users' attention. Continued use of Market Window after the
+            effective date of updated Terms may constitute acceptance of the updated
+            Terms to the extent permitted by applicable law.
+        </p>
+    </section>
+
+
+    <!-- 30 -->
+    <section class="mb-5">
+        <h2 class="h3 fw-bold">30. Governing law</h2>
+
+        <p>
+            These Terms are intended to be governed by the laws of the Republic of
+            Ghana, subject to any mandatory legal rights or requirements that apply
+            to a particular user or transaction.
+        </p>
+
+        <p class="mb-0">
+            Any dispute arising from these Terms or your use of Market Window should
+            first be brought to our attention so that we have a reasonable
+            opportunity to understand and resolve the matter.
+        </p>
+    </section>
+
+
+    <!-- 31 -->
+    <section class="mb-5">
+        <h2 class="h3 fw-bold">31. Disputes and complaints</h2>
+
+        <p>
+            If you have a complaint about Market Window, a listing, User Content,
+            an account decision or another aspect of the platform, please contact
+            us first.
+        </p>
+
+        <p>
+            We will review legitimate complaints and, where appropriate, request
+            additional information before making a decision.
+        </p>
+
+        <p>
+            Nothing in these Terms prevents a person from exercising a legal or
+            regulatory right that cannot lawfully be waived.
+        </p>
+    </section>
+
+
+    <!-- 32 -->
+    <section class="mb-5">
+        <h2 class="h3 fw-bold">32. Contact Market Window</h2>
+
+        <p>
+            If you have questions about these Terms, want to report prohibited
+            content, or believe that someone is misusing Market Window, please
+            contact us.
+        </p>
+
+        <div class="card border-0 bg-light rounded-4">
+            <div class="card-body p-4">
+
+                <h3 class="h5 fw-bold">Market Window</h3>
+
+                <p class="mb-1">
+                    <strong>Terms & platform support:</strong>
+                    <a href="mailto:support@marketwindowgh.com">
+                        support@marketwindowgh.com
+                    </a>
+                </p>
+
+                <p class="mb-0">
+                    When reporting an issue, provide enough information for us to
+                    understand the concern. Please do not send passwords, OTPs or
+                    other unnecessary confidential information.
+                </p>
+
+            </div>
+        </div>
+    </section>
+
+
+    <!-- Final trust statement -->
+    <section class="mb-4">
+        <div class="card border-primary border-opacity-25 shadow-sm rounded-4">
+            <div class="card-body p-4 p-lg-5 text-center">
+
+                <div class="fs-1 text-primary mb-3">
+                    <i class="bi bi-people"></i>
+                </div>
+
+                <h2 class="h3 fw-bold mb-3">
+                    Let's keep Market Window useful and trustworthy
+                </h2>
+
+                <p class="text-muted mx-auto mb-0" style="max-width: 760px;">
+                    Market Window works best when shoppers, businesses and
+                    contributors treat one another honestly and respectfully.
+                    These Terms exist to help protect that environment while making
+                    local business discovery easier for everyone.
+                </p>
+
+            </div>
+        </div>
+    </section>
+
+
+    <p class="small text-muted text-center mt-5 mb-0">
+        By using Market Window, you agree to comply with these Terms of Use and
+        applicable law.
+    </p>
+
+</div>
+
+{% endblock %}
