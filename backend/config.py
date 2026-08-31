@@ -37,7 +37,7 @@ class Config:
     # Google OAuth configuration
     GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID")
     GOOGLE_CLIENT_SECRET = os.getenv("GOOGLE_CLIENT_SECRET")
-    OAUTHLIB_INSECURE_TRANSPORT = os.getenv("OAUTHLIB_INSECURE_TRANSPORT", "1")  # For development
+    OAUTHLIB_INSECURE_TRANSPORT = os.getenv("OAUTHLIB_INSECURE_TRANSPORT", "0")  
     
     # Mail configuration
     MAIL_SERVER = "smtp.gmail.com"

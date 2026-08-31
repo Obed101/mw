@@ -1,1 +1,1 @@
-web: gunicorn mw_app:app
+web: cd backend && gunicorn run:app
