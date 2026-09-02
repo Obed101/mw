@@ -37,7 +37,7 @@
         &#8373; {{ "%.2f"|format(product.price) }}
     </td>
     <td class="text-center" id="stock-cell-{{ product.id }}">
-        {% include "manage/partials/stock_badge.html" %}
+        <span class="badge {% if product.available %}text-bg-success{% else %}text-bg-warning{% endif %}">{{ product.availability_label }}</span>
     </td>
     <td class="pe-4 text-end">
         <button class="btn btn-link text-muted p-1" onclick="toggleProductRow({{ product.id }})" title="More actions">
@@ -57,6 +57,13 @@
                 <button type="button" class="btn btn-sm btn-outline-secondary" onclick="duplicateProduct({{ product.id }})">
                     <i class="bi bi-copy me-1"></i>Duplicate
                 </button>
+                <span class="availability-actions d-none gap-1">
+                <form method="post" action="{{ url_for('manage_bp.update_product_availability', product_id=product.id) }}" hx-post="{{ url_for('manage_bp.update_product_availability', product_id=product.id) }}" hx-target="#product-row-{{ product.id }}" hx-swap="outerHTML">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><input type="hidden" name="available" value="true"><button type="submit" class="btn btn-sm btn-outline-success">✔️ Still Available</button>
+                </form>
+                <form method="post" action="{{ url_for('manage_bp.update_product_availability', product_id=product.id) }}" hx-post="{{ url_for('manage_bp.update_product_availability', product_id=product.id) }}" hx-target="#product-row-{{ product.id }}" hx-swap="outerHTML">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><input type="hidden" name="available" value="false"><button type="submit" class="btn btn-sm btn-outline-warning">Mark unavailable</button>
+                </form></span>
                 <button class="btn btn-sm btn-outline-danger"
                         hx-post="{{ url_for('manage_bp.delete_product', product_id=product.id) }}"
                         hx-confirm="Are you sure you want to delete '{{ product.name }}'?"

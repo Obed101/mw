@@ -26,6 +26,7 @@ var/
 **/versions/*
 */versions/*.py
 !backend/migrations/versions/d7f0a1b2c3d4_add_privilege_authorization.py
+!backend/migrations/versions/e1a2b3c4d5e6_add_availability_and_usual_hours.py
 **/database.sqlite
 **/data.ms/*
 

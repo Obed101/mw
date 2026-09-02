@@ -56,6 +56,8 @@ class Product(db.Model):
     stock = db.Column(db.Integer, default=0)
     images = db.Column(db.Text)  # Deprecated: legacy JSON/comma-separated URLs
     is_active = db.Column(db.Boolean, default=True)
+    available = db.Column(db.Boolean, default=True, server_default='true', nullable=False, index=True)
+    availability_updated_at = db.Column(db.DateTime(timezone=True), nullable=True, index=True)
     is_hidden = db.Column(db.Boolean, default=False, server_default='false', nullable=False)
     created_at = db.Column(db.DateTime(timezone=True), default=datetime.now(timezone.utc))
     updated_at = db.Column(db.DateTime(timezone=True), default=datetime.now(timezone.utc), onupdate=datetime.now(timezone.utc))
@@ -139,6 +141,10 @@ class Product(db.Model):
 
     def __repr__(self):
         return f'<Product {self.name}>'
+
+    @property
+    def availability_label(self):
+        return 'Recently confirmed available' if self.available else 'Reported unavailable'
 
     @classmethod
     def generate_code(cls):

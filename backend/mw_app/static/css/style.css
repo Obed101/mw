@@ -524,14 +524,11 @@ body.mw-page-transitioning .bottom-nav {
 /* ===== HOME CATEGORY PILLS ===== */
 .category-pill-scroll {
     display: flex;
-    flex-direction: column;
+    flex-direction: row;
     flex-wrap: wrap;
-    align-content: flex-start;
-    align-items: flex-start;
-    gap: 0.6rem;
-    height: 170px;
-    overflow-x: auto;
-    overflow-y: hidden;
+    gap: 0.5rem;
+    height: auto;
+    overflow: visible;
     padding-bottom: 0.5rem;
     scrollbar-width: thin;
     scrollbar-color: var(--primary-purple) #f3f4f6;
@@ -556,6 +553,7 @@ body.mw-page-transitioning .bottom-nav {
     border: 1px solid var(--border-light);
     transition: all 0.2s ease;
     white-space: nowrap;
+    margin-bottom: 0.5rem;
 }
 
 .category-pill:hover {

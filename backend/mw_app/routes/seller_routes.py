@@ -202,6 +202,9 @@ def _serialize_product(product):
         'tags': product.tags,
         'price': float(product.price or 0),
         'stock': product.stock,
+        'available': bool(product.available),
+        'availability_updated_at': product.availability_updated_at.isoformat() if product.availability_updated_at else None,
+        'availability_label': product.availability_label,
         'category_id': product.category_id,
         'category_name': product.category.name if product.category else None,
         'shop_id': product.shop_id,
@@ -316,6 +319,11 @@ def _apply_product_updates(product, data):
                 'message': 'Stock cannot be negative'
             }), 400
         product.stock = stock
+
+    if 'available' in data:
+        raw_available = data.get('available')
+        product.available = raw_available if isinstance(raw_available, bool) else str(raw_available).lower() in ('1', 'true', 'yes', 'on')
+        product.availability_updated_at = datetime.now(timezone.utc)
 
     if 'category_id' in data:
         try:
@@ -1114,6 +1122,8 @@ def add_product():
             shop_id=shop.id,
             category_id=category_id,
             is_active=is_active,
+            available=_parse_bool(data.get('available'), default=True),
+            availability_updated_at=datetime.now(timezone.utc),
         )
 
         image_input = data.get('image_urls')

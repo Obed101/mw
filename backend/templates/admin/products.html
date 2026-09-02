@@ -49,7 +49,7 @@
         </td>
         <td style="font-size:.82rem;color:var(--admin-muted)">{{ product.shop.name if product.shop else '—' }}</td>
         <td style="font-size:.85rem;font-weight:600">GH₵{{ '%.2f'|format(product.price) }}</td>
-        <td style="font-size:.82rem">{{ product.stock }}</td>
+        <td style="font-size:.82rem"><span class="badge {{ 'text-bg-success' if product.available else 'text-bg-warning' }}">{{ product.availability_label }}</span></td>
         <td>
           {% if product.is_hidden %}
             <span class="status-badge status-hidden"><i class="bi bi-eye-slash"></i> Hidden</span>

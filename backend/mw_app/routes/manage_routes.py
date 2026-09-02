@@ -7,6 +7,7 @@ from ..utils.helpers import shop_owner_required, get_managed_shop
 from ..utils.cloudinary_images import process_and_upload_image, delete_image
 from ..services.ai_service import AIService
 from datetime import datetime, timezone
+from datetime import time as time_value
 from flask import current_app
 from pathlib import Path
 from uuid import uuid4
@@ -211,6 +212,12 @@ def _apply_product_form_data(product, form):
     product.price = price
     product.description = form.get('description', '').strip()
     product.type_ = form.get('type_', 'product')
+    if 'available' in form:
+        product.available = str(form.get('available')).lower() in ('1', 'true', 'yes', 'on')
+        product.availability_updated_at = datetime.now(timezone.utc)
+    elif product.availability_updated_at is None:
+        product.available = True
+        product.availability_updated_at = datetime.now(timezone.utc)
 
     specs_raw = form.get('specifications')
     if specs_raw:
@@ -257,7 +264,8 @@ def add_product():
             
             product = Product(
                 shop_id=shop.id,
-                is_active=True
+                is_active=True, available=True,
+                availability_updated_at=datetime.now(timezone.utc)
             )
 
             _apply_product_form_data(product, request.form)
@@ -283,6 +291,45 @@ def add_product():
         
     categories = Category.query.filter_by(is_active=True).order_by(Category.name).all()
     return render_template('manage/partials/product_form_add.html', categories=categories)
+
+
+def _parse_time(raw):
+    if not raw:
+        return None
+    return datetime.strptime(raw, '%H:%M').time()
+
+
+@manage_bp.route('/products/<int:product_id>/availability', methods=['POST'])
+@login_required
+@shop_owner_required
+def update_product_availability(product_id):
+    shop, error = get_managed_shop(current_user)
+    product = Product.query.get_or_404(product_id)
+    if error or product.shop_id != shop.id:
+        abort(403)
+    value = request.form.get('available', 'true').lower() in ('1', 'true', 'yes', 'on')
+    product.available = value
+    product.availability_updated_at = datetime.now(timezone.utc)
+    db.session.commit()
+    if request.headers.get('HX-Request'):
+        return render_template('manage/partials/product_row.html', product=product)
+    flash('Availability updated.', 'success')
+    return redirect(url_for('manage_bp.products', shop_id=shop.id))
+
+
+@manage_bp.route('/products/availability/confirm-all', methods=['POST'])
+@login_required
+@shop_owner_required
+def confirm_all_product_availability():
+    shop, error = get_managed_shop(current_user)
+    if error:
+        abort(403)
+    now = datetime.now(timezone.utc)
+    Product.query.filter_by(shop_id=shop.id).update(
+        {'available': True, 'availability_updated_at': now}, synchronize_session=False)
+    db.session.commit()
+    flash('All products confirmed available.', 'success')
+    return redirect(url_for('manage_bp.products', shop_id=shop.id))
 
 @manage_bp.route('/products/<int:product_id>/edit', methods=['GET', 'POST'])
 @login_required
@@ -514,6 +561,13 @@ def edit_shop_page():
         shop.address = request.form.get('address', shop.address)
         shop.description = request.form.get('description', shop.description)
         shop.is_active = 'is_active' in request.form
+        if 'usual_opening_time' in request.form:
+            try:
+                shop.usual_opening_time = _parse_time(request.form.get('usual_opening_time'))
+                shop.usual_closing_time = _parse_time(request.form.get('usual_closing_time'))
+            except ValueError:
+                flash('Opening and closing times must be valid.', 'danger')
+                return redirect(url_for('manage_bp.edit_shop_page', shop_id=shop.id))
         
         shop.last_updated = datetime.now(timezone.utc)
         db.session.commit()

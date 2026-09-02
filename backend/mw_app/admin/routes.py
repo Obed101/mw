@@ -916,6 +916,13 @@ def edit_shop(shop_id):
         shop.promoted = bool(form.promoted.data)
         shop.is_active = form.is_active.data
         shop.verification_status = form.verification_status.data
+        from datetime import datetime
+        try:
+            shop.usual_opening_time = datetime.strptime(request.form.get('usual_opening_time'), '%H:%M').time() if request.form.get('usual_opening_time') else None
+            shop.usual_closing_time = datetime.strptime(request.form.get('usual_closing_time'), '%H:%M').time() if request.form.get('usual_closing_time') else None
+        except ValueError:
+            flash('Opening and closing times must be valid.', 'error')
+            return render_template('admin/shop_edit.html', form=form, shop=shop)
 
         # Set verified_at timestamp when status becomes verified
         if form.verification_status.data == VERIFICATION_STATUS_VERIFIED and not shop.verified_at:
@@ -1001,6 +1008,33 @@ def products():
         search=search,
         status_filter=status_filter,
     )
+
+
+@mw_admin_bp.route('/products/<int:product_id>/availability', methods=['POST'])
+@require_privilege('manage_shops')
+def admin_product_availability(product_id):
+    product = Product.query.get_or_404(product_id)
+    raw = request.form.get('available')
+    if raw is None:
+        raw = (request.get_json(silent=True) or {}).get('available', True)
+    product.available = raw if isinstance(raw, bool) else str(raw).lower() in ('1', 'true', 'yes', 'on')
+    from datetime import datetime, timezone
+    product.availability_updated_at = datetime.now(timezone.utc)
+    db.session.commit()
+    flash(f'Availability for "{product.name}" updated.', 'success')
+    return redirect(request.referrer or url_for('mw_admin_bp.products'))
+
+
+@mw_admin_bp.route('/shops/<int:shop_id>/confirm-availability', methods=['POST'])
+@require_privilege('manage_shops')
+def admin_confirm_shop_availability(shop_id):
+    Shop.query.get_or_404(shop_id)
+    from datetime import datetime, timezone
+    Product.query.filter_by(shop_id=shop_id).update(
+        {'available': True, 'availability_updated_at': datetime.now(timezone.utc)}, synchronize_session=False)
+    db.session.commit()
+    flash('All shop products confirmed available.', 'success')
+    return redirect(request.referrer or url_for('mw_admin_bp.shops'))
 
 
 @mw_admin_bp.route('/products/<int:product_id>/edit', methods=['GET', 'POST'])

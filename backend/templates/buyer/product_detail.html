@@ -419,8 +419,8 @@
                     </div>
                     <div class="spec-item">
                         <span class="spec-label">Stock</span>
-                        <span class="spec-value {% if product.stock < 5 %}text-danger{% endif %}">
-                            {{ product.stock }} units left
+                        <span class="spec-value {% if not product.available %}text-danger{% endif %}">
+                            {{ product.availability_label }}
                         </span>
                     </div>
                     {% if product.specifications_dict %}

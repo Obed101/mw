@@ -2,6 +2,7 @@
 {% block admin_title %}Edit Shop — {{ shop.name }}{% endblock %}
 
 {% block admin_content %}
+<div class="admin-card mb-3"><div class="admin-card-body"><strong>Usual opening hours</strong><div class="row mt-2"><div class="col-md-6"><label class="small">Opens</label><input type="time" name="usual_opening_time" form="shop-edit-form" class="admin-form-control" value="{{ shop.usual_opening_time.strftime('%H:%M') if shop.usual_opening_time else '' }}"></div><div class="col-md-6"><label class="small">Closes</label><input type="time" name="usual_closing_time" form="shop-edit-form" class="admin-form-control" value="{{ shop.usual_closing_time.strftime('%H:%M') if shop.usual_closing_time else '' }}"></div></div></div></div>
 <div class="d-flex align-items-center gap-3 mb-4">
   <a href="{{ url_for('mw_admin_bp.shops') }}" class="btn-admin-sm"><i class="bi bi-arrow-left"></i> Back</a>
   <div>
@@ -15,7 +16,7 @@
     <div class="admin-card">
       <div class="admin-card-header"><i class="bi bi-shop me-2"></i>Shop Details</div>
       <div class="admin-card-body">
-        <form method="POST">
+        <form method="POST" id="shop-edit-form">
           {{ form.hidden_tag() }}
           <div class="admin-form-group">
             <label>Shop Name</label>

@@ -7,7 +7,7 @@
                 <div class="market-card-media">
                     <img src="{{ product.primary_image_url or url_for('static', filename='images/mw_logo_trans.png') }}" class="card-img-top market-card-image" alt="{{ product.name }}">
                     <span class="badge product-qty-badge">
-                        <i class="bi bi-box-seam me-1"></i>{{ product.stock }} available
+                        <i class="bi bi-check-circle me-1"></i>{{ product.availability_label if product.available else 'Reported unavailable' }}
                     </span>
                     {% if product._near_you is defined and product._near_you %}
                     <span class="position-absolute top-0 start-0 m-2 badge rounded-pill near-you-badge">
@@ -52,8 +52,8 @@
     {% endfor %}
 {% elif not next_page %}
 <div class="market-grid-full">
-    <div class="alert alert-light border text-center mb-0">
-       No products found within your selected criteria.
+    <div class="alert alert-light border text-center mb-0 text-gradient">
+       Products in this criteria are now coming. Check back later
     </div>
 </div>
 {% endif %}

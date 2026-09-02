@@ -24,7 +24,7 @@
                 <div class="p-3 p-md-4">
                     <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-2">
                         <h1 class="h3 fw-bold mb-0">
-                            {{ shop.name }}
+                            {{ shop.name }}{% if shop.usual_hours_label %}<div class="small text-muted mt-1">Usually open {{ shop.usual_hours_label }}</div>{% endif %}
                             {% if shop.verification_status == 'verified' %}
                             <span class="bi bi-patch-check text-mw small" aria-label="Verified shop"></span>
                             {% endif %}
@@ -164,7 +164,7 @@
 
     <section>
         <div class="d-flex justify-content-between align-items-center mb-3">
-            <h2 class="h5 fw-bold mb-0">Products in {{ shop.name }}</h2>
+            <h2 class="h5 fw-bold mb-0">What's available in {{ shop.name }}</h2>
             <a href="{{ url_for('main_bp.products', shop_id=shop.id) }}" class="btn btn-sm btn-outline-primary">Find all products</a>
         </div>
 

@@ -37,6 +37,16 @@
                 <textarea name="description" class="form-control" rows="4" placeholder="Tell customers about your shop...">{{ shop.description or '' }}</textarea>
             </div>
 
+            <div class="col-12 col-md-6">
+                <label class="form-label fw-bold small">Usual opening time</label>
+                <input type="time" name="usual_opening_time" class="form-control" value="{{ shop.usual_opening_time.strftime('%H:%M') if shop.usual_opening_time else '' }}">
+            </div>
+            <div class="col-12 col-md-6">
+                <label class="form-label fw-bold small">Usual closing time</label>
+                <input type="time" name="usual_closing_time" class="form-control" value="{{ shop.usual_closing_time.strftime('%H:%M') if shop.usual_closing_time else '' }}">
+            </div>
+            <div class="col-12"><p class="text-muted small mb-0">{% if shop.usual_hours_label %}This shop is usually open from {{ shop.usual_hours_label }}.{% endif %}</p></div>
+
             <div class="col-12">
                 <label class="form-label fw-bold small">Address / Landmark</label>
                 <input type="text" name="address" class="form-control" value="{{ shop.address or '' }}" placeholder="e.g. Near the main market square">

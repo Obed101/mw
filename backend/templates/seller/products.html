@@ -462,8 +462,8 @@
                     </div>
                 </div>
                 <div class="col-md-4">
-                    <label class="form-label" for="new-stock">Stock</label>
-                    <input id="new-stock" class="form-control" type="number" min="0" step="1" x-model="newProduct.stock" :disabled="newProduct.type_ === 'service'" required>
+                    <label class="form-label" for="new-available">Availability</label>
+                    <div class="form-check form-switch pt-2"><input id="new-available" class="form-check-input" type="checkbox" x-model="newProduct.available"><label class="form-check-label" for="new-available">Available</label></div>
                 </div>
                 <div class="col-md-4">
                     <label class="form-label" for="new-code">Code</label>
@@ -686,6 +686,7 @@
             category_id: config.categories?.[0]?.id || '',
             price: '',
             stock: 0,
+            available: true,
             code: '',
             tags: '',
             description: '',
@@ -1040,6 +1041,7 @@
                         category_id: Number(this.newProduct.category_id),
                         price: this.newProduct.price === '' ? 0 : Number(this.newProduct.price),
                         stock: this.newProduct.type_ === 'service' ? 0 : (this.newProduct.stock === '' ? 0 : Number(this.newProduct.stock)),
+                        available: this.newProduct.available,
                         code: this.newProduct.code,
                         tags: this.newProduct.tags,
                         description: this.newProduct.description,

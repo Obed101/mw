@@ -195,6 +195,12 @@
 {% endblock %}
 
 {% block manage_content %}
+{% if shop.products %}
+<div class="alert alert-info d-flex flex-wrap align-items-center justify-content-between gap-2">
+    <span>Are all products here still available in your shop?</span>
+    <span class="d-flex gap-2"><form method="post" action="{{ url_for('manage_bp.confirm_all_product_availability', shop_id=shop.id) }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="btn btn-sm btn-success">Yes</button></form><button class="btn btn-sm btn-outline-secondary" type="button" onclick="document.querySelectorAll('.availability-actions').forEach(e=>e.classList.remove('d-none'))">No, some are not</button></span>
+</div>
+{% endif %}
 <!-- Search & Filter Controls -->
 <div class="card-manage mb-4">
     <div class="p-3 bg-white border-bottom d-flex flex-wrap gap-3 align-items-center justify-content-between">
@@ -243,7 +249,7 @@
                     <th class="ps-4 py-3 text-muted small fw-bold" style="width: 50px;"></th>
                     <th class="py-3 text-muted small fw-bold">Item</th>
                     <th class="py-3 text-muted small fw-bold text-center" style="width: 120px;">Price</th>
-                    <th class="py-3 text-muted small fw-bold text-center" style="width: 150px;">Stock</th>
+                    <th class="py-3 text-muted small fw-bold text-center" style="width: 150px;">Availability</th>
                     <th class="pe-4 py-3 text-muted small fw-bold text-end" style="width: 150px;">Actions</th>
                 </tr>
             </thead>

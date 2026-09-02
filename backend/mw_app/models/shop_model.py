@@ -51,6 +51,8 @@ class Shop(db.Model):
     is_active = db.Column(db.Boolean, default=True)
     created_at = db.Column(db.DateTime(timezone=True), default=datetime.now(timezone.utc))
     last_updated = db.Column(db.DateTime(timezone=True), default=datetime.now(timezone.utc), onupdate=datetime.now(timezone.utc))
+    usual_opening_time = db.Column(db.Time, nullable=True)
+    usual_closing_time = db.Column(db.Time, nullable=True)
     
     # Verification fields
     verification_status = db.Column(db.String(20), default=VERIFICATION_STATUS_PENDING, nullable=False)
@@ -151,6 +153,12 @@ class Shop(db.Model):
     def can_request_verification(self):
         """Check if shop can request verification (phone and email must be verified)"""
         return self.phone_verified and self.email_verified and self.verification_status == VERIFICATION_STATUS_PENDING
+
+    @property
+    def usual_hours_label(self):
+        if not self.usual_opening_time or not self.usual_closing_time:
+            return None
+        return f'{self.usual_opening_time.strftime("%I:%M %p").lstrip("0")} to {self.usual_closing_time.strftime("%I:%M %p").lstrip("0")}'
 
 
 class ShopImport(db.Model):

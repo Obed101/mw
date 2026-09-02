@@ -137,7 +137,7 @@
     {% else %}
     <div class="rounded-4 border bg-white bg-opacity-75 p-4 p-md-5 text-center text-muted">
         <i class="bi bi-search display-6 text-light mb-2"></i>
-        <p class="mb-0 fw-medium">No results found for "{{ query }}"</p>
+        <p class="mb-0 fw-medium">No results found for "{{ query }}". Try searching with fewer words</p>
     </div>
     {% endif %}
 </section>
@@ -203,7 +203,7 @@
 <div class="card border-0 shadow-lg" style="background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px); border-radius: 16px;">
     <div class="card-body p-4 text-center text-muted">
         <i class="bi bi-search display-6 text-light mb-2"></i>
-        <p class="mb-0 fw-medium">No results found for "{{ query }}"</p>
+        <p class="mb-0 fw-medium">No results found for "{{ query }}". Try searching with fewer words.</p>
     </div>
 </div>
 {% endif %}
