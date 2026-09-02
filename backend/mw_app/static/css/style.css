@@ -620,7 +620,6 @@ body.mw-page-transitioning .bottom-nav {
     background: white;
     display: flex;
     flex-direction: column;
-    height: 100%;
 }
 
 .product-card:hover {
@@ -677,27 +676,81 @@ body.mw-page-transitioning .bottom-nav {
     font-weight: 600;
 }
 
-/* ===== MARKET LIST GRIDS ===== */
+/* ===== CARD MASONRY LAYOUT ===== */
+.card-masonry,
 .market-grid {
-    display: grid;
-    gap: 0.8rem;
-    align-items: stretch;
+    column-width: 150px;
+    column-gap: 0.65rem;
+    column-fill: balance;
+    width: 100%;
 }
 
+.card-masonry-products,
+.market-grid-products {
+    column-width: 145px;
+    column-gap: 0.65rem;
+}
+
+.card-masonry-shops,
+.market-grid-shops {
+    column-width: 165px;
+    column-gap: 0.75rem;
+}
+
+/* Mobile: ensure at least 2 columns across phones */
+@media (max-width: 575.98px) {
+    .card-masonry,
+    .market-grid {
+        column-count: 2;
+        column-gap: 0.5rem;
+    }
+
+    .card-masonry-item,
+    .market-grid-item {
+        margin-bottom: 0.5rem;
+    }
+}
+
+.card-masonry-item,
 .market-grid-item {
+    break-inside: avoid;
+    -webkit-column-break-inside: avoid;
+    page-break-inside: avoid;
+    display: inline-block;
+    width: 100%;
+    margin-bottom: 0.65rem;
+    vertical-align: top;
     min-width: 0;
 }
 
-.market-grid-full {
-    grid-column: 1 / -1;
+.card-masonry-item > a,
+.market-grid-item > a {
+    display: block;
+    color: inherit;
+    text-decoration: none;
 }
 
-.market-grid-products {
-    grid-template-columns: repeat(auto-fill, minmax(145px, 1fr));
+.card-masonry-full,
+.market-grid-full,
+.card-masonry > .text-center,
+.market-grid > .text-center {
+    column-span: all;
+    width: 100%;
+    display: block;
+    margin-bottom: 1rem;
 }
 
-.market-grid-shops {
-    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+/* Ensure cards maintain their natural content height without artificial stretching */
+.card-masonry .card,
+.card-masonry .product-card,
+.card-masonry .shop-card,
+.card-masonry .wishlist-card,
+.market-grid .card,
+.market-grid .product-card,
+.market-grid .shop-card,
+.market-grid .wishlist-card {
+    height: auto !important;
+    min-height: 0 !important;
 }
 
 /* ===== COMPACT CARD LAYOUT ===== */
@@ -936,14 +989,6 @@ body.mw-page-transitioning .bottom-nav {
         padding-top: 1rem;
     }
 
-    .market-grid-products {
-        grid-template-columns: repeat(auto-fill, minmax(118px, 1fr));
-    }
-
-    .market-grid-shops {
-        grid-template-columns: repeat(auto-fill, minmax(118px, 1fr));
-    }
-
     .market-card-image {
         height: 104px;
     }
@@ -970,14 +1015,6 @@ body.mw-page-transitioning .bottom-nav {
 
     .main-content.with-bottom-nav {
         padding-bottom: 0;
-    }
-
-    .market-grid-products {
-        grid-template-columns: repeat(4, minmax(0, 1fr));
-    }
-
-    .market-grid-shops {
-        grid-template-columns: repeat(3, minmax(0, 1fr));
     }
 }
 

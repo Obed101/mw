@@ -96,14 +96,14 @@
         </div>
 
         <div
-            class="market-grid market-grid-products"
+            class="card-masonry card-masonry-products"
             id="category-products-container"
             hx-get="{{ url_for('buyer_bp.browse_products', category_id=selected_category.id) }}"
             hx-trigger="load"
             hx-target="#category-products-container"
             hx-swap="innerHTML"
         >
-            <div class="market-grid-full text-center py-4">
+            <div class="card-masonry-full market-grid-full text-center py-4">
                 <div class="spinner-border text-primary" role="status"></div>
                 <p class="mt-2 text-mw">Loading products...</p>
             </div>

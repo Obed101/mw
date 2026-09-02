@@ -83,9 +83,9 @@
             </div>
         </div>
         <div class="collapse show" id="explore-products-results">
-            <div class="market-grid market-grid-products">
+            <div class="card-masonry card-masonry-products">
             {% for product in products %}
-            <div class="market-grid-item">
+            <div class="card-masonry-item market-grid-item">
                 <a href="{{ url_for('buyer_bp.product_detail', product_id=product.id) }}" class="text-decoration-none">
                     <div class="card border-0 shadow-sm product-card product-card-compact">
                         <div class="position-relative">

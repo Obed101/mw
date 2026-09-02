@@ -14,13 +14,15 @@
     }
 
     .wishlist-shell .wishlist-grid {
-        --bs-gutter-x: 0.65rem;
-        --bs-gutter-y: 0.65rem;
+        width: 100%;
     }
 
     .wishlist-shell .wishlist-card {
         border-radius: 0.72rem;
         overflow: hidden;
+        break-inside: avoid;
+        height: auto !important;
+        min-height: 0 !important;
     }
 
     .wishlist-shell .wishlist-image {
@@ -51,7 +53,6 @@
         -webkit-line-clamp: 2;
         -webkit-box-orient: vertical;
         overflow: hidden;
-        min-height: 1.9em;
     }
 
     .wishlist-shell .wishlist-description {
@@ -62,7 +63,6 @@
         -webkit-line-clamp: 2;
         -webkit-box-orient: vertical;
         overflow: hidden;
-        min-height: 2.45em;
     }
 
     .wishlist-shell .wishlist-meta {
@@ -161,9 +161,9 @@
         <!-- Shops Tab -->
         <div class="tab-pane fade" id="shops" role="tabpanel">
             {% if shops %}
-            <div class="row wishlist-grid" id="followed-shops">
+            <div class="card-masonry card-masonry-shops wishlist-grid" id="followed-shops">
                 {% for shop in shops %}
-                <div class="col-6 col-md-4 col-lg-3 col-xl-2 followed-shop-item" data-shop-id="{{ shop.id }}">
+                <div class="card-masonry-item followed-shop-item" data-shop-id="{{ shop.id }}">
                     <div class="card border-0 shadow-sm wishlist-card">
                         <a href="{{ url_for('main_bp.shop_detail', shop_id=shop.id) }}" class="wishlist-card-link">
                         <div class="position-relative">
@@ -179,7 +179,7 @@
                                 {% endif %}
                             </div>
                             {%if shop.description%}
-                            <p class="card-text text-muted small flex-grow-1 wishlist-description">{{ shop.description[:70] or ""}}{% if shop.description|length > 70 %}...{% endif %}</p>
+                            <p class="card-text text-muted small wishlist-description">{{ shop.description[:70] or ""}}{% if shop.description|length > 70 %}...{% endif %}</p>
                             {%endif%}
                             <div class="wishlist-meta">
                                 {% if shop.town %}<span class="badge rounded-pill text-bg-light border me-1 wishlist-chip"><i class="bi bi-geo-alt me-1"></i>{{ shop.town }}</span>{% endif %}
@@ -223,7 +223,7 @@
                 {% endfor %}
             </div>
             {% else %}
-            <div class="text-center py-5">
+            <div class="card-masonry-full text-center py-5">
                 <i class="bi bi-shop text-muted" style="font-size: 4rem;"></i>
                 <h4 class="mt-3 text-muted">You're not following any shops yet</h4>
                 <p class="text-muted">Follow your favorite shops to stay updated with their latest products!</p>
@@ -237,9 +237,9 @@
         <!-- Products Tab -->
         <div class="tab-pane fade show active" id="products" role="tabpanel">
             {% if products %}
-            <div class="row wishlist-grid" id="wishlist-products">
+            <div class="card-masonry card-masonry-products wishlist-grid" id="wishlist-products">
                 {% for product in products %}
-                <div class="col-6 col-md-4 col-lg-3 col-xl-2 wishlist-item" data-product-id="{{ product.id }}">
+                <div class="card-masonry-item wishlist-item" data-product-id="{{ product.id }}">
                     <div class="card border-0 shadow-sm wishlist-card">
                         <a href="{{ url_for('buyer_bp.product_detail', product_id=product.id) }}" class="wishlist-card-link">
                         <div class="position-relative">
@@ -249,7 +249,7 @@
                         </div>
                         <div class="card-body d-flex flex-column">
                             <h5 class="card-title fw-semibold wishlist-title">{{ product.name }}</h5>
-                            <p class="card-text text-muted small flex-grow-1 wishlist-description">{{ product.description[:70] or ""}}{% if product.description|length > 70 %}...{% endif %}</p>
+                            <p class="card-text text-muted small wishlist-description">{{ product.description[:70] or ""}}{% if product.description|length > 70 %}...{% endif %}</p>
                             
                             <div class="wishlist-meta">
                                 {% if product.shop_name %}
@@ -259,8 +259,9 @@
                                 {% endif %}
                             </div>
                             
-                            <div class="d-flex justify-content-between align-items-center mt-auto">
+                            <div class="d-flex justify-content-between align-items-center mt-2">
                                 <span class="h5 text-primary mb-0">GH₵{{ "%.2f"|format(product.price) }}</span>
+                            </div>
                         </div>
                         </a>
                         <div class="px-2 pb-2 wishlist-actions">
@@ -289,7 +290,7 @@
                 {% endfor %}
             </div>
             {% else %}
-            <div class="text-center py-5">
+            <div class="card-masonry-full text-center py-5">
                 <i class="bi bi-heart text-muted" style="font-size: 4rem;"></i>
                 <h4 class="mt-3 text-muted">Your product wishlist is empty</h4>
                 <p class="text-muted">Start adding products you love to your wishlist!</p>

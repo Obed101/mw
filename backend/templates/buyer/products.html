@@ -147,14 +147,14 @@
 
     <input type="hidden" name="shop_id" value="{{ selected_shop_id }}">
     <div
-        class="market-grid market-grid-products"
+        class="card-masonry card-masonry-products"
         id="products-container"
         hx-get="{{ url_for('buyer_bp.browse_products', category_id=selected_category_id, shop_id=selected_shop_id) if selected_category_id or selected_shop_id else url_for('buyer_bp.browse_products') }}"
         hx-trigger="load"
         hx-target="#products-container"
         hx-swap="innerHTML"
     >
-        <div class="market-grid-full text-center py-5">
+        <div class="card-masonry-full market-grid-full text-center py-5">
             <div class="spinner-border text-primary" role="status"></div>
             <p class="mt-2 text-mw">Loading products...</p>
         </div>

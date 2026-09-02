@@ -1,7 +1,7 @@
 {% set favorite_shop_ids = followed_shop_ids if followed_shop_ids is defined else [] %}
 {% if shops %}
     {% for shop in shops %}
-    <div class="market-grid-item">
+    <div class="card-masonry-item market-grid-item">
         <a href="{{ url_for('main_bp.shop_detail', shop_id=shop.id) }}" class="text-decoration-none">
             <div class="card border-0 shadow-sm shop-card shop-card-compact">
                 <img src="{{ shop.primary_image_url|google_image_url(GOOGLE_IMAGE_SMALL) or url_for('static', filename='images/mw_logo_trans.png') }}" class="card-img-top market-card-image" alt="{{ shop.name }}">
@@ -39,7 +39,7 @@
     </div>
     {% endfor %}
 {% elif not next_page %}
-<div class="market-grid-full">
+<div class="card-masonry-full market-grid-full">
     <div class="alert alert-warning border text-center mb-0">
         No shops matched your current search criteria.
     </div>

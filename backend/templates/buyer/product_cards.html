@@ -1,7 +1,7 @@
 {% set favorite_ids = favorite_product_ids if favorite_product_ids is defined else [] %}
 {% if products %}
     {% for product in products %}
-    <div class="market-grid-item">
+    <div class="card-masonry-item market-grid-item">
         <a href="{{ url_for('buyer_bp.product_detail', product_id=product.id) }}" class="text-decoration-none">
             <div class="card border-0 shadow-sm product-card product-card-compact">
                 <div class="market-card-media">
@@ -51,7 +51,7 @@
     </div>
     {% endfor %}
 {% elif not next_page %}
-<div class="market-grid-full">
+<div class="card-masonry-full market-grid-full">
     <div class="alert alert-light border text-center mb-0 text-gradient">
        Products in this criteria are now coming. Check back later
     </div>

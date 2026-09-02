@@ -194,14 +194,14 @@
         </div>
 
         <div
-            class="market-grid market-grid-products"
+            class="card-masonry card-masonry-products"
             id="shop-products-container"
             hx-get="{{ url_for('buyer_bp.browse_products', shop_id=shop.id) }}"
             hx-trigger="load"
             hx-target="#shop-products-container"
             hx-swap="innerHTML"
         >
-            <div class="market-grid-full text-center py-4">
+            <div class="card-masonry-full market-grid-full text-center py-4">
                 <div class="spinner-border text-primary" role="status"></div>
                 <p class="mt-2 text-mw">Loading products...</p>
             </div>
@@ -216,7 +216,7 @@
                 <h3 class="h5 fw-bold mb-0">More Shops Near You</h3>
                 <a href="{{ url_for('buyer_template_bp.buyer_shops') }}" class="btn btn-sm btn-outline-primary">View All Shops</a>
             </div>
-            <div class="market-grid market-grid-shops" id="shop-recommendations-container">
+            <div class="card-masonry card-masonry-shops" id="shop-recommendations-container">
                 {% with shops=more_shops, has_next=more_shops_has_next, next_page=more_shops_next_page, next_url=(more_shops_url ~ '?page=' ~ more_shops_next_page if more_shops_has_next else None), search_term='', sort_by='nearest', category_id=None, user_id=None, load_more_target='#shop-recommendations-container' %}
                 {% include 'buyer/shop_cards.html' with context %}
                 {% endwith %}
