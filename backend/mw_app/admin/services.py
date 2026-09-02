@@ -4,7 +4,7 @@ Keeps routes thin and logic testable.
 """
 from datetime import datetime, timezone
 from ..extensions import db
-from ..models import User, Role, UserRole, Shop, Product
+from ..models import User, Role, UserRole, Privilege, AuthorizationAuditLog, Shop, Product
 from ..models.role_model import ROLE_SUPER_ADMIN, ROLE_ADMIN, ROLE_USER
 
 
@@ -44,7 +44,14 @@ def assign_role(user, role_name, assigned_by_id=None):
     Assign a named role to a user (idempotent).
     Returns the UserRole object.
     """
+    previous_role = user.authorization_role
     role = Role.get_or_create(role_name)
+    # The authorization model is intentionally one role per user.
+    user.role_id = role.id
+    if role_name == 'seller':
+        user.role = 'seller'
+    elif role_name in [ROLE_SUPER_ADMIN, ROLE_ADMIN]:
+        user.role = 'admin'
     existing = UserRole.query.filter_by(user_id=user.id, role_id=role.id).first()
     if existing:
         return existing
@@ -57,6 +64,8 @@ def assign_role(user, role_name, assigned_by_id=None):
     )
     db.session.add(user_role)
     db.session.flush()
+    synchronize_user_privileges(user, removed_role=previous_role if previous_role and previous_role.id != role.id else None)
+    _audit('role_assigned', actor_id=assigned_by_id, user_id=user.id, role_id=role.id)
     return user_role
 
 
@@ -69,8 +78,120 @@ def remove_role(user, role_name):
     if not user_role:
         return False
     db.session.delete(user_role)
+    if user.role_id == role.id:
+        user.role_id = None
+        if user.role in ('admin', 'seller'):
+            user.role = 'buyer'
+    synchronize_user_privileges(user, removed_role=role)
+    db.session.flush()
+    _audit('role_removed', user_id=user.id, role_id=role.id)
+    return True
+
+
+def _audit(action, actor_id=None, user_id=None, role_id=None, privilege_id=None, details=None):
+    db.session.add(AuthorizationAuditLog(actor_id=actor_id, action=action,
+        user_id=user_id, role_id=role_id, privilege_id=privilege_id, details=details))
+
+
+def synchronize_user_privileges(user, removed_role=None):
+    """Make effective privileges exactly match the user's current role plus direct grants."""
+    target = set(user.authorization_role.privileges if user.authorization_role else [])
+    # Direct privileges are retained when changing a role; removal of a role
+    # removes that role's grants, while explicit grants remain explicit.
+    current = set(user.privileges)
+    if removed_role:
+        current -= set(removed_role.privileges)
+    user.privileges = list((current | target))
+    db.session.flush()
+
+
+def assign_privilege(user, privilege, actor_id=None):
+    privilege = privilege if isinstance(privilege, Privilege) else Privilege.query.filter_by(key=privilege).first()
+    if not privilege or privilege in user.privileges:
+        return False
+    user.privileges.append(privilege)
+    _audit('privilege_assigned', actor_id=actor_id, user_id=user.id, privilege_id=privilege.id)
     db.session.flush()
     return True
+
+
+def remove_privilege(user, privilege, actor_id=None):
+    privilege = privilege if isinstance(privilege, Privilege) else Privilege.query.filter_by(key=privilege).first()
+    if not privilege or privilege not in user.privileges:
+        return False
+    user.privileges.remove(privilege)
+    _audit('privilege_removed', actor_id=actor_id, user_id=user.id, privilege_id=privilege.id)
+    db.session.flush()
+    return True
+
+
+INITIAL_PRIVILEGES = {
+    'manage_users': 'Manage users', 'manage_roles': 'Manage roles',
+    'manage_privileges': 'Manage privileges', 'assign_roles': 'Assign roles',
+    'assign_privileges': 'Assign individual privileges', 'manage_shops': 'Manage shops',
+    'edit_unowned_shops': 'Edit shops not owned by the user', 'verify_shops': 'Verify shops',
+    'moderate_content': 'Moderate content', 'view_reports': 'View reports',
+    'manage_promotions': 'Manage promotions', 'edit_super_admin': 'Manage super admins',
+    'reply_support_messages': 'Reply to support messages',
+}
+
+ROLE_SEEDS = {
+    ROLE_SUPER_ADMIN: ('Unrestricted platform administrator', set(INITIAL_PRIVILEGES)),
+    ROLE_ADMIN: ('Platform administrator', set(INITIAL_PRIVILEGES) - {'edit_super_admin'}),
+    'seller': ('Shop owner dashboard access', set()),
+    ROLE_USER: ('Standard Market Window user', set()),
+}
+
+
+def seed_privileges():
+    """Idempotently create the catalogue and the standard role bundles."""
+    privilege_map = {}
+    for key, description in INITIAL_PRIVILEGES.items():
+        privilege = Privilege.query.filter_by(key=key).first()
+        if not privilege:
+            privilege = Privilege(key=key, name=description, description=description)
+            db.session.add(privilege)
+        privilege_map[key] = privilege
+    db.session.flush()
+    for role_name, (description, keys) in ROLE_SEEDS.items():
+        role = Role.get_or_create(role_name)
+        role.description = role.description or description
+        old_privileges = set(role.privileges)
+        role.privileges = [privilege_map[key] for key in keys if key in privilege_map]
+        added = set(role.privileges) - old_privileges
+        removed = old_privileges - set(role.privileges)
+        for user in list(role.users):
+            for privilege in added:
+                if privilege not in user.privileges:
+                    user.privileges.append(privilege)
+            for privilege in removed:
+                if privilege in user.privileges:
+                    user.privileges.remove(privilege)
+    # Adopt legacy assignments created before role_id existed.
+    for assignment in UserRole.query.order_by(UserRole.assigned_at.desc()).all():
+        if assignment.user and assignment.user.role_id is None:
+            assignment.user.role_id = assignment.role_id
+            synchronize_user_privileges(assignment.user)
+    db.session.commit()
+
+
+def set_role_privileges(role, privileges, actor_id=None):
+    """Replace role membership and immediately synchronize every assigned user."""
+    old_privileges = set(role.privileges)
+    new_privileges = set(privileges)
+    role.privileges = list(dict.fromkeys(privileges))
+    db.session.flush()
+    added = new_privileges - old_privileges
+    removed = old_privileges - new_privileges
+    for user in list(role.users):
+        for privilege in added:
+            if privilege not in user.privileges:
+                user.privileges.append(privilege)
+        for privilege in removed:
+            if privilege in user.privileges:
+                user.privileges.remove(privilege)
+    _audit('role_privileges_changed', actor_id=actor_id, role_id=role.id)
+    db.session.flush()
 
 
 def toggle_admin_mode(user):

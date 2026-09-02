@@ -11,15 +11,16 @@ import re
 from ..extensions import db
 from ..models import (
     User, Shop, ShopImport, Product, Notification,
-    Role, UserRole,
+    Role, UserRole, Privilege, AuthorizationAuditLog,
     VERIFICATION_STATUS_VERIFIED, VERIFICATION_STATUS_SUSPENDED,
     VERIFICATION_STATUS_PENDING,
 )
-from ..models.role_model import ROLE_SUPER_ADMIN, ROLE_ADMIN
-from .decorators import login_required, admin_required, super_admin_required
+from ..models.role_model import ROLE_SUPER_ADMIN, ROLE_ADMIN, ROLE_USER
+from .decorators import login_required, admin_required, super_admin_required, require_privilege
 from .services import (
     assign_role, remove_role, toggle_admin_mode,
-    get_dashboard_stats, paginate_query, ensure_super_admin_exists,
+    get_dashboard_stats, paginate_query, ensure_super_admin_exists, seed_privileges,
+    assign_privilege, remove_privilege, set_role_privileges, _audit,
 )
 from .forms import UserEditForm, ShopAdminEditForm, ProductAdminEditForm
 from ..utils.threading_utils import run_in_background
@@ -386,6 +387,218 @@ def _import_duplicate_keys(name, phone, address, category, plus_code, latitude=N
         _import_identity_key(value)
         for value in (address, category, plus_code)
     }
+
+
+@mw_admin_bp.route('/manage/privileges', methods=['GET', 'POST'])
+@require_privilege('manage_privileges')
+def manage_privileges_page():
+    if request.method == 'POST':
+        data = request.form
+        privilege = Privilege(key=data.get('key', '').strip(), name=data.get('name', '').strip() or None,
+                              description=data.get('description', '').strip() or None)
+        if not privilege.key or Privilege.query.filter_by(key=privilege.key).first():
+            flash('Privilege keys must be present and unique.', 'error')
+        else:
+            db.session.add(privilege); db.session.flush()
+            _audit('privilege_created', actor_id=current_user.id, privilege_id=privilege.id)
+            db.session.commit(); flash('Privilege created.', 'success')
+        return redirect(url_for('mw_admin_bp.manage_privileges_page'))
+    return render_template('admin/privileges.html', privileges=Privilege.query.order_by(Privilege.id).all())
+
+
+@mw_admin_bp.route('/manage/privileges/<int:privilege_id>/edit', methods=['POST'])
+@require_privilege('manage_privileges')
+def edit_privilege_page(privilege_id):
+    privilege = Privilege.query.get_or_404(privilege_id)
+    privilege.name = request.form.get('name', '').strip() or privilege.name
+    privilege.description = request.form.get('description', '').strip() or None
+    _audit('privilege_updated', actor_id=current_user.id, privilege_id=privilege.id)
+    db.session.commit(); flash('Privilege updated.', 'success')
+    return redirect(url_for('mw_admin_bp.manage_privileges_page'))
+
+
+@mw_admin_bp.route('/manage/privileges/<int:privilege_id>/delete', methods=['POST'])
+@require_privilege('manage_privileges')
+def delete_privilege_page(privilege_id):
+    privilege = Privilege.query.get_or_404(privilege_id)
+    _audit('privilege_deleted', actor_id=current_user.id, privilege_id=privilege.id)
+    db.session.delete(privilege); db.session.commit(); flash('Privilege deleted.', 'success')
+    return redirect(url_for('mw_admin_bp.manage_privileges_page'))
+
+
+@mw_admin_bp.route('/manage/roles', methods=['GET', 'POST'])
+@require_privilege('manage_roles')
+def manage_roles_page():
+    if request.method == 'POST':
+        name = request.form.get('name', '').strip()
+        if not name or Role.query.filter_by(name=name).first():
+            flash('Role names must be present and unique.', 'error')
+        else:
+            role = Role(name=name, description=request.form.get('description', '').strip() or None)
+            db.session.add(role); db.session.flush(); _audit('role_created', actor_id=current_user.id, role_id=role.id)
+            db.session.commit(); flash('Role created.', 'success')
+        return redirect(url_for('mw_admin_bp.manage_roles_page'))
+    return render_template('admin/roles.html', roles=Role.query.order_by(Role.name).all(), privileges=Privilege.query.order_by(Privilege.key).all())
+
+
+@mw_admin_bp.route('/manage/roles/<int:role_id>/save', methods=['POST'])
+@require_privilege('manage_roles')
+def save_role_page(role_id):
+    role = Role.query.get_or_404(role_id)
+    if role.name == ROLE_SUPER_ADMIN and not current_user.is_super_admin():
+        flash('The Super Admin role is protected.', 'error')
+        return redirect(url_for('mw_admin_bp.manage_roles_page'))
+    role.description = request.form.get('description', '').strip() or None
+    ids = request.form.getlist('privilege_ids')
+    selected = Privilege.query.filter(Privilege.id.in_([int(i) for i in ids if i.isdigit()])).all() if ids else []
+    set_role_privileges(role, selected, current_user.id)
+    db.session.commit(); flash('Role and privileges updated.', 'success')
+    return redirect(url_for('mw_admin_bp.manage_roles_page'))
+
+
+@mw_admin_bp.route('/manage/roles/<int:role_id>/delete', methods=['POST'])
+@require_privilege('manage_roles')
+def delete_role_page(role_id):
+    role = Role.query.get_or_404(role_id)
+    if role.name in (ROLE_SUPER_ADMIN, ROLE_ADMIN, ROLE_USER, 'seller'):
+        flash('Seeded roles cannot be deleted.', 'error')
+    else:
+        _audit('role_deleted', actor_id=current_user.id, role_id=role.id)
+        db.session.delete(role); db.session.commit(); flash('Role deleted.', 'success')
+    return redirect(url_for('mw_admin_bp.manage_roles_page'))
+
+
+@mw_admin_bp.route('/users/<int:user_id>/manage-access', methods=['GET', 'POST'])
+@require_privilege('manage_users')
+def manage_user_access_page(user_id):
+    user = User.query.get_or_404(user_id)
+    if user.id == 1 and not current_user.has_privilege('edit_super_admin'):
+        flash('Super Admin #1 is protected.', 'error')
+        return redirect(url_for('mw_admin_bp.users'))
+    if request.method == 'POST':
+        role_name = request.form.get('role_name', '').strip()
+        current_role_name = user.authorization_role.name if user.authorization_role else ''
+        operation = request.form.get('operation', 'role')
+        if operation == 'role':
+            if role_name != current_role_name and not current_user.has_privilege('assign_roles'):
+                flash('Assign Roles privilege is required.', 'error')
+                return redirect(url_for('mw_admin_bp.manage_user_access_page', user_id=user.id))
+            if role_name:
+                assign_role(user, role_name, current_user.id)
+            elif user.authorization_role:
+                remove_role(user, user.authorization_role.name)
+        elif operation == 'privileges':
+            if not current_user.has_privilege('assign_privileges'):
+                flash('Assign Privileges privilege is required.', 'error')
+                return redirect(url_for('mw_admin_bp.manage_user_access_page', user_id=user.id))
+            selected_ids = set(request.form.getlist('privilege_ids'))
+            for privilege in Privilege.query.all():
+                if str(privilege.id) in selected_ids:
+                    assign_privilege(user, privilege, current_user.id)
+                else:
+                    remove_privilege(user, privilege, current_user.id)
+        db.session.commit(); flash('User access updated.', 'success')
+        return redirect(url_for('mw_admin_bp.manage_user_access_page', user_id=user.id))
+    return render_template('admin/user_access.html', user=user, roles=Role.query.order_by(Role.name).all(), privileges=Privilege.query.order_by(Privilege.key).all())
+
+
+# ---------------------------------------------------------------------------
+# Authorization API (also useful to the admin UI)
+# ---------------------------------------------------------------------------
+def _auth_json(obj):
+    if isinstance(obj, Privilege):
+        return {'id': obj.id, 'key': obj.key, 'name': obj.name, 'description': obj.description}
+    return {'id': obj.id, 'name': obj.name, 'description': obj.description,
+            'privileges': [_auth_json(p) for p in obj.privileges]}
+
+
+@mw_admin_bp.route('/privileges', methods=['GET', 'POST'])
+@require_privilege('manage_privileges')
+def privileges_api():
+    if request.method == 'GET':
+        return jsonify([_auth_json(p) for p in Privilege.query.order_by(Privilege.key).all()])
+    data = request.get_json(silent=True) or {}
+    key = str(data.get('key') or '').strip()
+    if not key or Privilege.query.filter_by(key=key).first():
+        return jsonify({'error': 'A unique privilege key is required'}), 400
+    privilege = Privilege(key=key, name=data.get('name') or key.replace('_', ' ').title(), description=data.get('description'))
+    db.session.add(privilege); db.session.flush(); _audit('privilege_created', actor_id=current_user.id, privilege_id=privilege.id)
+    db.session.commit()
+    return jsonify(_auth_json(privilege)), 201
+
+
+@mw_admin_bp.route('/privileges/<int:privilege_id>', methods=['GET', 'PUT', 'DELETE'])
+@require_privilege('manage_privileges')
+def privilege_api(privilege_id):
+    privilege = Privilege.query.get_or_404(privilege_id)
+    if request.method == 'GET': return jsonify(_auth_json(privilege))
+    if request.method == 'DELETE':
+        _audit('privilege_deleted', actor_id=current_user.id, privilege_id=privilege.id)
+        db.session.delete(privilege); db.session.commit(); return jsonify({'success': True})
+    data = request.get_json(silent=True) or {}
+    if data.get('name') is not None: privilege.name = data['name']
+    if data.get('description') is not None: privilege.description = data['description']
+    _audit('privilege_updated', actor_id=current_user.id, privilege_id=privilege.id)
+    db.session.commit(); return jsonify(_auth_json(privilege))
+
+
+@mw_admin_bp.route('/roles', methods=['GET', 'POST'])
+@require_privilege('manage_roles')
+def roles_api():
+    if request.method == 'GET': return jsonify([_auth_json(r) for r in Role.query.order_by(Role.name).all()])
+    data = request.get_json(silent=True) or {}; name = str(data.get('name') or '').strip()
+    if not name or Role.query.filter_by(name=name).first(): return jsonify({'error': 'A unique role name is required'}), 400
+    role = Role(name=name, description=data.get('description')); db.session.add(role); db.session.flush()
+    _audit('role_created', actor_id=current_user.id, role_id=role.id); db.session.commit()
+    return jsonify(_auth_json(role)), 201
+
+
+@mw_admin_bp.route('/roles/<int:role_id>', methods=['GET', 'PUT', 'DELETE'])
+@require_privilege('manage_roles')
+def role_api(role_id):
+    role = Role.query.get_or_404(role_id)
+    if role.name == ROLE_SUPER_ADMIN and not current_user.is_super_admin(): return jsonify({'error': 'Protected role'}), 403
+    if request.method == 'GET': return jsonify(_auth_json(role))
+    if request.method == 'DELETE': db.session.delete(role); db.session.commit(); return jsonify({'success': True})
+    data = request.get_json(silent=True) or {}; role.description = data.get('description', role.description)
+    if 'privilege_keys' in data:
+        set_role_privileges(role, [p for p in (Privilege.query.filter(Privilege.key.in_(data['privilege_keys'])).all())], current_user.id)
+    _audit('role_updated', actor_id=current_user.id, role_id=role.id); db.session.commit(); return jsonify(_auth_json(role))
+
+
+@mw_admin_bp.route('/users/<int:user_id>/authorization', methods=['PUT'])
+@require_privilege('assign_roles')
+def user_authorization_api(user_id):
+    user = User.query.get_or_404(user_id); data = request.get_json(silent=True) or {}
+    if user.id == 1 and not current_user.is_super_admin() and (data.get('role') or data.get('remove_role')):
+        return jsonify({'error': 'Super Admin #1 is protected'}), 403
+    if 'role' in data:
+        assign_role(user, data['role'], current_user.id)
+    if data.get('remove_role'):
+        remove_role(user, data['remove_role'])
+    if data.get('privilege'): assign_privilege(user, data['privilege'], current_user.id)
+    if data.get('remove_privilege'): remove_privilege(user, data['remove_privilege'], current_user.id)
+    db.session.commit()
+    return jsonify({'user_id': user.id, 'role_id': user.role_id, 'privileges': [p.key for p in user.privileges]})
+
+
+@mw_admin_bp.route('/audit-logs')
+@require_privilege('view_reports')
+def authorization_audit_logs():
+    page = max(request.args.get('page', 1, type=int), 1)
+    per_page = min(max(request.args.get('per_page', 30, type=int), 1), 100)
+    pagination = AuthorizationAuditLog.query.order_by(
+        AuthorizationAuditLog.created_at.desc(), AuthorizationAuditLog.id.desc()
+    ).paginate(page=page, per_page=per_page, error_out=False)
+    return jsonify({
+        'items': [{'id': log.id, 'actor_id': log.actor_id, 'action': log.action,
+                   'user_id': log.user_id, 'role_id': log.role_id,
+                   'privilege_id': log.privilege_id,
+                   'created_at': log.created_at.isoformat(), 'details': log.details}
+                  for log in pagination.items],
+        'page': pagination.page, 'pages': pagination.pages,
+        'has_next': pagination.has_next,
+    })
     if latitude is not None and longitude is not None:
         attributes.add(f'{float(latitude):.5f},{float(longitude):.5f}')
     return phone_name_key, {

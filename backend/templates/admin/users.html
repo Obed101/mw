@@ -77,6 +77,11 @@
             <a href="{{ url_for('mw_admin_bp.edit_user', user_id=user.id) }}" class="btn-admin-sm">
               <i class="bi bi-pencil"></i> Edit
             </a>
+            {% if user.id != 1 or current_user.is_super_admin() %}
+            <a href="{{ url_for('mw_admin_bp.manage_user_access_page', user_id=user.id) }}" class="btn-admin-sm">
+              <i class="bi bi-key"></i> Access
+            </a>
+            {% endif %}
             {% if user.id != current_user.id %}
               {% if not (user.is_super_admin() and not current_user.is_super_admin()) %}
               <form method="POST" action="{{ url_for('mw_admin_bp.suspend_user', user_id=user.id) }}" style="display:inline">

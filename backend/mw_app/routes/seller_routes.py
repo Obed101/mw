@@ -245,7 +245,7 @@ def _require_authenticated_shop_owner(shop_id):
 
     shop = Shop.query.get_or_404(shop_id)
     is_admin = getattr(current_user, 'can_access_admin', lambda: False)()
-    if shop.owner_id != current_user.id and not is_admin:
+    if not current_user.can_edit_shop(shop) and not is_admin:
         return None, _json_error('Unauthorized', 403)
 
     return shop, None
@@ -2397,7 +2397,8 @@ def claim_shop(shop_id):
 
     # Promote buyer to seller role if needed
     if user.role != USER_ROLE_SELLER:
-        user.role = USER_ROLE_SELLER
+        from ..admin.services import assign_role
+        assign_role(user, USER_ROLE_SELLER, assigned_by_id=user.id)
 
     db.session.commit()
 

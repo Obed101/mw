@@ -120,7 +120,8 @@ def create_app():
     # Seed: ensure user id=1 is super_admin and keywords are seeded
     with app.app_context():
         try:
-            from .admin.services import ensure_super_admin_exists, ensure_service_keywords_seeded
+            from .admin.services import ensure_super_admin_exists, ensure_service_keywords_seeded, seed_privileges
+            seed_privileges()
             ensure_super_admin_exists()
             ensure_service_keywords_seeded()
         except Exception:

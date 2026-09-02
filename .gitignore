@@ -24,6 +24,8 @@ var/
 *.egg-info/
 *.egg
 **/versions/*
+*/versions/*.py
+!backend/migrations/versions/d7f0a1b2c3d4_add_privilege_authorization.py
 **/database.sqlite
 **/data.ms/*
 

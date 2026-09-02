@@ -242,6 +242,14 @@
          class="{{ 'active' if request.endpoint and 'user' in (request.endpoint or '') else '' }}">
         <i class="bi bi-people"></i> Users
       </a>
+      <a href="{{ url_for('mw_admin_bp.manage_privileges_page') }}"
+         class="{{ 'active' if request.endpoint == 'mw_admin_bp.manage_privileges_page' else '' }}">
+        <i class="bi bi-key"></i> Manage privileges
+      </a>
+      <a href="{{ url_for('mw_admin_bp.manage_roles_page') }}"
+         class="{{ 'active' if request.endpoint == 'mw_admin_bp.manage_roles_page' else '' }}">
+        <i class="bi bi-person-badge"></i> Roles
+      </a>
       <a href="{{ url_for('mw_admin_bp.shops') }}"
          class="{{ 'active' if request.endpoint and 'shop' in (request.endpoint or '') else '' }}">
         <i class="bi bi-shop"></i> Shops

@@ -60,3 +60,18 @@ def super_admin_required(func):
             return redirect(url_for('main_bp.profile'))
         return func(*args, **kwargs)
     return decorated
+
+
+def require_privilege(privilege):
+    """Protect a special capability using the central User.has_privilege check."""
+    def decorator(func):
+        @wraps(func)
+        def decorated(*args, **kwargs):
+            if not current_user.is_authenticated:
+                return redirect(url_for('main_bp.login'))
+            if not current_user.has_privilege(privilege):
+                flash('You do not have permission for this action.', 'error')
+                return redirect(url_for('main_bp.index'))
+            return func(*args, **kwargs)
+        return decorated
+    return decorator

@@ -32,6 +32,9 @@ class User(db.Model, UserMixin):
     # Admin system fields
     admin_mode = db.Column(db.Boolean, default=False, server_default='false', nullable=False)
     is_active = db.Column(db.Boolean, default=True, server_default='true', nullable=False)
+
+    # New authorization role (the string ``role`` remains for API compatibility).
+    role_id = db.Column(db.Integer, db.ForeignKey('role.id', ondelete='SET NULL'), nullable=True, index=True)
     
     # Profile information
     first_name = db.Column(db.String(100))
@@ -86,6 +89,12 @@ class User(db.Model, UserMixin):
         back_populates="user",
         cascade="all, delete-orphan",
     )
+    authorization_role = db.relationship(
+        "Role", foreign_keys=[role_id], back_populates="users"
+    )
+    privileges = db.relationship(
+        "Privilege", secondary="user_privilege", back_populates="users"
+    )
     
     # Password hashing and verification
     def set_password(self, password):
@@ -126,8 +135,23 @@ class User(db.Model, UserMixin):
     # --- RBAC helpers ---
 
     def has_role(self, role_name):
-        """Return True if user has the named role in UserRole table."""
-        return any(ur.role.name == role_name for ur in self.user_roles if ur.role)
+        """Return True for the assigned role, with legacy table compatibility."""
+        if self.authorization_role and self.authorization_role.name == role_name:
+            return True
+        return any(ur.role and ur.role.name == role_name for ur in self.user_roles)
+
+    def has_privilege(self, privilege_id):
+        """Central authorization check; accepts a stable key or privilege id."""
+        if self.id == 1 or self.is_super_admin():
+            return True
+        if privilege_id is None:
+            return False
+        value = str(privilege_id)
+        return any(str(p.id) == value or p.key == value for p in self.privileges if p)
+
+    def can_edit_shop(self, shop):
+        """Owners can edit their shops; unowned shops require an explicit privilege."""
+        return bool(shop and (shop.owner_id == self.id or self.has_privilege('edit_unowned_shops')))
     
     def set_role(self, role_name):
         """Set the user's role."""

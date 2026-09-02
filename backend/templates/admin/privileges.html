@@ -1,0 +1,16 @@
+{% extends "admin/base_admin.html" %}
+{% block admin_title %}Manage privileges{% endblock %}
+{% block admin_content %}
+<div class="admin-card mb-4"><div class="admin-card-header">Create privilege</div><div class="admin-card-body">
+<form method="post" class="row g-2"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+<div class="col-md-3"><input class="admin-form-control" name="key" required placeholder="stable_key"></div>
+<div class="col-md-3"><input class="admin-form-control" name="name" placeholder="Display name"></div>
+<div class="col-md-4"><input class="admin-form-control" name="description" placeholder="Description"></div>
+<div class="col-md-2"><button class="btn-admin-primary w-100">Create</button></div></form></div></div>
+<div class="admin-card"><div class="admin-card-header"><span>Privilege catalogue</span><span class="text-muted">Use the ID or stable key in route checks</span></div>
+<table class="admin-table"><thead><tr><th>ID</th><th>Key</th><th>Name / description</th><th>Actions</th></tr></thead><tbody>
+{% for privilege in privileges %}<tr><td><code>{{ privilege.id }}</code></td><td><code>{{ privilege.key }}</code></td><td>
+<form method="post" action="{{ url_for('mw_admin_bp.edit_privilege_page', privilege_id=privilege.id) }}" class="row g-1"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><div class="col-md-5"><input class="admin-form-control" name="name" value="{{ privilege.name or '' }}"></div><div class="col-md-5"><input class="admin-form-control" name="description" value="{{ privilege.description or '' }}"></div><div class="col-md-2"><button class="btn-admin-sm">Save</button></div></form>
+</td><td><form method="post" action="{{ url_for('mw_admin_bp.delete_privilege_page', privilege_id=privilege.id) }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="btn-admin-sm btn-admin-danger" data-confirm="Delete this privilege?">Delete</button></form></td></tr>
+{% else %}<tr><td colspan="4">No privileges seeded yet.</td></tr>{% endfor %}</tbody></table></div>
+{% endblock %}

@@ -8,7 +8,9 @@ from .user_model import (
     TOKEN_TYPE_EMAIL_VERIFICATION, TOKEN_TYPE_PASSWORD_RESET, TOKEN_TYPE_API,
     VALID_TOKEN_TYPES
 )
-from .role_model import Role, UserRole, ROLE_SUPER_ADMIN, ROLE_ADMIN, ROLE_USER, VALID_ROLES, ADMIN_ROLES
+from .role_model import (Role, UserRole, Privilege, AuthorizationAuditLog,
+    role_privileges, user_privileges, ROLE_SUPER_ADMIN, ROLE_ADMIN, ROLE_USER,
+    VALID_ROLES, ADMIN_ROLES)
 
 from .shop_model import Shop, ShopImport, ShopImage, UserFollowShop, VerificationOTP, \
     MAX_SHOP_IMAGES, \
@@ -32,7 +34,7 @@ from .analytics_model import Event, SearchHistory, SavedSearch
 __all__ = [
     # Models
     'User', 'UserBrowsingHistory', 'AuthToken',
-    'Role', 'UserRole',
+    'Role', 'UserRole', 'Privilege', 'AuthorizationAuditLog',
     'Shop', 'ShopImport', 'ShopImage', 'UserFollowShop', 'VerificationOTP',
     'Product', 'ProductImage', 'StockUpdate',
     'Category',
