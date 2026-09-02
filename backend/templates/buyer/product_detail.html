@@ -490,7 +490,7 @@
             navigator.share({
                 title: '{{ product.name }}',
                 text: 'Check out this product on Market Window!',
-                url: window.location.href,
+                url: '{{ share_url | default(request.url, true) }}',
             }).catch(console.error);
         } else {
             // Fallback: Copy to clipboard

@@ -6,6 +6,7 @@ from datetime import datetime, timedelta, timezone
 from ..services.analytics_service import track_event
 from ..models.analytics_model import Event
 import json
+import re
 from pathlib import Path
 from uuid import uuid4
 
@@ -841,8 +842,9 @@ def add_shop():
     )
 
 
+@main_bp.route('/shops/<int:shop_id>-<slug>')
 @main_bp.route('/shops/<int:shop_id>')
-def shop_detail(shop_id):
+def shop_detail(shop_id, slug=None):
     """Public shop detail page with location and product listing."""
     shop = Shop.query.filter(
         Shop.id == shop_id,
@@ -884,7 +886,26 @@ def shop_detail(shop_id):
         more_shops_next_page=more_shops_page.next_num if more_shops_page.has_next else None,
         more_shops_url=url_for('main_bp.shop_detail_recommendations', shop_id=shop.id),
         location_check_url=url_for('main_bp.check_shop_location', shop_id=shop.id),
+        share_url=url_for('main_bp.shop_detail', shop_id=shop.id, slug=public_slug(shop.name), _external=True),
     )
+
+
+def public_slug(name):
+    """Use the first name word as a compact, human-readable public URL slug."""
+    word = (str(name or '').strip().split() or ['item'])[0]
+    return re.sub(r'[^a-z0-9-]', '', word.lower().replace('_', '-')) or 'item'
+
+
+@main_bp.route('/products/<int:product_id>-<slug>')
+def public_product_detail(product_id, slug=None):
+    product = Product.query.get_or_404(product_id)
+    shop = product.shop
+    is_favorited = current_user.is_authenticated and UserFavoriteProduct.query.filter_by(user_id=current_user.id, product_id=product.id).first() is not None
+    is_following = current_user.is_authenticated and UserFollowShop.query.filter_by(user_id=current_user.id, shop_id=shop.id).first() is not None
+    related_products = Product.query.filter(Product.category_id == product.category_id, Product.id != product.id, Product.is_active.is_(True)).limit(4).all()
+    return render_template('buyer/product_detail.html', product=product, shop=shop,
+        is_favorited=is_favorited, is_following=is_following, related_products=related_products,
+        variant='product_card', share_url=url_for('main_bp.public_product_detail', product_id=product.id, slug=public_slug(product.name), _external=True))
 
 
 @main_bp.route('/shops/<int:shop_id>/more')

@@ -1,5 +1,6 @@
 from io import BytesIO
 from urllib.parse import urljoin, urlparse
+import re
 
 import requests
 from ..search import search_service
@@ -512,7 +513,10 @@ def product_detail(product_id):
             is_favorited=is_favorited,
             is_following=is_following,
             related_products=related_products,
-            variant=variant
+            variant=variant,
+            share_url=url_for('main_bp.public_product_detail', product_id=product.id,
+                               slug=re.sub(r'[^a-z0-9-]', '', (product.name.split()[0] if product.name else 'item').lower()),
+                               _external=True)
         )
 
     except Exception as e:

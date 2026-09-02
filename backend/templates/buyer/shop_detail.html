@@ -33,6 +33,7 @@
                         <div class="small text-muted mt-1">({{ shop.google_category }})</div>
                         {% endif %}
                         <div class="d-flex align-items-center gap-2">
+                            <button type="button" class="btn btn-sm rounded-pill px-3 btn-outline-primary" onclick="shareShop()"><i class="bi bi-share-fill me-1"></i>Share</button>
                             {% if current_user.is_authenticated %}
                             <button
                                 type="button"
@@ -369,6 +370,15 @@
 {% endblock %}
 
 {% block scripts %}
+<script>
+function shareShop() {
+    const url = {{ (share_url | default(request.url, true)) | tojson }};
+    const title = {{ shop.name | tojson }};
+    const text = 'Check out this shop on Market Window!';
+    if (navigator.share) navigator.share({title, text, url}).catch(() => {});
+    else navigator.clipboard.writeText(url).then(() => alert('Shop link copied to clipboard!'));
+}
+</script>
 {% if shop.primary_image_url %}
 <script type="module">
     import PhotoSwipeLightbox from 'https://cdn.jsdelivr.net/npm/photoswipe@5.4.4/dist/photoswipe-lightbox.esm.js';
