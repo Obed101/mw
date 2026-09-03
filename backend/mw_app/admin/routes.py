@@ -383,11 +383,22 @@ def _import_duplicate_keys(name, phone, address, category, plus_code, latitude=N
     name_key = _import_identity_key(name)
     phone_key = _import_phone_key(phone)
     phone_name_key = (phone_key, name_key) if phone_key and name_key else None
+
     attributes = {
         _import_identity_key(value)
         for value in (address, category, plus_code)
     }
 
+    if latitude is not None and longitude is not None:
+        attributes.add(f"{float(latitude):.5f},{float(longitude):.5f}")
+
+    no_phone_keys = {
+        (name_key, attribute)
+        for attribute in attributes
+        if name_key and attribute
+    }
+
+    return phone_name_key, no_phone_keys
 
 @mw_admin_bp.route('/manage/privileges', methods=['GET', 'POST'])
 @require_privilege('manage_privileges')
