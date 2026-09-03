@@ -57,3 +57,7 @@ class Config:
     ARKESEL_API_KEY = os.getenv("ARKESEL_API_KEY")
     ARKESEL_SENDER_ID = os.getenv("ARKESEL_SENDER_ID", "Markt Wndow")
 
+    # Meilisearch configuration (optional – app runs without it)
+    # Override with env vars in production (e.g. on Heroku).
+    MEILISEARCH_URL = os.getenv("MEILISEARCH_URL", "http://127.0.0.1:7700")
+    MEILISEARCH_MASTER_KEY = os.getenv("MEILISEARCH_MASTER_KEY", "masterKey")

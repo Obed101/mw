@@ -8,12 +8,11 @@ def sync():
     app = create_app()
     with app.app_context():
         ms_url = app.config.get('MEILISEARCH_URL', 'http://127.0.0.1:7700')
-        ms_key = app.config.get('MEILISEARCH_KEY', 'masterKey')
+        ms_key = app.config.get('MEILISEARCH_MASTER_KEY', 'masterKey')
         client = meilisearch.Client(ms_url, ms_key)
 
         print(f"Connecting to Meilisearch at {ms_url}...")
 
-        print("Syncing Categories...")
         categories = Category.query.all()
         cat_data = [c.to_dict() for c in categories]
         if cat_data:
@@ -21,7 +20,6 @@ def sync():
             client.index('categories').update_filterable_attributes(['is_active', 'level', 'name'])
             print(f"Pushed {len(cat_data)} categories.")
 
-        print("Syncing Products...")
         products = Product.query.all()
         prod_data = []
         for p in products:

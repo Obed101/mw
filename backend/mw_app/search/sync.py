@@ -4,6 +4,26 @@ from ..models import Product, Shop, Category
 from ..extensions import db
 
 
+def _get_search_service() -> SearchService:
+    """Return the active SearchService instance.
+
+    Prefers the instance registered on the current app's extensions dict
+    (set by ``SearchService.init_app()``), falling back to the module-level
+    ``search_service`` singleton.  Returns a no-op stub if neither is set so
+    callers never crash.
+    """
+    # Try app extensions first (most reliable inside a request context).
+    svc = current_app.extensions.get('search_service')
+    if svc is not None:
+        return svc
+    # Fall back to the module-level singleton.
+    from . import search_service as _svc
+    if _svc is not None:
+        return _svc
+    # Last resort: return a fresh, client-less instance (all ops are no-ops).
+    return SearchService()
+
+
 def _get_value(obj, attr, default=None):
     """Get an attribute value, calling it if it's a callable."""
     v = getattr(obj, attr, default)
@@ -50,37 +70,37 @@ def _shop_to_doc(shop):
 
 # Sync individual product
 def sync_product(product):
-    svc: SearchService = current_app.extensions['search_service']
+    svc = _get_search_service()
     doc = _product_to_doc(product)
     svc.add_documents('products', [doc])
     current_app.logger.info('Synced product %s to Meilisearch', product.id)
 
 def delete_product(product_id):
-    svc: SearchService = current_app.extensions['search_service']
+    svc = _get_search_service()
     svc.delete_documents('products', [product_id])
     current_app.logger.info('Deleted product %s from Meilisearch', product_id)
 
 # Sync individual shop
 def sync_shop(shop):
-    svc: SearchService = current_app.extensions['search_service']
+    svc = _get_search_service()
     doc = _shop_to_doc(shop)
     svc.add_documents('shops', [doc])
     current_app.logger.info('Synced shop %s to Meilisearch', shop.id)
 
 def delete_shop(shop_id):
-    svc: SearchService = current_app.extensions['search_service']
+    svc = _get_search_service()
     svc.delete_documents('shops', [shop_id])
     current_app.logger.info('Deleted shop %s from Meilisearch', shop_id)
 
 # Sync individual category
 def sync_category(category):
-    svc: SearchService = current_app.extensions['search_service']
+    svc = _get_search_service()
     doc = _category_to_doc(category)
     svc.add_documents('categories', [doc])
     current_app.logger.info('Synced category %s to Meilisearch', category.id)
 
 def delete_category(category_id):
-    svc: SearchService = current_app.extensions['search_service']
+    svc = _get_search_service()
     svc.delete_documents('categories', [category_id])
     current_app.logger.info('Deleted category %s from Meilisearch', category_id)
 
@@ -97,7 +117,7 @@ def _category_to_doc(category):
 # Rebuild full indexes
 def rebuild_products():
     """Clear and repopulate the products index."""
-    svc: SearchService = current_app.extensions['search_service']
+    svc = _get_search_service()
     svc.clear_documents('products')
     products = Product.query.all()
     docs = [_product_to_doc(p) for p in products]
@@ -107,7 +127,7 @@ def rebuild_products():
 
 def rebuild_shops():
     """Clear and repopulate the shops index."""
-    svc: SearchService = current_app.extensions['search_service']
+    svc = _get_search_service()
     svc.clear_documents('shops')
     shops = Shop.query.all()
     docs = [_shop_to_doc(s) for s in shops]
@@ -117,7 +137,7 @@ def rebuild_shops():
 
 def rebuild_categories():
     """Clear and repopulate the categories index."""
-    svc: SearchService = current_app.extensions['search_service']
+    svc = _get_search_service()
     svc.clear_documents('categories')
     categories = Category.query.all()
     docs = [_category_to_doc(c) for c in categories]
@@ -195,3 +215,5 @@ def _register_sync_listeners():
             delete_category(target.id)
         except Exception:
             current_app.logger.exception('Failed to delete category %s from Meilisearch', target.id)
+
+
