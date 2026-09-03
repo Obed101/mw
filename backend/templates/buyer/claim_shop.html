@@ -139,10 +139,12 @@
                                     {% else %}
                                     <div id="phone-step-1">
                                         <label for="phone-input" class="form-label fw-semibold">Enter your Ghanaian phone number</label>
-                                        <div class="input-group mb-3">
-                                            <span class="input-group-text bg-light fw-bold">+233</span>
-                                            <input type="tel" class="form-control form-control-lg" id="phone-input" placeholder="0553995047" value="{{ user.phone or '' }}">
-                                            <button class="btn btn-primary px-4 fw-semibold" type="button" id="btn-send-phone-otp">
+                                        <div class="d-flex flex-column flex-md-row gap-2 mb-3">
+                                            <div class="input-group">
+                                                <span class="input-group-text bg-light fw-bold">+233</span>
+                                                <input type="tel" class="form-control form-control-lg" id="phone-input" placeholder="0553995047" value="{{ user.phone or '' }}">
+                                            </div>
+                                            <button class="btn btn-primary px-4 fw-semibold flex-shrink-0" type="button" id="btn-send-phone-otp">
                                                 Send SMS OTP
                                             </button>
                                         </div>
@@ -184,9 +186,9 @@
                                     {% else %}
                                     <div id="email-step-1">
                                         <label for="email-input" class="form-label fw-semibold">Email address</label>
-                                        <div class="input-group mb-3">
+                                        <div class="d-flex flex-column flex-md-row gap-2 mb-3">
                                             <input type="email" class="form-control form-control-lg" id="email-input" value="{{ user.email }}" readonly>
-                                            <button class="btn btn-primary px-4 fw-semibold" type="button" id="btn-send-email-otp">
+                                            <button class="btn btn-primary px-4 fw-semibold flex-shrink-0" type="button" id="btn-send-email-otp">
                                                 Send Email OTP
                                             </button>
                                         </div>
