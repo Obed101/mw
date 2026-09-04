@@ -2,6 +2,21 @@
 
 {% block title %}{{ shop.name }} - Market Window{% endblock %}
 
+{% block meta_tags %}
+{% set default_meta_image = url_for('static', filename='images/mw_logo_trans.png', _external=True) %}
+{% set shop_meta_image = shop.primary_image_url|google_image_url(GOOGLE_IMAGE_LARGE) if shop.primary_image_url else default_meta_image %}
+
+<meta property="og:title" content="{{ shop.name }} - Market Window">
+<meta property="og:description" content="{{ shop.description or 'Find ' ~ shop.name ~ ' on Market Window.' }}">
+<meta property="og:image" content="{{ shop_meta_image }}">
+<meta property="og:type" content="website">
+<meta property="og:url" content="{{ request.url }}">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="{{ shop.name }} - Market Window">
+<meta name="twitter:description" content="{{ shop.description or 'Find ' ~ shop.name ~ ' on Market Window.' }}">
+<meta name="twitter:image" content="{{ shop_meta_image }}">
+{% endblock %}
+
 {% block content %}
 <div class="container py-4">
     <section class="card border-0 shadow-sm mb-4 overflow-hidden">

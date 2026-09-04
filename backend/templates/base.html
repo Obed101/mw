@@ -4,6 +4,18 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}Market Window{% endblock %}</title>
+    {% block meta_tags %}
+    {% set default_meta_image = url_for('static', filename='images/mw_logo_trans.png', _external=True) %}
+    <meta property="og:title" content="{{ self.title()|striptags|trim }}">
+    <meta property="og:description" content="{{ meta_description or 'Find shops and products around you with Market Window.' }}">
+    <meta property="og:image" content="{{ meta_image or default_meta_image }}">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="{{ request.url }}">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="{{ self.title()|striptags|trim }}">
+    <meta name="twitter:description" content="{{ meta_description or 'Find shops and products around you with Market Window.' }}">
+    <meta name="twitter:image" content="{{ meta_image or default_meta_image }}">
+    {% endblock %}
     
     <!-- Favicon -->
     <link rel="icon" type="image/png" href="{{ url_for('static', filename='images/mw_logo_color.png') }}">

@@ -2,6 +2,21 @@
 
 {% block title %}{{ product.name }} - Market Window{% endblock %}
 
+{% block meta_tags %}
+{% set default_meta_image = url_for('static', filename='images/mw_logo_trans.png', _external=True) %}
+{% set product_meta_image = product.primary_image_url or (product.shop.primary_image_url if product.shop and product.shop.primary_image_url else default_meta_image) %}
+
+<meta property="og:title" content="{{ product.name }} - Market Window">
+<meta property="og:description" content="{{ product.description or 'Find ' ~ product.name ~ ' on Market Window.' }}">
+<meta property="og:image" content="{{ product_meta_image }}">
+<meta property="og:type" content="website">
+<meta property="og:url" content="{{ request.url }}">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="{{ product.name }} - Market Window">
+<meta name="twitter:description" content="{{ product.description or 'Find ' ~ product.name ~ ' on Market Window.' }}">
+<meta name="twitter:image" content="{{ product_meta_image }}">
+{% endblock %}
+
 {% block styles %}
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/photoswipe@5.4.4/dist/photoswipe.css">
 <style>

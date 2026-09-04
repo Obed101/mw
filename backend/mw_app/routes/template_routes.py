@@ -1715,7 +1715,7 @@ def oauth_authorize():
 
             flash(
                 f"Welcome to Market Window, {resolved_first or username}! "
-                f"Your username is <strong>{username}</strong>. "
+                f"Your username is \"{username}\". "
                 f"Use it with your password if you ever sign in without Google.",
                 "success"
             )
